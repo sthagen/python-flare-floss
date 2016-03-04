@@ -1,12 +1,20 @@
 <img src="resources/logo.png?raw=true " width="350"/>
 # FireEye Labs Obfuscated String Solver
 
-Malware authors encode data in binary files to hide malicious activity and
-impede reverse engineering.
+Rather than heavily protecting backdoors with hardcore packers, many
+malware authors evade heuristic detections by obfuscating only key
+portions of a malware file. Often, these are the strings and resources
+used to configure domains, files, and other artifacts of an infection.
+These key feature will not show up in output of the `strings.exe` utility
+that is commonly used during basic static analysis.
 
-The goal of this project is to develop a tool that can automatically detect,
-extract, and decode obfuscated strings in PE executable files.
+The FireEye Labs Obfuscated String Solver (FLOSS) uses advanced
+static analysis techniques to automatically deobfuscate strings from
+malware binaries. You can use it just like `strings.exe` to enhance
+basic static analysis of unknown binaries.
 
+# Quick Run
+Download a standalone executable file from the releases page: https://github.com/fireeye/flare-floss/releases
 
 # Quick Installation
 - Install vivisect:
