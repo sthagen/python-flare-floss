@@ -14,9 +14,12 @@ malware binaries. You can use it just like `strings.exe` to enhance
 basic static analysis of unknown binaries.
 
 # Quick Run
-Download a standalone executable file from the releases page: https://github.com/fireeye/flare-floss/releases
+To try FLOSS right away, download a standalone executable file from the releases page: https://github.com/fireeye/flare-floss/releases
 
 # Quick Installation
+Use the following steps to install FLOSS via the standard Python installer: pip.
+This will add an executable `floss` (or `floss.exe` on Windows) to your `$PATH`.
+
 - Install vivisect:
 
     `$ pip install https://github.com/williballenthin/vivisect/zipball/master`
@@ -40,9 +43,13 @@ Display the help/usage screen to see all available switches.
     $ ./floss -h
 
 
+# Detailed Setup
+To install FLOSS from source for development, use the following instructions.
 
-# Setup
 ## Requirements
+First, install a few required dependencies.
+Here's the easiest way:
+
 - `vivisect` - https://github.com/vivisect/vivisect, installable module from https://github.com/williballenthin/vivisect.git
 
     $ pip install https://github.com/williballenthin/vivisect/zipball/master
@@ -59,7 +66,6 @@ Display the help/usage screen to see all available switches.
 ## Installation from Github
 This technique installs FLOSS to your local Python environment,
 but does not keep editable source files around for you to hack on.
-
 
 - Install vivisect:
 
@@ -121,12 +127,3 @@ Run all tests from file:
 Run test from file
 
     py.test --sp samples/malicious/ tests/test_floss.py::test_plugins
-
-# Known Decoding Functions
-| Sample Hash | Function Offset |
-| --- | --- |
-|6ee35da59f92f71e757d4d5b964ecf00|0x40166C|
-|6ee35da59f92f71e757d4d5b964ecf00|0x402647|
-|8c713117af4ca6bbd69292a78069e75b|0x40104F|
-|8c713117af4ca6bbd69292a78069e75b|0x401718|
-|bf8616bbed6d804a3dea09b230c2ab0c|0x4010BB|
