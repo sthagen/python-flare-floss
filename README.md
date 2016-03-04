@@ -3,10 +3,10 @@
 
 Rather than heavily protecting backdoors with hardcore packers, many
 malware authors evade heuristic detections by obfuscating only key
-portions of a malware file. Often, these are the strings and resources
+portions of an executable. Often, these portions are strings and resources
 used to configure domains, files, and other artifacts of an infection.
-These key feature will not show up in output of the `strings.exe` utility
-that is commonly used during basic static analysis.
+These key features will not show up as plaintext in output of the `strings.exe` utility
+that we commonly use during basic static analysis.
 
 The FireEye Labs Obfuscated String Solver (FLOSS) uses advanced
 static analysis techniques to automatically deobfuscate strings from
