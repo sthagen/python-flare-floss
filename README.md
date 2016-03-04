@@ -31,10 +31,6 @@ Extract obfuscated strings from a malware binary:
 
     $ floss /path/to/malware/binary
 
-Invoke the string decoder on a file.
-
-    $ floss /path/to/malware/binary
-
 Test individual functions (or a list of functions) using the `-f` switch.
 
     $ floss /path/to/malware/binary -f 0x40166C,0x402647
