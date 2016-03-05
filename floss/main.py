@@ -2,6 +2,7 @@
 # encoding: utf-8
 
 import os
+import sys
 import logging
 import pkg_resources
 import operator
@@ -167,7 +168,7 @@ class StringDecoderConfig(viv_utils.LoggingObject):
 
         if self.options.list_plugins:
             self.print_plugin_list()
-            exit(0)
+            sys.exit(0)
 
         TRY_HELP_MSG = "Try '%s -h' for more information" % parser.get_prog_name()
 
