@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
-
+from __future__ import print_function
 import os
 import sys
 import logging
@@ -76,7 +76,7 @@ class StringDecoder(viv_utils.LoggingObject):
             f = open(idapython_file, "w")
             try:
                 f.write(script_content)
-                print "\nWrote IDAPython script file to %s" % idapython_file
+                print("\nWrote IDAPython script file to %s" % idapython_file)
             finally:
                 f.close()
         except Exception as e:
@@ -252,8 +252,8 @@ class StringDecoderConfig(viv_utils.LoggingObject):
             logging.getLogger("plugins.xor_plugin.XORSimplePlugin").setLevel(logging.ERROR)
 
     def print_plugin_list(self):
-            print "Available plugins:"
-            print "\n".join([" - %s" % plugin.get_name_version() for plugin in get_all_plugins()])
+            print("Available plugins:")
+            print("\n".join([" - %s" % plugin.get_name_version() for plugin in get_all_plugins()]))
 
     def select_functions(self):
         workspace_functions = self.vivisect_workspace.getFunctions()
@@ -389,11 +389,11 @@ class IdentificationManager(viv_utils.LoggingObject):
         return sorted(self.candidates_weighted.items(), key=operator.itemgetter(1), reverse=True)
 
     def print_top(self, n=10):
-        print "\nMost likely decoding functions in %s:" % self.sample_file_path
-        print "address:    score:  "
-        print "----------  -------"
+        print("\nMost likely decoding functions in %s:" % self.sample_file_path)
+        print("address:    score:  ")
+        print("----------  -------")
         for fva, score in self.sort_candidates_by_score()[:n]:
-            print "0x%08X: %.5f" % (fva, score)
+            print("0x%08X: %.5f" % (fva, score))
 
     def get_top_candidate_functions(self, n=10):
         return [fva for fva, _ in self.sort_candidates_by_score()[:n]]
@@ -422,7 +422,7 @@ def main():
         string_decoder.create_idapython_script()
 
     time1 = time()
-    print "Finished execution after %f seconds" % (time1-time0)
+    print("Finished execution after %f seconds" % (time1-time0))
 
 
 if __name__ == "__main__":
