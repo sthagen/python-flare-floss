@@ -27,19 +27,25 @@ class FunctionCrossReferencesToPlugin(plugin_object.GeneralPlugin):
         return candidate_functions
 
     def score(self, function_vas, vivisect_workspace=None):
-        # find maximum number of cross references to a function
-        max_cross_references_to = 0
-        for fva in vivisect_workspace.getFunctions():
-            xrefs_to = len(vivisect_workspace.getXrefsTo(fva))
-            if xrefs_to > max_cross_references_to:
-                max_cross_references_to = xrefs_to
-
         candidate_functions = {}
+        max_cross_references_to = self.get_max_xrefs_to(vivisect_workspace)
+
         for fva in function_vas:
             xrefs_to = len(vivisect_workspace.getXrefsTo(fva))
-            score = (float(xrefs_to) / float(max_cross_references_to))  # TODO scoring
+            score = 0
+            if max_cross_references_to != 0:
+                score = (float(xrefs_to) / float(max_cross_references_to))
             candidate_functions[fva] = score
         return candidate_functions
+
+    def get_max_xrefs_to(self, vw):
+        # find maximum number of cross references to a function
+        max_cross_references_to = 0
+        for fva in vw.getFunctions():
+            xrefs_to = len(vw.getXrefsTo(fva))
+            if xrefs_to > max_cross_references_to:
+                max_cross_references_to = xrefs_to
+        return max_cross_references_to
 
 
 class FunctionArgumentCountPlugin(plugin_object.GeneralPlugin):
