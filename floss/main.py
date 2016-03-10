@@ -158,7 +158,7 @@ class StringDecoderConfig(viv_utils.LoggingObject):
             plugnplay.plugin_dirs = [plugins_path]
             plugnplay.load_plugins(logging.getLogger("plugin_loader"))
         except pkg_resources.DistributionNotFound as e:
-            self.w("failed to load extra plugins: %s", e)
+            self.i("failed to load extra plugins: %s", e)
 
     def configure(self):
         parser = self.get_OptionParser()
