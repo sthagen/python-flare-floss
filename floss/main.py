@@ -407,7 +407,7 @@ class IdentificationManager(viv_utils.LoggingObject):
 
 def main():
     # default to INFO, unless otherwise changed
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.WARNING)
 
     time0 = time()
     string_decoder = StringDecoder()
