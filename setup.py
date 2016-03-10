@@ -26,7 +26,7 @@ setup(
         'floss',
     ],
     package_dir={'floss': 'floss'},
-    package_data={'floss': ['data/*.py', 'floss/plugins']},
+    package_data={'floss': ['plugins']},
     entry_points={
         "console_scripts": [
             "floss=floss.main:main",
