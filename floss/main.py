@@ -289,6 +289,9 @@ def output_strings(ds_filtered, min_length):
     print("Offset       Called At    String")
     print("----------   ----------   -------------------------------------")
     for ds in ds_filtered:
+        if len(ds.s) < min_length:
+            continue
+
         va = ds.va
         if not va:
             va = 0
@@ -314,9 +317,13 @@ def main():
     parser.add_option("-g", "--group", dest="group_functions",
                         help="group output by virtual address of decoding functions",
                         action="store_true")
+
     parser.add_option("-i", "--ida", dest="ida_python_file",
                         help="create an IDAPython script to annotate the decoded strings in an IDB file")
 
+    parser.add_option("-n", "--minimum-length", dest="min_length",
+                        help="minimum string length (default is 3)")
+ 
     parser.add_option("-p", "--plugins", dest="plugins",
                         help="apply the specified identification plugins only (comma-separated)")
     parser.add_option("-l", "--list-plugins", dest="list_plugins",
@@ -343,6 +350,8 @@ def main():
         parser.error("'%s' is not a file\n%s" % (sample_file_path, TRY_HELP_MSG))
 
     set_logging_level(options.debug, options.verbose)
+
+    min_length = int(options.min_length or "")
 
     vw = viv_utils.getWorkspace(sample_file_path)
 
@@ -378,9 +387,9 @@ def main():
             len_ds = len(ds_filtered)
             if len_ds > 0:
                 print("\nDecoding function at 0x%X (decoded %d strings)" % (fva, len_ds))
-                output_strings(ds_filtered, 4)
+                output_strings(ds_filtered, min_length)
     else:
-        output_strings(decoded_strings, 4)
+        output_strings(decoded_strings, min_length)
 
     if options.ida_python_file:
         floss_logger.info("generating IDA script...")
