@@ -99,12 +99,10 @@ def is_string(s, min_length=4):
 
 class DecodingManager(viv_utils.LoggingObject):
 
-    def __init__(self, sample_file_path):
+    def __init__(self, vw):
         viv_utils.LoggingObject.__init__(self)
-        self.vivisect_workspace = viv_utils.getWorkspace(sample_file_path)
-
+        self.vivisect_workspace = vw
         self.function_index = viv_utils.InstructionFunctionIndex(self.vivisect_workspace)
-        # TODO do we need a set for the decoded strings?
         self.decoded_strings = set([])
 
     def run_decoding(self, function_vas):
@@ -113,35 +111,6 @@ class DecodingManager(viv_utils.LoggingObject):
             fd = FunctionDecoder(self.vivisect_workspace, fva, self.function_index)
             fd.invoke_decoding()
             self.decoded_strings.update(set(fd.get_decoded_strings()))
-
-    def print_decoded_strings(self, group_fvas=None, min_length=2):
-        decoded_strings = self.get_decoded_strings()
-        print "%d strings decoded:" % len(decoded_strings)
-        if group_fvas:
-            for fva in group_fvas:
-                ds_filtered = filter(lambda ds: ds.fva == fva, decoded_strings)
-                len_ds = len(ds_filtered)
-                if len_ds > 0:
-                    print "\nDecoding function at 0x%X (decoded %d strings)" % (fva, len_ds)
-                    self.format_strings(ds_filtered, min_length)
-        else:
-            self.format_strings(decoded_strings, min_length)
-
-    def format_strings(self, ds_filtered, min_length):
-        print "Offset       Called At    String"
-        print "----------   ----------   -------------------------------------"
-        for ds in ds_filtered:
-            va = ds.va
-            if not va:
-                va = 0
-            print "0x%08X   0x%08X   %s" % (va, ds.decoded_at_va, self.sanitize_string_print(ds.s))
-
-    def sanitize_string_print(self, str_in):
-        sanitized_string = str_in.replace('\n', '\\n')
-        sanitized_string = sanitized_string.replace('\r', '\\r')
-        sanitized_string = sanitized_string.replace('\t', '\\t')
-        sanitized_string = "".join(s for s in sanitized_string if s in string.printable)
-        return sanitized_string
 
     def get_decoded_strings(self, min_length=4):
         ret = []
