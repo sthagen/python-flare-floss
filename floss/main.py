@@ -45,6 +45,15 @@ def print_plugin_list():
 
 
 class StringDecoder(viv_utils.LoggingObject):
+    """
+    decoder = StringDecoder(vw)
+    for fva in decoder.identify_decoding_functions(plugins, functions):
+        for ctx in decoder.extract_decoding_contexts(fva):
+            for delta in decoder.emulate_decoding_routine(index, fva, ctx):
+                for delta_bytes decoder.extract_delta_bytes(delta, min_length, source_fva=function):
+                    for decoded_string in decoder.extract_strings(delta_bytes)
+                        print(decoded_string.offset, decoded_strings)
+    """
 
     def __init__(self, vw):
         viv_utils.LoggingObject.__init__(self)
@@ -55,6 +64,70 @@ class StringDecoder(viv_utils.LoggingObject):
         identification_manager.run_plugins(functions)
         identification_manager.apply_plugin_weights()
         return identification_manager
+
+    def extract_decoding_contexts(self, function):
+        return get_function_contexts(self.vw, function)
+
+    def emulate_decoding_routine(self, function, context):
+        self.d("Emulating function at 0x%08X called at 0x%08X, return address: 0x%08X",
+               function, context.decoded_at_va, context.return_address)
+
+        emu = makeEmulator(self.vw)
+        femu = FunctionEmulator(emu, function, index)
+        deltas = femu.emulate_function(context.return_address, 2000)
+        return deltas
+
+    def extract_delta_bytes(delta, min_length, source_fva=0x0):
+        strings = []
+
+        memory_snap_before = delta.pre_snap.memory
+        memory_snap_after = delta.post_snap.memory
+        sp = delta.post_snap.sp
+
+        # maps from region start to section tuple
+        mem_before = {m[0]: m for m in memory_snap_before}
+        mem_after = {m[0]: m for m in memory_snap_after}
+
+        stack_start = 0x0
+        stack_end = 0x0
+        for m in memory_snap_after:
+            if m[0] <= sp < m[1]:
+                stack_start, stack_end = m[0], m[1]
+
+        # iterate memory from after the decoding, since if somethings been allocated,
+        # we want to know. don't care if things have been deallocated.
+        for section_after_start, section_after in mem_after.items():
+            (_, _, _, bytes_after) = section_after
+            if section_after_start not in mem_before:
+                strings.append(DecodedString(section_after_start,
+                                             bytes_after,
+                                             function_context.decoded_at_va,
+                                             source_fva))
+                continue
+
+            section_before = mem_before[section_after_start]
+            (_, _, _, bytes_before) = section_before
+
+            memory_diff = envi.memory.memdiff(bytes_before, bytes_after)
+            for offset, length in memory_diff:
+                address = section_after_start + offset
+
+                if stack_start <= address <= sp:
+                    # every stack address that exceeds the stack pointer can be ignored because it is local
+                    # to child stack frame
+                    continue
+
+                diff_bytes = bytes_after[offset:offset + length]
+                global_address = False
+                if not (stack_start <= address < stack_end):
+                    # address is in global memory
+                    global_address = address
+                strings.append(DecodedString(address,
+                                             diff_bytes,
+                                             function_context.decoded_at_va,
+                                             source_fva,
+                                             global_address))
+        return strings
 
     def decode_strings(self, functions):
         decoding_manager = DecodingManager(self.vw)
@@ -378,7 +451,7 @@ def main():
     floss_logger.info("decoding strings...")
     strings_results = string_decoder.decode_strings(selected_functions)
 
-    decoded_strings = strings_results.get_decoded_strings()
+    decoded_strings = strings_results.get_decoded_strings(min_length)
     print("%d strings decoded:" % len(decoded_strings))
     if options.group_functions:
         fvas = set(map(lambda i: i.fva, decoded_strings))
