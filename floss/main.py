@@ -12,15 +12,85 @@ from optparse import OptionParser
 
 import plugnplay
 import viv_utils
+import envi.memory
 
-from DecodingManager import DecodingManager
 from interfaces import DecodingRoutineIdentifier
 import plugins.xor_plugin
 import plugins.library_function_plugin
 import plugins.function_meta_data_plugin
+from FunctionArgumentGetter import get_function_contexts
+from utils import makeEmulator
+from DecodingManager import DecodedString, FunctionEmulator
 
 
 floss_logger = logging.getLogger("floss")
+
+
+def compute_ascii_string_length(s):
+    for i, c in enumerate(s):
+        if c not in string.printable:
+            return i
+    return len(s)
+
+
+def is_ascii_string(s, min_length=4):
+    return compute_ascii_string_length(s) >= min_length
+
+
+def compute_unicode_string_length(s):
+    """
+    mostly from vivisect:detectUnicode
+
+    If the address appears to be the start of a unicode string, then
+    return the string length in bytes, else return -1.
+    This will return true if the memory location is likely
+    *simple* UTF16-LE unicode (<ascii><0><ascii><0><0><0>).
+    """
+    maxlen = len(s)
+    count = 0
+    while count < maxlen:
+        c0 = s[count]
+        if (count + 1) >= len(s):
+            break
+        c1 = s[count + 1]
+
+        # If it's not null,char,null,char then it's
+        # not simple unicode...
+        if ord(c1) != 0:
+            break
+
+        # If we find our null terminator after more
+        # than 4 chars, we're probably a real string
+        if ord(c0) == 0:
+            break
+
+        # If the first byte char isn't printable, then
+        # we're probably not a real "simple" ascii string
+        if c0 not in string.printable:
+            break
+
+        count += 2
+    return count
+
+
+def is_unicode_string(s, min_length=4):
+    """
+    mostly from vivisect:detectUnicode
+
+    If the address appears to be the start of a unicode string, then
+    return the string length in bytes, else return -1.
+    This will return true if the memory location is likely
+    *simple* UTF16-LE unicode (<ascii><0><ascii><0><0><0>).
+    """
+    return compute_unicode_string_length(s) >= (min_length * 2)
+
+
+def is_string(s, min_length=4):
+    if is_ascii_string(s, min_length=min_length):
+        return True
+    if is_unicode_string(s, min_length=min_length):
+        return True
+    return False
 
 
 # TODO add --plugin_dir switch at some point
@@ -40,7 +110,7 @@ def get_all_plugins():
 
 
 def print_plugin_list():
-    print("Available plugins:")
+    print("Available identification plugins:")
     print("\n".join([" - %s" % plugin.get_name_version() for plugin in get_all_plugins()]))
 
 
@@ -58,9 +128,10 @@ class StringDecoder(viv_utils.LoggingObject):
     def __init__(self, vw):
         viv_utils.LoggingObject.__init__(self)
         self.vw = vw
+        self.function_index = viv_utils.InstructionFunctionIndex(vw)
 
-    def identify_decoding_functions(self, plugins, functions):
-        identification_manager = IdentificationManager(self.vw, plugins)
+    def identify_decoding_functions(self, identification_plugins, functions):
+        identification_manager = IdentificationManager(self.vw, identification_plugins)
         identification_manager.run_plugins(functions)
         identification_manager.apply_plugin_weights()
         return identification_manager
@@ -69,16 +140,17 @@ class StringDecoder(viv_utils.LoggingObject):
         return get_function_contexts(self.vw, function)
 
     def emulate_decoding_routine(self, function, context):
+        emu = makeEmulator(self.vw)
+        # Restore function context
+        emu.setEmuSnap(context.emu_snap)  # TODO somewhere else?
+        femu = FunctionEmulator(emu, function, self.function_index)
         self.d("Emulating function at 0x%08X called at 0x%08X, return address: 0x%08X",
                function, context.decoded_at_va, context.return_address)
-
-        emu = makeEmulator(self.vw)
-        femu = FunctionEmulator(emu, function, index)
         deltas = femu.emulate_function(context.return_address, 2000)
         return deltas
 
-    def extract_delta_bytes(delta, min_length, source_fva=0x0):
-        strings = []
+    def extract_delta_bytes(self, delta, decoded_at_va, source_fva=0x0):
+        delta_bytes = []
 
         memory_snap_before = delta.pre_snap.memory
         memory_snap_after = delta.post_snap.memory
@@ -99,10 +171,8 @@ class StringDecoder(viv_utils.LoggingObject):
         for section_after_start, section_after in mem_after.items():
             (_, _, _, bytes_after) = section_after
             if section_after_start not in mem_before:
-                strings.append(DecodedString(section_after_start,
-                                             bytes_after,
-                                             function_context.decoded_at_va,
-                                             source_fva))
+                # TODO delta bytes instead of decoded strings
+                delta_bytes.append(DecodedString(section_after_start, bytes_after, decoded_at_va, source_fva))
                 continue
 
             section_before = mem_before[section_after_start]
@@ -122,17 +192,33 @@ class StringDecoder(viv_utils.LoggingObject):
                 if not (stack_start <= address < stack_end):
                     # address is in global memory
                     global_address = address
-                strings.append(DecodedString(address,
-                                             diff_bytes,
-                                             function_context.decoded_at_va,
-                                             source_fva,
-                                             global_address))
-        return strings
+                delta_bytes.append(DecodedString(address, diff_bytes, decoded_at_va, source_fva, global_address))
+        return delta_bytes
 
-    def decode_strings(self, functions):
-        decoding_manager = DecodingManager(self.vw)
-        decoding_manager.run_decoding(functions)
-        return decoding_manager
+    def extract_strings(self, delta_bytes):
+        min_length = 4
+        ret = []
+        queue = [delta_bytes]
+        while len(queue) > 0:
+            d = queue.pop()
+            s = d.s.replace("\x00\x00\x00\x00", "")  # quickly remove large empty regions
+            if is_unicode_string(s, min_length=min_length):
+                slen = compute_unicode_string_length(s)
+                ds = s[:slen].decode("utf-16")
+                if ds != "A" * slen:
+                    ret.append(DecodedString(d.va, ds, d.decoded_at_va, d.fva, d.global_address))
+                queue.append(DecodedString(d.va + slen, s[slen:], d.decoded_at_va, d.fva, d.global_address))
+            elif is_ascii_string(s, min_length=min_length):
+                slen = compute_ascii_string_length(s)
+                ds = s[:slen].decode("ascii")
+                if ds != "A" * slen:
+                    ret.append(DecodedString(d.va, ds, d.decoded_at_va, d.fva, d.global_address))
+                queue.append(DecodedString(d.va + slen, s[slen:], d.decoded_at_va, d.fva, d.global_address))
+            else:
+                if len(s) > 1:
+                    # chop off the first byte, then keep searching
+                    queue.append(DecodedString(d.va + 1, s[1:], d.decoded_at_va, d.fva, d.global_address))
+        return ret
 
 
 def sanitize_string_for_printing(s):
@@ -190,23 +276,6 @@ if __name__ == "__main__":
     return script_content
 
 
-def load_plugins(self):
-    """
-    Get path to plugins and load them into plugnplay
-    """
-    # note: need to update if the setup.py module names change
-    MODULE_NAME = "floss"
-    req = pkg_resources.Requirement.parse(MODULE_NAME)
-    requested_directory = os.path.join(MODULE_NAME, "plugins")
-    try:
-        plugins_path = pkg_resources.resource_filename(req, requested_directory)
-
-        plugnplay.plugin_dirs = [plugins_path]
-        plugnplay.load_plugins(logging.getLogger("plugin_loader"))
-    except pkg_resources.DistributionNotFound as e:
-        self.i("failed to load extra plugins: %s", e)
-
-
 class IdentificationManager(viv_utils.LoggingObject):
     PLUGIN_WEIGHTS = {"XORSimplePlugin": 0.5,
                       "FunctionCrossReferencesToPlugin": 0.2,
@@ -216,12 +285,12 @@ class IdentificationManager(viv_utils.LoggingObject):
                       "FunctionInstructionCountPlugin": 0.025,
                       "FunctionSizePlugin": 0.025,
                       "FunctionRecursivePlugin": 0.025,
-                      "FunctionIsLibraryPlugin": -1.0,}
+                      "FunctionIsLibraryPlugin": -1.0, }
 
-    def __init__(self, vw, plugins):
+    def __init__(self, vw, identification_plugins):
         viv_utils.LoggingObject.__init__(self)
         self.vw = vw
-        self.plugins = set(plugins)
+        self.plugins = set(identification_plugins)
         self.candidate_functions = {}
         self.candidates_weighted = None
 
@@ -262,8 +331,6 @@ class IdentificationManager(viv_utils.LoggingObject):
         """
         Return {effective_function_address: weighted_score}, the weighted score is a sum of the score a
         function received from each plugin multiplied by the plugin's weight. The
-        :param candidate_functions: dictionary storing {effective_function_addresses: {plugin_name: score}}
-        :param plugin_weights: dictionary storing {plugin_name: weight}
         :return: dictionary storing {effective_function_address: total score}
         """
         functions_weighted = {}
@@ -274,7 +341,7 @@ class IdentificationManager(viv_utils.LoggingObject):
                 if plugin_name not in self.PLUGIN_WEIGHTS.keys():
                     raise Exception("Plugin weight not found: %s" % plugin_name)
                 self.d("[%s] %.05f (weight) * %.05f (score) = %.05f" % (plugin_name, self.PLUGIN_WEIGHTS[plugin_name],
-                                                                              score, self.PLUGIN_WEIGHTS[plugin_name] * score))
+                                                                        score, self.PLUGIN_WEIGHTS[plugin_name] * score))
                 total_score = total_score + (self.PLUGIN_WEIGHTS[plugin_name] * score)
             self.d("Total score: %.05f\n" % total_score)
             functions_weighted[candidate_function] = total_score
@@ -310,7 +377,7 @@ def set_logging_level(should_debug=False, should_verbose=False):
         # ignore messages like:
         # WARNING:EmulatorDriver:error during emulation of function: BreakpointHit at 0x1001fbfb
         # ERROR:EmulatorDriver:error during emulation of function ... DivideByZero: DivideByZero at 0x10004940
-        # TODO: probably should should modify emulator driver to de-prioritize this
+        # TODO: probably should modify emulator driver to de-prioritize this
         logging.getLogger("EmulatorDriver").setLevel(logging.CRITICAL)
 
         # ignore messages like:
@@ -334,6 +401,7 @@ def select_functions(vw, function_vas=None):
         return vw.getFunctions()
 
     function_vas = set(function_vas)
+    workspace_functions = set(vw.getFunctions())
     if len(function_vas - workspace_functions) > 0:
         floss_logger.warn("Functions don't exist:", function_vas - workspace_functions)
         raise Exception("Functions not found")
@@ -348,7 +416,8 @@ def select_plugins(plugin_names=None):
     plugin_names = set(plugin_names)
     all_plugin_names = set(map(str, get_all_plugins()))
 
-    plugin_names.remove("")
+    if "" in plugin_names:
+        plugin_names.remove("")
     if not plugin_names:
         return list(all_plugin_names)
 
@@ -358,16 +427,21 @@ def select_plugins(plugin_names=None):
     return plugin_names
 
 
-def output_strings(ds_filtered, min_length):
+def filter_str_len(decoded_strings, min_length):
+        ds_filtered = []
+        for ds in decoded_strings:
+            if len(ds.s) < min_length:
+                continue
+            else:
+                ds_filtered.append(ds)
+        return ds_filtered
+
+
+def output_strings(ds_filtered):
     print("Offset       Called At    String")
     print("----------   ----------   -------------------------------------")
     for ds in ds_filtered:
-        if len(ds.s) < min_length:
-            continue
-
-        va = ds.va
-        if not va:
-            va = 0
+        va = ds.va or 0
         print("0x%08X   0x%08X   %s" % (va, ds.decoded_at_va, sanitize_string_for_printing(ds.s)))
 
 
@@ -424,13 +498,14 @@ def main():
 
     set_logging_level(options.debug, options.verbose)
 
-    min_length = int(options.min_length or "")
+    DEFAULT_MIN_LENGTH = 3
+    min_length = int(options.min_length or str(DEFAULT_MIN_LENGTH))
 
     vw = viv_utils.getWorkspace(sample_file_path)
 
     fvas = None
     if options.functions:
-        fvas = [int(fva, 0x10) for fva in foptions.functions.split(",")]
+        fvas = [int(fva, 0x10) for fva in options.functions.split(",")]
     selected_functions = select_functions(vw, fvas)
     floss_logger.debug("Selected the following functions: %s", ", ".join(map(hex, selected_functions)))
  
@@ -438,21 +513,29 @@ def main():
     floss_logger.debug("Selected the following plugins: %s", ", ".join(map(str, selected_plugins)))
 
     time0 = time()
-    string_decoder = StringDecoder(vw)
-    floss_logger.info("identifying decoding functions...")
 
+    string_decoder = StringDecoder(vw)
+
+    floss_logger.info("identifying decoding functions...")
     decoder_results = string_decoder.identify_decoding_functions(selected_plugins, selected_functions)
     print("\nMost likely decoding functions in: " + sample_file_path)
     print("address:    score:  ")
     print("----------  -------")
     for fva, score in decoder_results.sort_candidates_by_score()[:10]:
         print("0x%08X: %.5f" % (fva, score))
+    print("")
 
     floss_logger.info("decoding strings...")
-    strings_results = string_decoder.decode_strings(selected_functions)
+    decoded_strings = []
+    for fva, _ in decoder_results.sort_candidates_by_score()[:10]:
+        for ctx in string_decoder.extract_decoding_contexts(fva):
+            for delta in string_decoder.emulate_decoding_routine(fva, ctx):
+                for delta_bytes in string_decoder.extract_delta_bytes(delta, ctx.decoded_at_va, fva):
+                    for decoded_string in string_decoder.extract_strings(delta_bytes):
+                        decoded_strings.append(decoded_string)
 
-    decoded_strings = strings_results.get_decoded_strings(min_length)
-    print("%d strings decoded:" % len(decoded_strings))
+    decoded_strings = filter_str_len(decoded_strings, min_length)
+    print("FLOSS decoded %d strings:" % len(decoded_strings))
     if options.group_functions:
         fvas = set(map(lambda i: i.fva, decoded_strings))
         for fva in fvas:
@@ -460,9 +543,9 @@ def main():
             len_ds = len(ds_filtered)
             if len_ds > 0:
                 print("\nDecoding function at 0x%X (decoded %d strings)" % (fva, len_ds))
-                output_strings(ds_filtered, min_length)
+                output_strings(ds_filtered)
     else:
-        output_strings(decoded_strings, min_length)
+        output_strings(decoded_strings)
 
     if options.ida_python_file:
         floss_logger.info("generating IDA script...")

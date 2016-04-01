@@ -1,124 +1,10 @@
-import string
-import functools
 from collections import namedtuple
 
 import viv_utils
 import envi.memory
 
-from utils import makeEmulator
-from FunctionArgumentGetter import get_function_contexts
-
 
 DecodedString = namedtuple("DecodedString", ["va", "s", "decoded_at_va", "fva", "global_address"])
-
-
-def compute_ascii_string_length(s):
-    for i, c in enumerate(s):
-        if c not in string.printable:
-            return i
-    return len(s)
-
-
-def is_ascii_string(s, min_length=4):
-    return compute_ascii_string_length(s) >= min_length
-
-
-def compute_unicode_string_length(s):
-    '''
-    mostly from vivisect:detectUnicode
-
-    If the address appears to be the start of a unicode string, then
-    return the string length in bytes, else return -1.
-    This will return true if the memory location is likely
-    *simple* UTF16-LE unicode (<ascii><0><ascii><0><0><0>).
-    '''
-    maxlen = len(s)
-    count = 0
-    while count < maxlen:
-        c0 = s[count]
-        if (count + 1) >= len(s):
-            break
-        c1 = s[count + 1]
-
-        # If it's not null,char,null,char then it's
-        # not simple unicode...
-        if ord(c1) != 0:
-            break
-
-        # If we find our null terminator after more
-        # than 4 chars, we're probably a real string
-        if ord(c0) == 0:
-            break
-
-        # If the first byte char isn't printable, then
-        # we're probably not a real "simple" ascii string
-        if c0 not in string.printable:
-            break
-
-        count += 2
-    return count
-
-
-def is_unicode_string(s, min_length=4):
-    '''
-    mostly from vivisect:detectUnicode
-
-    If the address appears to be the start of a unicode string, then
-    return the string length in bytes, else return -1.
-    This will return true if the memory location is likely
-    *simple* UTF16-LE unicode (<ascii><0><ascii><0><0><0>).
-    '''
-    return compute_unicode_string_length(s) >= (min_length * 2)
-
-
-def is_string(s, min_length=4):
-    if is_ascii_string(s, min_length=min_length):
-        return True
-    if is_unicode_string(s, min_length=min_length):
-        return True
-    return False
-
-
-class DecodingManager(viv_utils.LoggingObject):
-
-    def __init__(self, vw):
-        viv_utils.LoggingObject.__init__(self)
-        self.vivisect_workspace = vw
-        self.function_index = viv_utils.InstructionFunctionIndex(self.vivisect_workspace)
-        self.decoded_strings = set([])
-
-    def run_decoding(self, function_vas):
-        for fva in function_vas:
-            self.d("decoding function: %s" % (hex(fva)))
-            fd = FunctionDecoder(self.vivisect_workspace, fva, self.function_index)
-            fd.invoke_decoding()
-            self.decoded_strings.update(set(fd.get_decoded_strings()))
-
-    def get_decoded_strings(self, min_length=4):
-        ret = []
-        queue = list(self.decoded_strings)
-        while len(queue) > 0:
-            d = queue.pop()
-            s = d.s.replace("\x00\x00\x00\x00", "")  # quickly remove large empty regions
-            if is_unicode_string(s, min_length=min_length):
-                slen = compute_unicode_string_length(s)
-                ds = s[:slen].decode("utf-16")
-                # filter out vivisect taint data
-                if ds != "A" * slen:
-                    ret.append(DecodedString(d.va, ds, d.decoded_at_va, d.fva, d.global_address))
-                queue.append(DecodedString(d.va + slen, s[slen:], d.decoded_at_va, d.fva, d.global_address))
-            elif is_ascii_string(s, min_length=min_length):
-                slen = compute_ascii_string_length(s)
-                ds = s[:slen].decode("ascii")
-                # filter out vivisect taint data
-                if ds != "A" * slen:
-                    ret.append(DecodedString(d.va, ds, d.decoded_at_va, d.fva, d.global_address))
-                queue.append(DecodedString(d.va + slen, s[slen:], d.decoded_at_va, d.fva, d.global_address))
-            else:
-                if len(s) > 1:
-                    # chop off the first byte, then keep searching
-                    queue.append(DecodedString(d.va + 1, s[1:], d.decoded_at_va, d.fva, d.global_address))
-        return ret
 
 
 class ApiMonitor(viv_utils.emulator_drivers.Monitor):
@@ -180,14 +66,14 @@ class ApiMonitor(viv_utils.emulator_drivers.Monitor):
 
     def dumpStack(self, emu):
         esp = emu.getStackCounter()
-        str = ""
+        stack_str = ""
         for i in xrange(16, -16, -4):
             if i == 0:
                 sp = "<= SP"
             else:
                 sp = "%02d" % i
-            str = "%s\n0x%08X - 0x%08X %s" % (str, (esp + i), self.getStackValue(emu, i), sp)
-        self._logger.debug(str)
+            stack_str = "%s\n0x%08X - 0x%08X %s" % (stack_str, (esp + i), self.getStackValue(emu, i), sp)
+        self._logger.debug(stack_str)
 
 
 def pointerSize(emu):
@@ -209,7 +95,7 @@ class GetProcessHeapHook(viv_utils.emulator_drivers.Hook):
         raise viv_utils.emulator_drivers.UnsupportedFunction()
 
 
-def round(i, size):
+def heap_round(i, size):
     if i % size == 0:
         return i
     return i + (i - (i % size))
@@ -221,7 +107,7 @@ class RtlAllocateHeapHook(viv_utils.emulator_drivers.Hook):
         self._heap_addr = 0x69690000
 
     def _allocate_mem(self, emu, size):
-        size = round(size, 0x1000)
+        size = heap_round(size, 0x1000)
         if size > 10 * 1024 * 1024:
             size = 10 * 1024 * 1024
         va = self._heap_addr
@@ -302,7 +188,7 @@ class DeltaCollectorHook(viv_utils.emulator_drivers.Hook):
     hook that collects Deltas at each imported API call.
     """
     def __init__(self, pre_snap):
-        super(DeltaCollectorHook, self).__init__(*args, **kwargs)
+        super(DeltaCollectorHook, self).__init__()
 
         self._pre_snap = pre_snap
         self.deltas = []
@@ -320,7 +206,7 @@ class FunctionEmulator(viv_utils.LoggingObject):
         self.fva = fva
         self.function_index = function_index
 
-    def emulate_function(self, return_address, max_instruction):
+    def emulate_function(self, return_address, max_instruction_count):
         pre_snap = make_snapshot(self.emu)
         delta_collector = DeltaCollectorHook(pre_snap)
 
