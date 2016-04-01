@@ -149,76 +149,78 @@ class StringDecoder(viv_utils.LoggingObject):
         deltas = femu.emulate_function(context.return_address, 2000)
         return deltas
 
-    def extract_delta_bytes(self, delta, decoded_at_va, source_fva=0x0):
-        delta_bytes = []
 
-        memory_snap_before = delta.pre_snap.memory
-        memory_snap_after = delta.post_snap.memory
-        sp = delta.post_snap.sp
+def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
+    delta_bytes = []
 
-        # maps from region start to section tuple
-        mem_before = {m[0]: m for m in memory_snap_before}
-        mem_after = {m[0]: m for m in memory_snap_after}
+    memory_snap_before = delta.pre_snap.memory
+    memory_snap_after = delta.post_snap.memory
+    sp = delta.post_snap.sp
 
-        stack_start = 0x0
-        stack_end = 0x0
-        for m in memory_snap_after:
-            if m[0] <= sp < m[1]:
-                stack_start, stack_end = m[0], m[1]
+    # maps from region start to section tuple
+    mem_before = {m[0]: m for m in memory_snap_before}
+    mem_after = {m[0]: m for m in memory_snap_after}
 
-        # iterate memory from after the decoding, since if somethings been allocated,
-        # we want to know. don't care if things have been deallocated.
-        for section_after_start, section_after in mem_after.items():
-            (_, _, _, bytes_after) = section_after
-            if section_after_start not in mem_before:
-                # TODO delta bytes instead of decoded strings
-                delta_bytes.append(DecodedString(section_after_start, bytes_after, decoded_at_va, source_fva, False))
+    stack_start = 0x0
+    stack_end = 0x0
+    for m in memory_snap_after:
+        if m[0] <= sp < m[1]:
+            stack_start, stack_end = m[0], m[1]
+
+    # iterate memory from after the decoding, since if somethings been allocated,
+    # we want to know. don't care if things have been deallocated.
+    for section_after_start, section_after in mem_after.items():
+        (_, _, _, bytes_after) = section_after
+        if section_after_start not in mem_before:
+            # TODO delta bytes instead of decoded strings
+            delta_bytes.append(DecodedString(section_after_start, bytes_after, decoded_at_va, source_fva, False))
+            continue
+
+        section_before = mem_before[section_after_start]
+        (_, _, _, bytes_before) = section_before
+
+        memory_diff = envi.memory.memdiff(bytes_before, bytes_after)
+        for offset, length in memory_diff:
+            address = section_after_start + offset
+
+            if stack_start <= address <= sp:
+                # every stack address that exceeds the stack pointer can be ignored because it is local
+                # to child stack frame
                 continue
 
-            section_before = mem_before[section_after_start]
-            (_, _, _, bytes_before) = section_before
+            diff_bytes = bytes_after[offset:offset + length]
+            global_address = False
+            if not (stack_start <= address < stack_end):
+                # address is in global memory
+                global_address = address
+            delta_bytes.append(DecodedString(address, diff_bytes, decoded_at_va, source_fva, global_address))
+    return delta_bytes
 
-            memory_diff = envi.memory.memdiff(bytes_before, bytes_after)
-            for offset, length in memory_diff:
-                address = section_after_start + offset
 
-                if stack_start <= address <= sp:
-                    # every stack address that exceeds the stack pointer can be ignored because it is local
-                    # to child stack frame
-                    continue
-
-                diff_bytes = bytes_after[offset:offset + length]
-                global_address = False
-                if not (stack_start <= address < stack_end):
-                    # address is in global memory
-                    global_address = address
-                delta_bytes.append(DecodedString(address, diff_bytes, decoded_at_va, source_fva, global_address))
-        return delta_bytes
-
-    def extract_strings(self, delta_bytes):
-        min_length = 4
-        ret = []
-        queue = [delta_bytes]
-        while len(queue) > 0:
-            d = queue.pop()
-            s = d.s.replace("\x00\x00\x00\x00", "")  # quickly remove large empty regions
-            if is_unicode_string(s, min_length=min_length):
-                slen = compute_unicode_string_length(s)
-                ds = s[:slen].decode("utf-16")
-                if ds != "A" * slen:
-                    ret.append(DecodedString(d.va, ds, d.decoded_at_va, d.fva, d.global_address))
-                queue.append(DecodedString(d.va + slen, s[slen:], d.decoded_at_va, d.fva, d.global_address))
-            elif is_ascii_string(s, min_length=min_length):
-                slen = compute_ascii_string_length(s)
-                ds = s[:slen].decode("ascii")
-                if ds != "A" * slen:
-                    ret.append(DecodedString(d.va, ds, d.decoded_at_va, d.fva, d.global_address))
-                queue.append(DecodedString(d.va + slen, s[slen:], d.decoded_at_va, d.fva, d.global_address))
-            else:
-                if len(s) > 1:
-                    # chop off the first byte, then keep searching
-                    queue.append(DecodedString(d.va + 1, s[1:], d.decoded_at_va, d.fva, d.global_address))
-        return ret
+def extract_strings(delta_bytes):
+    min_length = 4
+    ret = []
+    queue = [delta_bytes]
+    while len(queue) > 0:
+        d = queue.pop()
+        s = d.s.replace("\x00\x00\x00\x00", "")  # quickly remove large empty regions
+        if is_unicode_string(s, min_length=min_length):
+            slen = compute_unicode_string_length(s)
+            ds = s[:slen].decode("utf-16")
+            if ds != "A" * slen:
+                ret.append(DecodedString(d.va, ds, d.decoded_at_va, d.fva, d.global_address))
+            queue.append(DecodedString(d.va + slen, s[slen:], d.decoded_at_va, d.fva, d.global_address))
+        elif is_ascii_string(s, min_length=min_length):
+            slen = compute_ascii_string_length(s)
+            ds = s[:slen].decode("ascii")
+            if ds != "A" * slen:
+                ret.append(DecodedString(d.va, ds, d.decoded_at_va, d.fva, d.global_address))
+            queue.append(DecodedString(d.va + slen, s[slen:], d.decoded_at_va, d.fva, d.global_address))
+        else:
+            if len(s) > 1:
+                # chop off the first byte, then keep searching
+                queue.append(DecodedString(d.va + 1, s[1:], d.decoded_at_va, d.fva, d.global_address))
+    return ret
 
 
 def sanitize_string_for_printing(s):
@@ -453,24 +455,18 @@ def main():
     parser = OptionParser(usage=usage_message, version="%prog 0.1")
     parser.add_option("-v", "--verbose", dest="verbose",
                         help="show verbose messages and warnings", action="store_true")
-
     parser.add_option("-d", "--debug", dest="debug",
                         help="show all trace messages", action="store_true")
-
     parser.add_option("-f", "--functions", dest="functions",
                         help="only analyze the specified functions (comma-separated)",
                         type="string")
-
     parser.add_option("-g", "--group", dest="group_functions",
                         help="group output by virtual address of decoding functions",
                         action="store_true")
-
     parser.add_option("-i", "--ida", dest="ida_python_file",
                         help="create an IDAPython script to annotate the decoded strings in an IDB file")
-
     parser.add_option("-n", "--minimum-length", dest="min_length",
                         help="minimum string length (default is 3)")
- 
     parser.add_option("-p", "--plugins", dest="plugins",
                         help="apply the specified identification plugins only (comma-separated)")
     parser.add_option("-l", "--list-plugins", dest="list_plugins",
@@ -508,7 +504,7 @@ def main():
         fvas = [int(fva, 0x10) for fva in options.functions.split(",")]
     selected_functions = select_functions(vw, fvas)
     floss_logger.debug("Selected the following functions: %s", ", ".join(map(hex, selected_functions)))
- 
+
     selected_plugins = select_plugins((options.plugins or "").split(","))
     floss_logger.debug("Selected the following plugins: %s", ", ".join(map(str, selected_plugins)))
 
@@ -530,8 +526,8 @@ def main():
     for fva, _ in decoder_results.sort_candidates_by_score()[:10]:
         for ctx in string_decoder.extract_decoding_contexts(fva):
             for delta in string_decoder.emulate_decoding_routine(fva, ctx):
-                for delta_bytes in string_decoder.extract_delta_bytes(delta, ctx.decoded_at_va, fva):
-                    for decoded_string in string_decoder.extract_strings(delta_bytes):
+                for delta_bytes in extract_delta_bytes(delta, ctx.decoded_at_va, fva):
+                    for decoded_string in extract_strings(delta_bytes):
                         decoded_strings.append(decoded_string)
 
     decoded_strings = filter_str_len(decoded_strings, min_length)
@@ -559,7 +555,7 @@ def main():
                 raise e
 
     time1 = time()
-    print("Finished execution after %f seconds" % (time1-time0))
+    print("Finished execution after %f seconds" % (time1 - time0))
 
 
 if __name__ == "__main__":
