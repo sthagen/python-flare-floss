@@ -196,7 +196,7 @@ class DeltaCollectorHook(viv_utils.emulator_drivers.Hook):
     def hook(self, callname, driver, callconv, api, argv):
         if is_import(driver._emu, driver._emu.getProgramCounter()):
             # TODO: don't reach
-            self._deltas.append(Delta(self._pre_snap, make_snapshot(driver._emu)))
+            self.deltas.append(Delta(self._pre_snap, make_snapshot(driver._emu)))
 
 
 class FunctionEmulator(viv_utils.LoggingObject):

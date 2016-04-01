@@ -172,7 +172,7 @@ class StringDecoder(viv_utils.LoggingObject):
             (_, _, _, bytes_after) = section_after
             if section_after_start not in mem_before:
                 # TODO delta bytes instead of decoded strings
-                delta_bytes.append(DecodedString(section_after_start, bytes_after, decoded_at_va, source_fva))
+                delta_bytes.append(DecodedString(section_after_start, bytes_after, decoded_at_va, source_fva, False))
                 continue
 
             section_before = mem_before[section_after_start]
