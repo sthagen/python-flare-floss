@@ -23,6 +23,8 @@ from utils import makeEmulator
 from DecodingManager import DecodedString, FunctionEmulator
 
 
+floss_version = "1.0"
+
 floss_logger = logging.getLogger("floss")
 
 
@@ -274,8 +276,19 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 """ % (sample_file_path, "\n    ".join(main_commands))
     return script_content
+
+
+def create_script(ida_python_file, script_content):
+    idapython_file = os.path.abspath(ida_python_file)
+    with open(idapython_file, 'wb') as f:
+        try:
+            f.write(script_content)
+            print("\nWrote IDAPython script file to %s" % idapython_file)
+        except Exception as e:
+            raise e
 
 
 class IdentificationManager(viv_utils.LoggingObject):
@@ -447,12 +460,9 @@ def output_strings(ds_filtered):
         print("0x%08X   0x%08X   %s" % (va, ds.decoded_at_va, sanitize_string_for_printing(ds.s)))
 
 
-def main():
-    # default to INFO, unless otherwise changed
-    logging.basicConfig(level=logging.WARNING)
-
+def make_parser():
     usage_message = "%prog [options] FILEPATH"
-    parser = OptionParser(usage=usage_message, version="%prog 0.1")
+    parser = OptionParser(usage=usage_message, version="%prog " + floss_version)
     parser.add_option("-v", "--verbose", dest="verbose",
                         help="show verbose messages and warnings", action="store_true")
     parser.add_option("-d", "--debug", dest="debug",
@@ -472,30 +482,54 @@ def main():
     parser.add_option("-l", "--list-plugins", dest="list_plugins",
                         help="list all available identification plugins and exit",
                         action="store_true")
+    return parser
 
+
+def print_identification_results(sample_file_path, decoder_results):
+    print("\nMost likely decoding functions in: " + sample_file_path)
+    print("address:    score:  ")
+    print("----------  -------")
+    for fva, score in decoder_results.sort_candidates_by_score()[:10]:
+        print("0x%08X: %.5f" % (fva, score))
+    print("")
+
+
+def print_decoding_results(decoded_strings, min_length, group_functions):
+    print("FLOSS decoded %d strings" % len(decoded_strings))
+    if group_functions:
+        fvas = set(map(lambda i: i.fva, decoded_strings))
+        for fva in fvas:
+            ds_filtered = filter(lambda ds: ds.fva == fva, decoded_strings)
+            len_ds = len(ds_filtered)
+            if len_ds > 0:
+                print("\nDecoding function at 0x%X (decoded %d strings)" % (fva, len_ds))
+                output_strings(ds_filtered)
+    else:
+        output_strings(decoded_strings)
+
+
+def main():
+    # default to INFO, unless otherwise changed
+    logging.basicConfig(level=logging.WARNING)
+
+    parser = make_parser()
     options, args = parser.parse_args()
 
     if options.list_plugins:
         print_plugin_list()
         sys.exit(0)
 
-    TRY_HELP_MSG = "Try '%s -h' for more information" % parser.get_prog_name()
-
-    if len(args) != 1:
-        parser.error("Please provide a valid file path\n%s" % TRY_HELP_MSG)
-
-    sample_file_path = args[0]
-
-    if not os.path.exists(sample_file_path):
-        parser.error("File '%s' does not exist\n%s" % (sample_file_path, TRY_HELP_MSG))
-
-    if not os.path.isfile(sample_file_path):
-        parser.error("'%s' is not a file\n%s" % (sample_file_path, TRY_HELP_MSG))
-
     set_logging_level(options.debug, options.verbose)
 
-    DEFAULT_MIN_LENGTH = 3
-    min_length = int(options.min_length or str(DEFAULT_MIN_LENGTH))
+    try_help_msg = "Try '%s -h' for more information" % parser.get_prog_name()
+    if len(args) != 1:
+        parser.error("Please provide a valid file path\n%s" % try_help_msg)
+
+    sample_file_path = args[0]
+    if not os.path.exists(sample_file_path):
+        parser.error("File '%s' does not exist\n%s" % (sample_file_path, try_help_msg))
+    if not os.path.isfile(sample_file_path):
+        parser.error("'%s' is not a file\n%s" % (sample_file_path, try_help_msg))
 
     vw = viv_utils.getWorkspace(sample_file_path)
 
@@ -514,12 +548,7 @@ def main():
 
     floss_logger.info("identifying decoding functions...")
     decoder_results = string_decoder.identify_decoding_functions(selected_plugins, selected_functions)
-    print("\nMost likely decoding functions in: " + sample_file_path)
-    print("address:    score:  ")
-    print("----------  -------")
-    for fva, score in decoder_results.sort_candidates_by_score()[:10]:
-        print("0x%08X: %.5f" % (fva, score))
-    print("")
+    print_identification_results(sample_file_path, decoder_results)
 
     floss_logger.info("decoding strings...")
     decoded_strings = []
@@ -530,31 +559,19 @@ def main():
                     for decoded_string in extract_strings(delta_bytes):
                         decoded_strings.append(decoded_string)
 
+    default_min_length = 3
+    min_length = int(options.min_length or str(default_min_length))
+
     decoded_strings = filter_str_len(decoded_strings, min_length)
-    print("FLOSS decoded %d strings:" % len(decoded_strings))
-    if options.group_functions:
-        fvas = set(map(lambda i: i.fva, decoded_strings))
-        for fva in fvas:
-            ds_filtered = filter(lambda ds: ds.fva == fva, decoded_strings)
-            len_ds = len(ds_filtered)
-            if len_ds > 0:
-                print("\nDecoding function at 0x%X (decoded %d strings)" % (fva, len_ds))
-                output_strings(ds_filtered)
-    else:
-        output_strings(decoded_strings)
+    print_decoding_results(decoded_strings, min_length, options.group_functions)
 
     if options.ida_python_file:
-        floss_logger.info("generating IDA script...")
-        idapython_file = os.path.abspath(options.ida_python_file)
+        floss_logger.info("creating IDA script...")
         script_content = create_script_content(sample_file_path, decoded_strings)
-        with open(idapython_file, 'wb') as f:
-            try:
-                f.write(script_content)
-                print("\nWrote IDAPython script file to %s" % idapython_file)
-            except Exception as e:
-                raise e
+        create_script(options.ida_python_file, script_content)
 
     time1 = time()
+
     print("Finished execution after %f seconds" % (time1 - time0))
 
 
