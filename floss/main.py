@@ -28,92 +28,87 @@ floss_version = "1.0"
 floss_logger = logging.getLogger("floss")
 
 
-def compute_ascii_string_length(s):
-    for i, c in enumerate(s):
-        if c not in string.printable:
-            return i
-    return len(s)
+class IdentificationManager(viv_utils.LoggingObject):
+    PLUGIN_WEIGHTS = {"XORSimplePlugin": 0.5,
+                      "FunctionCrossReferencesToPlugin": 0.2,
+                      "FunctionArgumentCountPlugin": 0.2,
+                      "FunctionIsThunkPlugin": -1.0,
+                      "FunctionBlockCountPlugin": 0.025,
+                      "FunctionInstructionCountPlugin": 0.025,
+                      "FunctionSizePlugin": 0.025,
+                      "FunctionRecursivePlugin": 0.025,
+                      "FunctionIsLibraryPlugin": -1.0, }
 
+    def __init__(self, vw, identification_plugins):
+        viv_utils.LoggingObject.__init__(self)
+        self.vw = vw
+        self.plugins = set(identification_plugins)
+        self.candidate_functions = {}
+        self.candidates_weighted = None
 
-def is_ascii_string(s, min_length=4):
-    return compute_ascii_string_length(s) >= min_length
+    def run_plugins(self, functions, raw_data=False):
+        plugins_to_run = []
+        # TODO: these plugin instances should be passed in from the outside
+        # or a client library cannot provide its own plugins
+        for identifier in get_all_plugins():
+            if str(identifier) in self.plugins:
+                plugins_to_run.append(identifier)
 
+        for plugin in plugins_to_run:
+            decoder_candidates = plugin.identify(self.vw, functions)
+            if raw_data:
+                self.merge_candidates(str(plugin), decoder_candidates)
+            else:
+                scored_candidates = plugin.score(decoder_candidates, self.vw)
+                self.merge_candidates(str(plugin), scored_candidates)
 
-def compute_unicode_string_length(s):
-    """
-    mostly from vivisect:detectUnicode
+    def merge_candidates(self, plugin_name, plugin_candidates):
+        """
+        Merge data from all plugins into candidate_functions dictionary.
+        """
 
-    If the address appears to be the start of a unicode string, then
-    return the string length in bytes, else return -1.
-    This will return true if the memory location is likely
-    *simple* UTF16-LE unicode (<ascii><0><ascii><0><0><0>).
-    """
-    maxlen = len(s)
-    count = 0
-    while count < maxlen:
-        c0 = s[count]
-        if (count + 1) >= len(s):
-            break
-        c1 = s[count + 1]
+        if not plugin_candidates:
+            return self.candidate_functions
 
-        # If it's not null,char,null,char then it's
-        # not simple unicode...
-        if ord(c1) != 0:
-            break
+        for candidate_function in plugin_candidates:
+            if candidate_function in self.candidate_functions.keys():
+                self.d("Function at 0x%08X is already in candidate list, merging", candidate_function)
+                self.candidate_functions[candidate_function][plugin_name] = plugin_candidates[candidate_function]
+            else:
+                self.d("Function at 0x%08X is new, adding", candidate_function)
+                self.candidate_functions[candidate_function] = {}
+                self.candidate_functions[candidate_function][plugin_name] = plugin_candidates[candidate_function]
 
-        # If we find our null terminator after more
-        # than 4 chars, we're probably a real string
-        if ord(c0) == 0:
-            break
+    def apply_plugin_weights(self):
+        """
+        Return {effective_function_address: weighted_score}, the weighted score is a sum of the score a
+        function received from each plugin multiplied by the plugin's weight. The
+        :return: dictionary storing {effective_function_address: total score}
+        """
+        functions_weighted = {}
+        for candidate_function, plugin_score in self.candidate_functions.items():
+            self.d("0x%08X" % candidate_function)
+            total_score = 0.0
+            for plugin_name, score in plugin_score.items():
+                if plugin_name not in self.PLUGIN_WEIGHTS.keys():
+                    raise Exception("Plugin weight not found: %s" % plugin_name)
+                self.d("[%s] %.05f (weight) * %.05f (score) = %.05f" % (plugin_name, self.PLUGIN_WEIGHTS[plugin_name],
+                                                                        score, self.PLUGIN_WEIGHTS[plugin_name] * score))
+                total_score = total_score + (self.PLUGIN_WEIGHTS[plugin_name] * score)
+            self.d("Total score: %.05f\n" % total_score)
+            functions_weighted[candidate_function] = total_score
 
-        # If the first byte char isn't printable, then
-        # we're probably not a real "simple" ascii string
-        if c0 not in string.printable:
-            break
+        self.candidates_weighted = functions_weighted
 
-        count += 2
-    return count
+    def sort_candidates_by_score(self):
+        # via http://stackoverflow.com/questions/613183/sort-a-python-dictionary-by-value
+        return sorted(self.candidates_weighted.items(), key=operator.itemgetter(1), reverse=True)
 
+    def get_top_candidate_functions(self, n=10):
+        return [(fva, score) for fva, score in self.sort_candidates_by_score()[:n]]
 
-def is_unicode_string(s, min_length=4):
-    """
-    mostly from vivisect:detectUnicode
-
-    If the address appears to be the start of a unicode string, then
-    return the string length in bytes, else return -1.
-    This will return true if the memory location is likely
-    *simple* UTF16-LE unicode (<ascii><0><ascii><0><0><0>).
-    """
-    return compute_unicode_string_length(s) >= (min_length * 2)
-
-
-def is_string(s, min_length=4):
-    if is_ascii_string(s, min_length=min_length):
-        return True
-    if is_unicode_string(s, min_length=min_length):
-        return True
-    return False
-
-
-# TODO add --plugin_dir switch at some point
-def get_all_plugins():
-    ps = DecodingRoutineIdentifier.implementors()
-    if len(ps) == 0:
-        ps.append(plugins.function_meta_data_plugin.FunctionCrossReferencesToPlugin())
-        ps.append(plugins.function_meta_data_plugin.FunctionArgumentCountPlugin())
-        ps.append(plugins.function_meta_data_plugin.FunctionIsThunkPlugin())
-        ps.append(plugins.function_meta_data_plugin.FunctionBlockCountPlugin())
-        ps.append(plugins.function_meta_data_plugin.FunctionInstructionCountPlugin())
-        ps.append(plugins.function_meta_data_plugin.FunctionSizePlugin())
-        ps.append(plugins.function_meta_data_plugin.FunctionRecursivePlugin())
-        ps.append(plugins.library_function_plugin.FunctionIsLibraryPlugin())
-        ps.append(plugins.xor_plugin.XORSimplePlugin())
-    return ps
-
-
-def print_plugin_list():
-    print("Available identification plugins:")
-    print("\n".join([" - %s" % plugin.get_name_version() for plugin in get_all_plugins()]))
+    def get_candidate_functions(self):
+        return self.candidate_functions
 
 
 class StringDecoder(viv_utils.LoggingObject):
@@ -225,6 +220,74 @@ def extract_strings(delta_bytes):
     return ret
 
 
+# string functions
+def compute_ascii_string_length(s):
+    for i, c in enumerate(s):
+        if c not in string.printable:
+            return i
+    return len(s)
+
+
+def is_ascii_string(s, min_length=4):
+    return compute_ascii_string_length(s) >= min_length
+
+
+def compute_unicode_string_length(s):
+    """
+    mostly from vivisect:detectUnicode
+
+    If the address appears to be the start of a unicode string, then
+    return the string length in bytes, else return -1.
+    This will return true if the memory location is likely
+    *simple* UTF16-LE unicode (<ascii><0><ascii><0><0><0>).
+    """
+    maxlen = len(s)
+    count = 0
+    while count < maxlen:
+        c0 = s[count]
+        if (count + 1) >= len(s):
+            break
+        c1 = s[count + 1]
+
+        # If it's not null,char,null,char then it's
+        # not simple unicode...
+        if ord(c1) != 0:
+            break
+
+        # If we find our null terminator after more
+        # than 4 chars, we're probably a real string
+        if ord(c0) == 0:
+            break
+
+        # If the first byte char isn't printable, then
+        # we're probably not a real "simple" ascii string
+        if c0 not in string.printable:
+            break
+
+        count += 2
+    return count
+
+
+def is_unicode_string(s, min_length=4):
+    """
+    mostly from vivisect:detectUnicode
+
+    If the address appears to be the start of a unicode string, then
+    return the string length in bytes, else return -1.
+    This will return true if the memory location is likely
+    *simple* UTF16-LE unicode (<ascii><0><ascii><0><0><0>).
+    """
+    return compute_unicode_string_length(s) >= (min_length * 2)
+
+
+def is_string(s, min_length=4):
+    if is_ascii_string(s, min_length=min_length):
+        return True
+    if is_unicode_string(s, min_length=min_length):
+        return True
+    return False
+
+
 def sanitize_string_for_printing(s):
     sanitized_string = s.replace('\n', '\\n')
     sanitized_string = sanitized_string.replace('\r', '\\r')
@@ -240,138 +303,50 @@ def sanitize_string_for_script(s):
     return sanitized_string
 
 
-def create_script_content(sample_file_path, decoded_strings):
-    main_commands = []
-    for ds in decoded_strings:
-        if ds.s != "":
-            sanitized_string = sanitize_string_for_script(ds.s)
-            if ds.global_address:
-                main_commands.append("AppendComment(%d, \"FLOSS: %s\", True)" % (ds.global_address, sanitized_string))
-                main_commands.append("print \"FLOSS: string \\\"%s\\\" at global VA 0x%X\"" % (sanitized_string, ds.global_address))
-            else:
-                main_commands.append("AppendComment(%d, \"FLOSS: %s\")" % (ds.decoded_at_va, sanitized_string))
-                main_commands.append("print \"FLOSS: string \\\"%s\\\" decoded at VA 0x%X\"" % (sanitized_string, ds.decoded_at_va))
-    main_commands.append("print \"Imported %d decoded strings from FLOSS\"" % len(decoded_strings))
-    script_content = """from idc import MakeComm, MakeRptCmt
+def print_plugin_list():
+    print("Available identification plugins:")
+    print("\n".join([" - %s" % plugin.get_name_version() for plugin in get_all_plugins()]))
 
 
-def AppendComment(ea, s, repeatable=False):
-    # see williutils and http://blogs.norman.com/2011/security-research/improving-ida-analysis-of-x64-exception-handling
-    string = Comment(ea)
-    if not string:
-        string = s
-    else:
-        if s in string:  # ignore duplicates
-            return
-        string = string + "\\n" + s
-    if repeatable:
-        MakeRptCmt(ea, string)
-    else:
-        MakeComm(ea, string)
+# TODO add --plugin_dir switch at some point
+def get_all_plugins():
+    ps = DecodingRoutineIdentifier.implementors()
+    if len(ps) == 0:
+        ps.append(plugins.function_meta_data_plugin.FunctionCrossReferencesToPlugin())
+        ps.append(plugins.function_meta_data_plugin.FunctionArgumentCountPlugin())
+        ps.append(plugins.function_meta_data_plugin.FunctionIsThunkPlugin())
+        ps.append(plugins.function_meta_data_plugin.FunctionBlockCountPlugin())
+        ps.append(plugins.function_meta_data_plugin.FunctionInstructionCountPlugin())
+        ps.append(plugins.function_meta_data_plugin.FunctionSizePlugin())
+        ps.append(plugins.function_meta_data_plugin.FunctionRecursivePlugin())
+        ps.append(plugins.library_function_plugin.FunctionIsLibraryPlugin())
+        ps.append(plugins.xor_plugin.XORSimplePlugin())
+    return ps
 
 
-def main():
-    print "Annotating decoded strings for %s"
-    %s
-
-if __name__ == "__main__":
-    main()
-
-""" % (sample_file_path, "\n    ".join(main_commands))
-    return script_content
-
-
-def create_script(ida_python_file, script_content):
-    idapython_file = os.path.abspath(ida_python_file)
-    with open(idapython_file, 'wb') as f:
-        try:
-            f.write(script_content)
-            print("\nWrote IDAPython script file to %s" % idapython_file)
-        except Exception as e:
-            raise e
-
-
-class IdentificationManager(viv_utils.LoggingObject):
-    PLUGIN_WEIGHTS = {"XORSimplePlugin": 0.5,
-                      "FunctionCrossReferencesToPlugin": 0.2,
-                      "FunctionArgumentCountPlugin": 0.2,
-                      "FunctionIsThunkPlugin": -1.0,
-                      "FunctionBlockCountPlugin": 0.025,
-                      "FunctionInstructionCountPlugin": 0.025,
-                      "FunctionSizePlugin": 0.025,
-                      "FunctionRecursivePlugin": 0.025,
-                      "FunctionIsLibraryPlugin": -1.0, }
-
-    def __init__(self, vw, identification_plugins):
-        viv_utils.LoggingObject.__init__(self)
-        self.vw = vw
-        self.plugins = set(identification_plugins)
-        self.candidate_functions = {}
-        self.candidates_weighted = None
-
-    def run_plugins(self, functions, raw_data=False):
-        plugins_to_run = []
-        # TODO: these plugin instances should be passed in from the outside
-        # or a client library cannot provide its own plugins
-        for identifier in get_all_plugins():
-            if str(identifier) in self.plugins:
-                plugins_to_run.append(identifier)
-
-        for plugin in plugins_to_run:
-            decoder_candidates = plugin.identify(self.vw, functions)
-            if raw_data:
-                self.merge_candidates(str(plugin), decoder_candidates)
-            else:
-                scored_candidates = plugin.score(decoder_candidates, self.vw)
-                self.merge_candidates(str(plugin), scored_candidates)
-
-    def merge_candidates(self, plugin_name, plugin_candidates):
-        """
-        Merge data from all plugins into candidate_functions dictionary.
-        """
-
-        if not plugin_candidates:
-            return self.candidate_functions
-
-        for candidate_function in plugin_candidates:
-            if candidate_function in self.candidate_functions.keys():
-                self.d("Function at 0x%08X is already in candidate list, merging", candidate_function)
-                self.candidate_functions[candidate_function][plugin_name] = plugin_candidates[candidate_function]
-            else:
-                self.d("Function at 0x%08X is new, adding", candidate_function)
-                self.candidate_functions[candidate_function] = {}
-                self.candidate_functions[candidate_function][plugin_name] = plugin_candidates[candidate_function]
-
-    def apply_plugin_weights(self):
-        """
-        Return {effective_function_address: weighted_score}, the weighted score is a sum of the score a
-        function received from each plugin multiplied by the plugin's weight. The
-        :return: dictionary storing {effective_function_address: total score}
-        """
-        functions_weighted = {}
-        for candidate_function, plugin_score in self.candidate_functions.items():
-            self.d("0x%08X" % candidate_function)
-            total_score = 0.0
-            for plugin_name, score in plugin_score.items():
-                if plugin_name not in self.PLUGIN_WEIGHTS.keys():
-                    raise Exception("Plugin weight not found: %s" % plugin_name)
-                self.d("[%s] %.05f (weight) * %.05f (score) = %.05f" % (plugin_name, self.PLUGIN_WEIGHTS[plugin_name],
-                                                                        score, self.PLUGIN_WEIGHTS[plugin_name] * score))
-                total_score = total_score + (self.PLUGIN_WEIGHTS[plugin_name] * score)
-            self.d("Total score: %.05f\n" % total_score)
-            functions_weighted[candidate_function] = total_score
-
-        self.candidates_weighted = functions_weighted
-
-    def sort_candidates_by_score(self):
-        # via http://stackoverflow.com/questions/613183/sort-a-python-dictionary-by-value
-        return sorted(self.candidates_weighted.items(), key=operator.itemgetter(1), reverse=True)
-
-    def get_top_candidate_functions(self, n=10):
-        return [fva for fva, _ in self.sort_candidates_by_score()[:n]]
-
-    def get_candidate_functions(self):
-        return self.candidate_functions
+def make_parser():
+    usage_message = "%prog [options] FILEPATH"
+    parser = OptionParser(usage=usage_message, version="%prog " + floss_version)
+    parser.add_option("-v", "--verbose", dest="verbose",
+                        help="show verbose messages and warnings", action="store_true")
+    parser.add_option("-d", "--debug", dest="debug",
+                        help="show all trace messages", action="store_true")
+    parser.add_option("-f", "--functions", dest="functions",
+                        help="only analyze the specified functions (comma-separated)",
+                        type="string")
+    parser.add_option("-g", "--group", dest="group_functions",
+                        help="group output by virtual address of decoding functions",
+                        action="store_true")
+    parser.add_option("-i", "--ida", dest="ida_python_file",
+                        help="create an IDAPython script to annotate the decoded strings in an IDB file")
+    parser.add_option("-n", "--minimum-length", dest="min_length",
+                        help="minimum string length (default is 3)")
+    parser.add_option("-p", "--plugins", dest="plugins",
+                        help="apply the specified identification plugins only (comma-separated)")
+    parser.add_option("-l", "--list-plugins", dest="list_plugins",
+                        help="list all available identification plugins and exit",
+                        action="store_true")
+    return parser
 
 
 def set_logging_level(should_debug=False, should_verbose=False):
@@ -442,6 +417,15 @@ def select_plugins(plugin_names=None):
     return plugin_names
 
 
+def print_identification_results(sample_file_path, decoder_results):
+    print("\nMost likely decoding functions in: " + sample_file_path)
+    print("address:    score:  ")
+    print("----------  -------")
+    for fva, score in decoder_results.get_top_candidate_functions(10):
+        print("0x%08X: %.5f" % (fva, score))
+    print("")
+
+
 def filter_str_len(decoded_strings, min_length):
         ds_filtered = []
         for ds in decoded_strings:
@@ -450,48 +434,6 @@ def filter_str_len(decoded_strings, min_length):
             else:
                 ds_filtered.append(ds)
         return ds_filtered
-
-
-def output_strings(ds_filtered):
-    print("Offset       Called At    String")
-    print("----------   ----------   -------------------------------------")
-    for ds in ds_filtered:
-        va = ds.va or 0
-        print("0x%08X   0x%08X   %s" % (va, ds.decoded_at_va, sanitize_string_for_printing(ds.s)))
-
-
-def make_parser():
-    usage_message = "%prog [options] FILEPATH"
-    parser = OptionParser(usage=usage_message, version="%prog " + floss_version)
-    parser.add_option("-v", "--verbose", dest="verbose",
-                        help="show verbose messages and warnings", action="store_true")
-    parser.add_option("-d", "--debug", dest="debug",
-                        help="show all trace messages", action="store_true")
-    parser.add_option("-f", "--functions", dest="functions",
-                        help="only analyze the specified functions (comma-separated)",
-                        type="string")
-    parser.add_option("-g", "--group", dest="group_functions",
-                        help="group output by virtual address of decoding functions",
-                        action="store_true")
-    parser.add_option("-i", "--ida", dest="ida_python_file",
-                        help="create an IDAPython script to annotate the decoded strings in an IDB file")
-    parser.add_option("-n", "--minimum-length", dest="min_length",
-                        help="minimum string length (default is 3)")
-    parser.add_option("-p", "--plugins", dest="plugins",
-                        help="apply the specified identification plugins only (comma-separated)")
-    parser.add_option("-l", "--list-plugins", dest="list_plugins",
-                        help="list all available identification plugins and exit",
-                        action="store_true")
-    return parser
-
-
-def print_identification_results(sample_file_path, decoder_results):
-    print("\nMost likely decoding functions in: " + sample_file_path)
-    print("address:    score:  ")
-    print("----------  -------")
-    for fva, score in decoder_results.sort_candidates_by_score()[:10]:
-        print("0x%08X: %.5f" % (fva, score))
-    print("")
 
 
 def print_decoding_results(decoded_strings, min_length, group_functions):
@@ -506,6 +448,65 @@ def print_decoding_results(decoded_strings, min_length, group_functions):
                 output_strings(ds_filtered)
     else:
         output_strings(decoded_strings)
+
+
+def output_strings(ds_filtered):
+    print("Offset       Called At    String")
+    print("----------   ----------   -------------------------------------")
+    for ds in ds_filtered:
+        va = ds.va or 0
+        print("0x%08X   0x%08X   %s" % (va, ds.decoded_at_va, sanitize_string_for_printing(ds.s)))
+
+
+def create_script_content(sample_file_path, decoded_strings):
+    main_commands = []
+    for ds in decoded_strings:
+        if ds.s != "":
+            sanitized_string = sanitize_string_for_script(ds.s)
+            if ds.global_address:
+                main_commands.append("AppendComment(%d, \"FLOSS: %s\", True)" % (ds.global_address, sanitized_string))
+                main_commands.append("print \"FLOSS: string \\\"%s\\\" at global VA 0x%X\"" % (sanitized_string, ds.global_address))
+            else:
+                main_commands.append("AppendComment(%d, \"FLOSS: %s\")" % (ds.decoded_at_va, sanitized_string))
+                main_commands.append("print \"FLOSS: string \\\"%s\\\" decoded at VA 0x%X\"" % (sanitized_string, ds.decoded_at_va))
+    main_commands.append("print \"Imported %d decoded strings from FLOSS\"" % len(decoded_strings))
+    script_content = """from idc import MakeComm, MakeRptCmt
+
+
+def AppendComment(ea, s, repeatable=False):
+    # see williutils and http://blogs.norman.com/2011/security-research/improving-ida-analysis-of-x64-exception-handling
+    string = Comment(ea)
+    if not string:
+        string = s
+    else:
+        if s in string:  # ignore duplicates
+            return
+        string = string + "\\n" + s
+    if repeatable:
+        MakeRptCmt(ea, string)
+    else:
+        MakeComm(ea, string)
+
+
+def main():
+    print "Annotating decoded strings for %s"
+    %s
+
+if __name__ == "__main__":
+    main()
+
+""" % (sample_file_path, "\n    ".join(main_commands))
+    return script_content
+
+
+def create_script(ida_python_file, script_content):
+    idapython_file = os.path.abspath(ida_python_file)
+    with open(idapython_file, 'wb') as f:
+        try:
+            f.write(script_content)
+            print("\nWrote IDAPython script file to %s" % idapython_file)
+        except Exception as e:
+            raise e
 
 
 def main():
@@ -552,7 +553,7 @@ def main():
 
     floss_logger.info("decoding strings...")
     decoded_strings = []
-    for fva, _ in decoder_results.sort_candidates_by_score()[:10]:
+    for fva, _ in decoder_results.get_top_candidate_functions(10):
         for ctx in string_decoder.extract_decoding_contexts(fva):
             for delta in string_decoder.emulate_decoding_routine(fva, ctx):
                 for delta_bytes in extract_delta_bytes(delta, ctx.decoded_at_va, fva):
