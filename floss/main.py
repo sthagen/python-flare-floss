@@ -146,6 +146,16 @@ class StringDecoder(viv_utils.LoggingObject):
         deltas = femu.emulate_function(context.return_address, 2000)
         return deltas
 
+    def decode_strings(self, decoding_functions_candidates, min_length):
+        decoded_strings = []
+        for fva, _ in decoding_functions_candidates.get_top_candidate_functions(10):
+            for ctx in self.extract_decoding_contexts(fva):
+                for delta in self.emulate_decoding_routine(fva, ctx):
+                    for delta_bytes in extract_delta_bytes(delta, ctx.decoded_at_va, fva):
+                        for decoded_string in extract_strings(delta_bytes, min_length):
+                            decoded_strings.append(decoded_string)
+        return decoded_strings
+
 
 def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
     delta_bytes = []
@@ -194,8 +204,7 @@ def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
     return delta_bytes
 
 
-def extract_strings(delta_bytes):
-    min_length = 4
+def extract_strings(delta_bytes, min_length):
     ret = []
     queue = [delta_bytes]
     while len(queue) > 0:
@@ -383,10 +392,19 @@ def set_logging_level(should_debug=False, should_verbose=False):
         logging.getLogger("plugins.xor_plugin.XORSimplePlugin").setLevel(logging.ERROR)
 
 
-def select_functions(vw, function_vas=None):
+def parse_functions_option(functions_option):
+    fvas = None
+    if functions_option:
+        fvas = [int(fva, 0x10) for fva in functions_option.split(",")]
+    return fvas
+
+
+def select_functions(vw, functions_option):
     """
     given a workspace and sequence of function addresses, return the list of valid functions, or all valid function addresses.
     """
+    function_vas = parse_functions_option(functions_option)
+
     if function_vas is None:
         return vw.getFunctions()
 
@@ -394,15 +412,22 @@ def select_functions(vw, function_vas=None):
     workspace_functions = set(vw.getFunctions())
     if len(function_vas - workspace_functions) > 0:
         floss_logger.warn("Functions don't exist:", function_vas - workspace_functions)
+        # TODO handle exception
         raise Exception("Functions not found")
 
     return function_vas
 
 
-def select_plugins(plugin_names=None):
+def parse_plugins_option(plugins_option):
+    return (plugins_option or "").split(",")
+
+
+def select_plugins(plugins_option):
     """
     return the list of valid plugin names from the list of plugin names, or all valid plugin names.
     """
+    plugin_names = parse_plugins_option(plugins_option)
+
     plugin_names = set(plugin_names)
     all_plugin_names = set(map(str, get_all_plugins()))
 
@@ -412,9 +437,16 @@ def select_plugins(plugin_names=None):
         return list(all_plugin_names)
 
     if len(plugin_names - all_plugin_names) > 0:
+        # TODO handle exception
         raise Exception("Plugin not found")
 
     return plugin_names
+
+
+def parse_min_length_option(min_length_option):
+    default_min_length = 3
+    min_length = int(min_length_option or str(default_min_length))
+    return min_length
 
 
 def print_identification_results(sample_file_path, decoder_results):
@@ -426,16 +458,6 @@ def print_identification_results(sample_file_path, decoder_results):
     print("")
 
 
-def filter_str_len(decoded_strings, min_length):
-        ds_filtered = []
-        for ds in decoded_strings:
-            if len(ds.s) < min_length:
-                continue
-            else:
-                ds_filtered.append(ds)
-        return ds_filtered
-
-
 def print_decoding_results(decoded_strings, min_length, group_functions):
     print("FLOSS decoded %d strings" % len(decoded_strings))
     if group_functions:
@@ -444,7 +466,7 @@ def print_decoding_results(decoded_strings, min_length, group_functions):
             ds_filtered = filter(lambda ds: ds.fva == fva, decoded_strings)
             len_ds = len(ds_filtered)
             if len_ds > 0:
-                print("\nDecoding function at 0x%X (decoded %d strings)" % (fva, len_ds))
+                print("Decoding function at 0x%X (decoded %d strings)" % (fva, len_ds))
                 output_strings(ds_filtered)
     else:
         output_strings(decoded_strings)
@@ -456,6 +478,7 @@ def output_strings(ds_filtered):
     for ds in ds_filtered:
         va = ds.va or 0
         print("0x%08X   0x%08X   %s" % (va, ds.decoded_at_va, sanitize_string_for_printing(ds.s)))
+    print("")
 
 
 def create_script_content(sample_file_path, decoded_strings):
@@ -499,12 +522,13 @@ if __name__ == "__main__":
     return script_content
 
 
-def create_script(ida_python_file, script_content):
-    idapython_file = os.path.abspath(ida_python_file)
-    with open(idapython_file, 'wb') as f:
+def create_script(sample_file_path, ida_python_file, decoded_strings):
+    script_content = create_script_content(sample_file_path, decoded_strings)
+    ida_python_file = os.path.abspath(ida_python_file)
+    with open(ida_python_file, 'wb') as f:
         try:
             f.write(script_content)
-            print("\nWrote IDAPython script file to %s" % idapython_file)
+            print("Wrote IDAPython script file to %s\n" % ida_python_file)
         except Exception as e:
             raise e
 
@@ -516,11 +540,11 @@ def main():
     parser = make_parser()
     options, args = parser.parse_args()
 
+    set_logging_level(options.debug, options.verbose)
+
     if options.list_plugins:
         print_plugin_list()
         sys.exit(0)
-
-    set_logging_level(options.debug, options.verbose)
 
     try_help_msg = "Try '%s -h' for more information" % parser.get_prog_name()
     if len(args) != 1:
@@ -534,45 +558,31 @@ def main():
 
     vw = viv_utils.getWorkspace(sample_file_path)
 
-    fvas = None
-    if options.functions:
-        fvas = [int(fva, 0x10) for fva in options.functions.split(",")]
-    selected_functions = select_functions(vw, fvas)
+    selected_functions = select_functions(vw, options.functions)
     floss_logger.debug("Selected the following functions: %s", ", ".join(map(hex, selected_functions)))
 
-    selected_plugins = select_plugins((options.plugins or "").split(","))
+    selected_plugins = select_plugins(options.plugins)
     floss_logger.debug("Selected the following plugins: %s", ", ".join(map(str, selected_plugins)))
+
+    min_length = parse_min_length_option(options.min_length)
 
     time0 = time()
 
     string_decoder = StringDecoder(vw)
 
-    floss_logger.info("identifying decoding functions...")
-    decoder_results = string_decoder.identify_decoding_functions(selected_plugins, selected_functions)
-    print_identification_results(sample_file_path, decoder_results)
+    floss_logger.info("Identifying decoding functions...")
+    decoding_functions_candidates = string_decoder.identify_decoding_functions(selected_plugins, selected_functions)
+    print_identification_results(sample_file_path, decoding_functions_candidates)
 
-    floss_logger.info("decoding strings...")
-    decoded_strings = []
-    for fva, _ in decoder_results.get_top_candidate_functions(10):
-        for ctx in string_decoder.extract_decoding_contexts(fva):
-            for delta in string_decoder.emulate_decoding_routine(fva, ctx):
-                for delta_bytes in extract_delta_bytes(delta, ctx.decoded_at_va, fva):
-                    for decoded_string in extract_strings(delta_bytes):
-                        decoded_strings.append(decoded_string)
-
-    default_min_length = 3
-    min_length = int(options.min_length or str(default_min_length))
-
-    decoded_strings = filter_str_len(decoded_strings, min_length)
+    floss_logger.info("Decoding strings...")
+    decoded_strings = string_decoder.decode_strings(decoding_functions_candidates, min_length)
     print_decoding_results(decoded_strings, min_length, options.group_functions)
 
     if options.ida_python_file:
-        floss_logger.info("creating IDA script...")
-        script_content = create_script_content(sample_file_path, decoded_strings)
-        create_script(options.ida_python_file, script_content)
+        floss_logger.info("Creating IDA script...")
+        create_script(sample_file_path, options.ida_python_file, decoded_strings)
 
     time1 = time()
-
     print("Finished execution after %f seconds" % (time1 - time0))
 
 
