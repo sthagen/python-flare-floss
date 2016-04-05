@@ -399,17 +399,29 @@ def parse_functions_option(functions_option):
     return fvas
 
 
+def parse_sample_file_path(parser, args):
+    try_help_msg = "Try '%s -h' for more information" % parser.get_prog_name()
+    if len(args) != 1:
+        parser.error("Please provide a valid file path\n%s" % try_help_msg)
+    sample_file_path = args[0]
+    if not os.path.exists(sample_file_path):
+        parser.error("File '%s' does not exist\n%s" % (sample_file_path, try_help_msg))
+    if not os.path.isfile(sample_file_path):
+        parser.error("'%s' is not a file\n%s" % (sample_file_path, try_help_msg))
+    return sample_file_path
+
+
 def select_functions(vw, functions_option):
     """
     given a workspace and sequence of function addresses, return the list of valid functions, or all valid function addresses.
     """
     function_vas = parse_functions_option(functions_option)
 
+    workspace_functions = set(vw.getFunctions())
     if function_vas is None:
-        return vw.getFunctions()
+        return workspace_functions
 
     function_vas = set(function_vas)
-    workspace_functions = set(vw.getFunctions())
     if len(function_vas - workspace_functions) > 0:
         floss_logger.warn("Functions don't exist:", function_vas - workspace_functions)
         # TODO handle exception
@@ -546,16 +558,9 @@ def main():
         print_plugin_list()
         sys.exit(0)
 
-    try_help_msg = "Try '%s -h' for more information" % parser.get_prog_name()
-    if len(args) != 1:
-        parser.error("Please provide a valid file path\n%s" % try_help_msg)
+    sample_file_path = parse_sample_file_path(parser, args)
 
-    sample_file_path = args[0]
-    if not os.path.exists(sample_file_path):
-        parser.error("File '%s' does not exist\n%s" % (sample_file_path, try_help_msg))
-    if not os.path.isfile(sample_file_path):
-        parser.error("'%s' is not a file\n%s" % (sample_file_path, try_help_msg))
-
+    floss_logger.info("Generating vivisect workspace")
     vw = viv_utils.getWorkspace(sample_file_path)
 
     selected_functions = select_functions(vw, options.functions)
