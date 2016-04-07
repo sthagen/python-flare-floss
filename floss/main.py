@@ -479,17 +479,19 @@ def print_decoding_results(decoded_strings, min_length, group_functions):
             len_ds = len(ds_filtered)
             if len_ds > 0:
                 print("Decoding function at 0x%X (decoded %d strings)" % (fva, len_ds))
-                output_strings(ds_filtered)
+                output_strings(ds_filtered, min_length)
     else:
-        output_strings(decoded_strings)
+        output_strings(decoded_strings, min_length)
 
 
-def output_strings(ds_filtered):
+def output_strings(ds_filtered, min_length):
     print("Offset       Called At    String")
     print("----------   ----------   -------------------------------------")
     for ds in ds_filtered:
         va = ds.va or 0
-        print("0x%08X   0x%08X   %s" % (va, ds.decoded_at_va, sanitize_string_for_printing(ds.s)))
+        s = sanitize_string_for_printing(ds.s)
+        if len(s) >= min_length:
+            print("0x%08X   0x%08X   %s" % (va, ds.decoded_at_va, s))
     print("")
 
 
@@ -559,6 +561,7 @@ def main():
         sys.exit(0)
 
     sample_file_path = parse_sample_file_path(parser, args)
+    min_length = parse_min_length_option(options.min_length)
 
     floss_logger.info("Generating vivisect workspace")
     vw = viv_utils.getWorkspace(sample_file_path)
@@ -568,8 +571,6 @@ def main():
 
     selected_plugins = select_plugins(options.plugins)
     floss_logger.debug("Selected the following plugins: %s", ", ".join(map(str, selected_plugins)))
-
-    min_length = parse_min_length_option(options.min_length)
 
     time0 = time()
 
