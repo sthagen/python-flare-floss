@@ -14,12 +14,13 @@ import plugnplay
 import viv_utils
 import envi.memory
 
-from interfaces import DecodingRoutineIdentifier
+import strings
 import plugins.xor_plugin
 import plugins.library_function_plugin
 import plugins.function_meta_data_plugin
-from FunctionArgumentGetter import get_function_contexts
 from utils import makeEmulator
+from interfaces import DecodingRoutineIdentifier
+from FunctionArgumentGetter import get_function_contexts
 from DecodingManager import DecodedString, FunctionEmulator
 
 
@@ -204,12 +205,17 @@ def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
     return delta_bytes
 
 
-def extract_strings(delta_bytes, min_length):
+def extract_strings(delta, min_length):
     ret = []
-    for s in strings.ascii_strings(delta_bytes.s):
-        ret.append(DecodedString(d.va + s.offset, s.s, d.decoded_at_va, d.fva, d.global_address))
-    for s in strings.unicode_strings(delta_bytes.s):
-        ret.append(DecodedString(d.va + s.offset, s.s, d.decoded_at_va, d.fva, d.global_address))
+    for s in strings.ascii_strings(delta.s):
+        if s.s == "A" * len(s.s):
+            # ignore strings of all "A", which is likely taint data
+            continue
+        ret.append(DecodedString(delta.va + s.offset, s.s, delta.decoded_at_va, delta.fva, delta.global_address))
+    for s in strings.unicode_strings(delta.s):
+        if s.s == "A" * len(s.s):
+            continue
+        ret.append(DecodedString(delta.va + s.offset, s.s, delta.decoded_at_va, delta.fva, delta.global_address))
     return ret
 
 
