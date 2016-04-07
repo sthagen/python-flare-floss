@@ -3,6 +3,8 @@ from collections import namedtuple
 
 
 ASCII_BYTE = " !\"#\$%&\'\(\)\*\+,-\./0123456789:;<=>\?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\[\]\^_`abcdefghijklmnopqrstuvwxyz\{\|\}\\\~\t"
+ASCII_RE_4 = re.compile("([%s]{%d,})" % (ASCII_BYTE, 4))
+UNICODE_RE_4 = re.compile(b"((?:[%s]\x00){%d,})" % (ASCII_BYTE, 4))
 
 
 String = namedtuple("String", ["s", "offset"])
@@ -18,10 +20,15 @@ def extract_ascii_strings(buf, n=4):
     :type n: int
     :rtype: Sequence[String]
     '''
-    reg = "([%s]{%d,})" % (ASCII_BYTE, n)
-    ascii_re = re.compile(reg)
-    for match in ascii_re.finditer(buf):
+    r = None
+    if n == 4:
+        r = ASCII_RE_4
+    else:
+        reg = "([%s]{%d,})" % (ASCII_BYTE, n)
+        r = re.compile(reg)
+    for match in r.finditer(buf):
         yield String(match.group().decode("ascii"), match.start())
+
 
 def extract_unicode_strings(buf, n=4):
     '''
@@ -33,9 +40,12 @@ def extract_unicode_strings(buf, n=4):
     :type n: int
     :rtype: Sequence[String]
     '''
-    reg = b"((?:[%s]\x00){%d,})" % (ASCII_BYTE, n)
-    ascii_re = re.compile(reg)
-    for match in ascii_re.finditer(buf):
+    if n == 4:
+        r = UNICODE_RE_4
+    else:
+        reg = b"((?:[%s]\x00){%d,})" % (ASCII_BYTE, n)
+        r = re.compile(reg)
+    for match in r.finditer(buf):
         try:
             yield String(match.group().decode("utf-16"), match.start())
         except UnicodeDecodeError:
