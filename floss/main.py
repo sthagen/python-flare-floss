@@ -113,16 +113,6 @@ class IdentificationManager(viv_utils.LoggingObject):
 
 
 class StringDecoder(viv_utils.LoggingObject):
-    """
-    decoder = StringDecoder(vw)
-    for fva in decoder.identify_decoding_functions(plugins, functions):
-        for ctx in decoder.extract_decoding_contexts(fva):
-            for delta in decoder.emulate_decoding_routine(index, fva, ctx):
-                for delta_bytes decoder.extract_delta_bytes(delta, min_length, source_fva=function):
-                    for decoded_string in decoder.extract_strings(delta_bytes)
-                        print(decoded_string.offset, decoded_strings)
-    """
-
     def __init__(self, vw):
         viv_utils.LoggingObject.__init__(self)
         self.vw = vw
@@ -181,7 +171,8 @@ def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
         (_, _, _, bytes_after) = section_after
         if section_after_start not in mem_before:
             # TODO delta bytes instead of decoded strings
-            delta_bytes.append(DecodedString(section_after_start, bytes_after, decoded_at_va, source_fva, False))
+            delta_bytes.append(DecodedString(section_after_start, bytes_after, 
+                                             decoded_at_va, source_fva, False))
             continue
 
         section_before = mem_before[section_after_start]
@@ -192,8 +183,8 @@ def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
             address = section_after_start + offset
 
             if stack_start <= address <= sp:
-                # every stack address that exceeds the stack pointer can be ignored because it is local
-                # to child stack frame
+                # every stack address that exceeds the stack pointer can be
+                # ignored because it is local to child stack frame
                 continue
 
             diff_bytes = bytes_after[offset:offset + length]
@@ -201,7 +192,8 @@ def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
             if not (stack_start <= address < stack_end):
                 # address is in global memory
                 global_address = address
-            delta_bytes.append(DecodedString(address, diff_bytes, decoded_at_va, source_fva, global_address))
+            delta_bytes.append(DecodedString(address, diff_bytes, decoded_at_va,
+                                             source_fva, global_address))
     return delta_bytes
 
 
@@ -211,11 +203,13 @@ def extract_strings(delta, min_length):
         if s.s == "A" * len(s.s):
             # ignore strings of all "A", which is likely taint data
             continue
-        ret.append(DecodedString(delta.va + s.offset, s.s, delta.decoded_at_va, delta.fva, delta.global_address))
+        ret.append(DecodedString(delta.va + s.offset, s.s, delta.decoded_at_va,
+                                 delta.fva, delta.global_address))
     for s in strings.extract_unicode_strings(delta.s):
         if s.s == "A" * len(s.s):
             continue
-        ret.append(DecodedString(delta.va + s.offset, s.s, delta.decoded_at_va, delta.fva, delta.global_address))
+        ret.append(DecodedString(delta.va + s.offset, s.s, delta.decoded_at_va,
+                                 delta.fva, delta.global_address))
     return ret
 
 
@@ -337,7 +331,8 @@ def parse_sample_file_path(parser, args):
 
 def select_functions(vw, functions_option):
     """
-    given a workspace and sequence of function addresses, return the list of valid functions, or all valid function addresses.
+    given a workspace and sequence of function addresses, 
+     return the list of valid functions, or all valid function addresses.
     """
     function_vas = parse_functions_option(functions_option)
 
@@ -390,7 +385,7 @@ def print_identification_results(sample_file_path, decoder_results):
     print("address:    score:  ")
     print("----------  -------")
     for fva, score in decoder_results.get_top_candidate_functions(10):
-        print("0x%08X: %.5f" % (fva, score))
+        print("0x%08X %.5f" % (fva, score))
     print("")
 
 
@@ -403,17 +398,19 @@ def print_decoding_results(decoded_strings, min_length, group_functions):
             len_ds = len(ds_filtered)
             if len_ds > 0:
                 print("Decoding function at 0x%X (decoded %d strings)" % (fva, len_ds))
-                output_strings(ds_filtered)
+                output_strings(ds_filtered, min_length)
     else:
-        output_strings(decoded_strings)
+        output_strings(decoded_strings, min_length)
 
 
-def output_strings(ds_filtered):
+def output_strings(ds_filtered, min_length):
     print("Offset       Called At    String")
     print("----------   ----------   -------------------------------------")
     for ds in ds_filtered:
         va = ds.va or 0
-        print("0x%08X   0x%08X   %s" % (va, ds.decoded_at_va, sanitize_string_for_printing(ds.s)))
+        s = sanitize_string_for_printing(ds.s)
+        if len(s) >= min_length:
+            print("0x%08X   0x%08X   %s" % (va, ds.decoded_at_va, s))
     print("")
 
 
@@ -506,7 +503,7 @@ def main():
     min_length = parse_min_length_option(options.min_length)
 
     if options.all_strings:
-        floss_logger.info("Extracting static strings")
+        floss_logger.info("Extracting static strings...")
         print_all_strings(sample_file_path, n=min_length)
 
     floss_logger.info("Generating vivisect workspace")
@@ -517,7 +514,6 @@ def main():
 
     selected_plugins = select_plugins(options.plugins)
     floss_logger.debug("Selected the following plugins: %s", ", ".join(map(str, selected_plugins)))
-
 
     time0 = time()
 
