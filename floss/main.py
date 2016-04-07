@@ -207,12 +207,12 @@ def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
 
 def extract_strings(delta, min_length):
     ret = []
-    for s in strings.ascii_strings(delta.s):
+    for s in strings.extract_ascii_strings(delta.s):
         if s.s == "A" * len(s.s):
             # ignore strings of all "A", which is likely taint data
             continue
         ret.append(DecodedString(delta.va + s.offset, s.s, delta.decoded_at_va, delta.fva, delta.global_address))
-    for s in strings.unicode_strings(delta.s):
+    for s in strings.extract_unicode_strings(delta.s):
         if s.s == "A" * len(s.s):
             continue
         ret.append(DecodedString(delta.va + s.offset, s.s, delta.decoded_at_va, delta.fva, delta.global_address))
