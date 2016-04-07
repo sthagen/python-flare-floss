@@ -258,6 +258,8 @@ def get_all_plugins():
 def make_parser():
     usage_message = "%prog [options] FILEPATH"
     parser = OptionParser(usage=usage_message, version="%prog " + floss_version)
+    parser.add_option("-a", "--all_strings", dest="all_strings", action="store_true",
+                        help="also extract static ASCII and UTF-16 strings from the file")
     parser.add_option("-v", "--verbose", dest="verbose",
                         help="show verbose messages and warnings", action="store_true")
     parser.add_option("-d", "--debug", dest="debug",
@@ -467,6 +469,26 @@ def create_script(sample_file_path, ida_python_file, decoded_strings):
             raise e
 
 
+def print_all_strings(path, n=4):
+    with open(path, "rb") as f:
+        b = f.read()
+
+    print("Static ASCII strings")
+    print("Offset       String")
+    print("----------   -------------------------------------")
+    ret = []
+    for s in strings.extract_ascii_strings(b, n=n):
+        print("0x%08X   %s" % (s.offset, s.s))
+    print("")
+
+    print("Static UTF-16 strings")
+    print("Offset       String")
+    print("----------   -------------------------------------")
+    for s in strings.extract_unicode_strings(b, n=n):
+        print("0x%08X   %s" % (s.offset, s.s))
+    print("")
+
+
 def main():
     # default to INFO, unless otherwise changed
     logging.basicConfig(level=logging.WARNING)
@@ -481,6 +503,11 @@ def main():
         sys.exit(0)
 
     sample_file_path = parse_sample_file_path(parser, args)
+    min_length = parse_min_length_option(options.min_length)
+
+    if options.all_strings:
+        floss_logger.info("Extracting static strings")
+        print_all_strings(sample_file_path, n=min_length)
 
     floss_logger.info("Generating vivisect workspace")
     vw = viv_utils.getWorkspace(sample_file_path)
@@ -491,7 +518,6 @@ def main():
     selected_plugins = select_plugins(options.plugins)
     floss_logger.debug("Selected the following plugins: %s", ", ".join(map(str, selected_plugins)))
 
-    min_length = parse_min_length_option(options.min_length)
 
     time0 = time()
 
