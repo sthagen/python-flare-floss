@@ -206,95 +206,11 @@ def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
 
 def extract_strings(delta_bytes, min_length):
     ret = []
-    queue = [delta_bytes]
-    while len(queue) > 0:
-        d = queue.pop()
-        s = d.s.replace("\x00\x00\x00\x00", "")  # quickly remove large empty regions
-        if is_unicode_string(s, min_length=min_length):
-            slen = compute_unicode_string_length(s)
-            ds = s[:slen].decode("utf-16")
-            if ds != "A" * slen:
-                ret.append(DecodedString(d.va, ds, d.decoded_at_va, d.fva, d.global_address))
-            queue.append(DecodedString(d.va + slen, s[slen:], d.decoded_at_va, d.fva, d.global_address))
-        elif is_ascii_string(s, min_length=min_length):
-            slen = compute_ascii_string_length(s)
-            ds = s[:slen].decode("ascii")
-            if ds != "A" * slen:
-                ret.append(DecodedString(d.va, ds, d.decoded_at_va, d.fva, d.global_address))
-            queue.append(DecodedString(d.va + slen, s[slen:], d.decoded_at_va, d.fva, d.global_address))
-        else:
-            if len(s) > 1:
-                # chop off the first byte, then keep searching
-                queue.append(DecodedString(d.va + 1, s[1:], d.decoded_at_va, d.fva, d.global_address))
+    for s in strings.ascii_strings(delta_bytes.s):
+        ret.append(DecodedString(d.va + s.offset, s.s, d.decoded_at_va, d.fva, d.global_address))
+    for s in strings.unicode_strings(delta_bytes.s):
+        ret.append(DecodedString(d.va + s.offset, s.s, d.decoded_at_va, d.fva, d.global_address))
     return ret
-
-
-# string functions
-def compute_ascii_string_length(s):
-    for i, c in enumerate(s):
-        if c not in string.printable:
-            return i
-    return len(s)
-
-
-def is_ascii_string(s, min_length=4):
-    return compute_ascii_string_length(s) >= min_length
-
-
-def compute_unicode_string_length(s):
-    """
-    mostly from vivisect:detectUnicode
-
-    If the address appears to be the start of a unicode string, then
-    return the string length in bytes, else return -1.
-    This will return true if the memory location is likely
-    *simple* UTF16-LE unicode (<ascii><0><ascii><0><0><0>).
-    """
-    maxlen = len(s)
-    count = 0
-    while count < maxlen:
-        c0 = s[count]
-        if (count + 1) >= len(s):
-            break
-        c1 = s[count + 1]
-
-        # If it's not null,char,null,char then it's
-        # not simple unicode...
-        if ord(c1) != 0:
-            break
-
-        # If we find our null terminator after more
-        # than 4 chars, we're probably a real string
-        if ord(c0) == 0:
-            break
-
-        # If the first byte char isn't printable, then
-        # we're probably not a real "simple" ascii string
-        if c0 not in string.printable:
-            break
-
-        count += 2
-    return count
-
-
-def is_unicode_string(s, min_length=4):
-    """
-    mostly from vivisect:detectUnicode
-
-    If the address appears to be the start of a unicode string, then
-    return the string length in bytes, else return -1.
-    This will return true if the memory location is likely
-    *simple* UTF16-LE unicode (<ascii><0><ascii><0><0><0>).
-    """
-    return compute_unicode_string_length(s) >= (min_length * 2)
-
-
-def is_string(s, min_length=4):
-    if is_ascii_string(s, min_length=min_length):
-        return True
-    if is_unicode_string(s, min_length=min_length):
-        return True
-    return False
 
 
 def sanitize_string_for_printing(s):
