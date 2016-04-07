@@ -273,6 +273,8 @@ def make_parser():
     parser.add_option("-l", "--list-plugins", dest="list_plugins",
                         help="list all available identification plugins and exit",
                         action="store_true")
+    parser.add_option("-q", "--quiet", dest="quiet", action="store_true",
+                        help="suppress headers and formatting to print only extracted strings")
     return parser
 
 
@@ -389,29 +391,37 @@ def print_identification_results(sample_file_path, decoder_results):
     print("")
 
 
-def print_decoding_results(decoded_strings, min_length, group_functions):
-    print("FLOSS decoded %d strings" % len(decoded_strings))
+def print_decoding_results(decoded_strings, min_length, group_functions, quiet=False):
+    if not quiet:
+        print("FLOSS decoded %d strings" % len(decoded_strings))
     if group_functions:
         fvas = set(map(lambda i: i.fva, decoded_strings))
         for fva in fvas:
             ds_filtered = filter(lambda ds: ds.fva == fva, decoded_strings)
             len_ds = len(ds_filtered)
             if len_ds > 0:
-                print("Decoding function at 0x%X (decoded %d strings)" % (fva, len_ds))
-                output_strings(ds_filtered, min_length)
+                if not quiet:
+                    print("Decoding function at 0x%X (decoded %d strings)" % (fva, len_ds))
+                output_strings(ds_filtered, min_length, quiet=quiet)
     else:
-        output_strings(decoded_strings, min_length)
+        output_strings(decoded_strings, min_length, quiet=quiet)
 
 
-def output_strings(ds_filtered, min_length):
-    print("Offset       Called At    String")
-    print("----------   ----------   -------------------------------------")
+def output_strings(ds_filtered, min_length, quiet=False):
+    if not quiet:
+        print("Offset       Called At    String")
+        print("----------   ----------   -------------------------------------")
+
     for ds in ds_filtered:
         va = ds.va or 0
         s = sanitize_string_for_printing(ds.s)
         if len(s) >= min_length:
-            print("0x%08X   0x%08X   %s" % (va, ds.decoded_at_va, s))
-    print("")
+            if quiet:
+                print("%s" % (s))
+            else:
+                print("0x%08X   0x%08X   %s" % (va, ds.decoded_at_va, s))
+    if not quiet:
+        print("")
 
 
 def create_script_content(sample_file_path, decoded_strings):
@@ -466,24 +476,29 @@ def create_script(sample_file_path, ida_python_file, decoded_strings):
             raise e
 
 
-def print_all_strings(path, n=4):
+def print_all_strings(path, n=4, quiet=False):
     with open(path, "rb") as f:
         b = f.read()
 
-    print("Static ASCII strings")
-    print("Offset       String")
-    print("----------   -------------------------------------")
-    ret = []
-    for s in strings.extract_ascii_strings(b, n=n):
-        print("0x%08X   %s" % (s.offset, s.s))
-    print("")
+    if quiet:
+        for s in strings.extract_ascii_strings(b, n=n):
+            print("%s" % (s.s))
+        for s in strings.extract_unicode_strings(b, n=n):
+            print("%s" % (s.s))
+    else:
+        print("Static ASCII strings")
+        print("Offset       String")
+        print("----------   -------------------------------------")
+        for s in strings.extract_ascii_strings(b, n=n):
+            print("0x%08X   %s" % (s.offset, s.s))
+        print("")
 
-    print("Static UTF-16 strings")
-    print("Offset       String")
-    print("----------   -------------------------------------")
-    for s in strings.extract_unicode_strings(b, n=n):
-        print("0x%08X   %s" % (s.offset, s.s))
-    print("")
+        print("Static UTF-16 strings")
+        print("Offset       String")
+        print("----------   -------------------------------------")
+        for s in strings.extract_unicode_strings(b, n=n):
+            print("0x%08X   %s" % (s.offset, s.s))
+        print("")
 
 
 def main():
@@ -504,7 +519,7 @@ def main():
 
     if options.all_strings:
         floss_logger.info("Extracting static strings...")
-        print_all_strings(sample_file_path, n=min_length)
+        print_all_strings(sample_file_path, n=min_length, quiet=options.quiet)
 
     floss_logger.info("Generating vivisect workspace")
     vw = viv_utils.getWorkspace(sample_file_path)
@@ -521,18 +536,20 @@ def main():
 
     floss_logger.info("Identifying decoding functions...")
     decoding_functions_candidates = string_decoder.identify_decoding_functions(selected_plugins, selected_functions)
-    print_identification_results(sample_file_path, decoding_functions_candidates)
+    if not options.quiet:
+        print_identification_results(sample_file_path, decoding_functions_candidates)
 
     floss_logger.info("Decoding strings...")
     decoded_strings = string_decoder.decode_strings(decoding_functions_candidates, min_length)
-    print_decoding_results(decoded_strings, min_length, options.group_functions)
+    print_decoding_results(decoded_strings, min_length, options.group_functions, quiet=options.quiet)
 
     if options.ida_python_file:
         floss_logger.info("Creating IDA script...")
         create_script(sample_file_path, options.ida_python_file, decoded_strings)
 
     time1 = time()
-    print("Finished execution after %f seconds" % (time1 - time0))
+    if not options.quiet:
+        print("Finished execution after %f seconds" % (time1 - time0))
 
 
 if __name__ == "__main__":
