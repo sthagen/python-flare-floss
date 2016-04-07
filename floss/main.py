@@ -560,6 +560,12 @@ def main():
 
     sample_file_path = parse_sample_file_path(parser, args)
 
+    with open(sample_file_path, "rb") as f:
+        magic = f.read(2)
+    if magic != "MZ":
+        floss_logger.error("FLOSS currently supports the following formats: PE")
+        return
+
     floss_logger.info("Generating vivisect workspace")
     vw = viv_utils.getWorkspace(sample_file_path)
 
