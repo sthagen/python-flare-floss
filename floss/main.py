@@ -14,12 +14,13 @@ import plugnplay
 import viv_utils
 import envi.memory
 
-from interfaces import DecodingRoutineIdentifier
+import strings
 import plugins.xor_plugin
 import plugins.library_function_plugin
 import plugins.function_meta_data_plugin
-from FunctionArgumentGetter import get_function_contexts
 from utils import makeEmulator
+from interfaces import DecodingRoutineIdentifier
+from FunctionArgumentGetter import get_function_contexts
 from DecodingManager import DecodedString, FunctionEmulator
 
 
@@ -204,97 +205,18 @@ def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
     return delta_bytes
 
 
-def extract_strings(delta_bytes, min_length):
+def extract_strings(delta, min_length):
     ret = []
-    queue = [delta_bytes]
-    while len(queue) > 0:
-        d = queue.pop()
-        s = d.s.replace("\x00\x00\x00\x00", "")  # quickly remove large empty regions
-        if is_unicode_string(s, min_length=min_length):
-            slen = compute_unicode_string_length(s)
-            ds = s[:slen].decode("utf-16")
-            if ds != "A" * slen:
-                ret.append(DecodedString(d.va, ds, d.decoded_at_va, d.fva, d.global_address))
-            queue.append(DecodedString(d.va + slen, s[slen:], d.decoded_at_va, d.fva, d.global_address))
-        elif is_ascii_string(s, min_length=min_length):
-            slen = compute_ascii_string_length(s)
-            ds = s[:slen].decode("ascii")
-            if ds != "A" * slen:
-                ret.append(DecodedString(d.va, ds, d.decoded_at_va, d.fva, d.global_address))
-            queue.append(DecodedString(d.va + slen, s[slen:], d.decoded_at_va, d.fva, d.global_address))
-        else:
-            if len(s) > 1:
-                # chop off the first byte, then keep searching
-                queue.append(DecodedString(d.va + 1, s[1:], d.decoded_at_va, d.fva, d.global_address))
+    for s in strings.extract_ascii_strings(delta.s):
+        if s.s == "A" * len(s.s):
+            # ignore strings of all "A", which is likely taint data
+            continue
+        ret.append(DecodedString(delta.va + s.offset, s.s, delta.decoded_at_va, delta.fva, delta.global_address))
+    for s in strings.extract_unicode_strings(delta.s):
+        if s.s == "A" * len(s.s):
+            continue
+        ret.append(DecodedString(delta.va + s.offset, s.s, delta.decoded_at_va, delta.fva, delta.global_address))
     return ret
-
-
-# string functions
-def compute_ascii_string_length(s):
-    for i, c in enumerate(s):
-        if c not in string.printable:
-            return i
-    return len(s)
-
-
-def is_ascii_string(s, min_length=4):
-    return compute_ascii_string_length(s) >= min_length
-
-
-def compute_unicode_string_length(s):
-    """
-    mostly from vivisect:detectUnicode
-
-    If the address appears to be the start of a unicode string, then
-    return the string length in bytes, else return -1.
-    This will return true if the memory location is likely
-    *simple* UTF16-LE unicode (<ascii><0><ascii><0><0><0>).
-    """
-    maxlen = len(s)
-    count = 0
-    while count < maxlen:
-        c0 = s[count]
-        if (count + 1) >= len(s):
-            break
-        c1 = s[count + 1]
-
-        # If it's not null,char,null,char then it's
-        # not simple unicode...
-        if ord(c1) != 0:
-            break
-
-        # If we find our null terminator after more
-        # than 4 chars, we're probably a real string
-        if ord(c0) == 0:
-            break
-
-        # If the first byte char isn't printable, then
-        # we're probably not a real "simple" ascii string
-        if c0 not in string.printable:
-            break
-
-        count += 2
-    return count
-
-
-def is_unicode_string(s, min_length=4):
-    """
-    mostly from vivisect:detectUnicode
-
-    If the address appears to be the start of a unicode string, then
-    return the string length in bytes, else return -1.
-    This will return true if the memory location is likely
-    *simple* UTF16-LE unicode (<ascii><0><ascii><0><0><0>).
-    """
-    return compute_unicode_string_length(s) >= (min_length * 2)
-
-
-def is_string(s, min_length=4):
-    if is_ascii_string(s, min_length=min_length):
-        return True
-    if is_unicode_string(s, min_length=min_length):
-        return True
-    return False
 
 
 def sanitize_string_for_printing(s):
@@ -336,6 +258,8 @@ def get_all_plugins():
 def make_parser():
     usage_message = "%prog [options] FILEPATH"
     parser = OptionParser(usage=usage_message, version="%prog " + floss_version)
+    parser.add_option("-a", "--all_strings", dest="all_strings", action="store_true",
+                        help="also extract static ASCII and UTF-16 strings from the file")
     parser.add_option("-v", "--verbose", dest="verbose",
                         help="show verbose messages and warnings", action="store_true")
     parser.add_option("-d", "--debug", dest="debug",
@@ -547,6 +471,26 @@ def create_script(sample_file_path, ida_python_file, decoded_strings):
             raise e
 
 
+def print_all_strings(path, n=4):
+    with open(path, "rb") as f:
+        b = f.read()
+
+    print("Static ASCII strings")
+    print("Offset       String")
+    print("----------   -------------------------------------")
+    ret = []
+    for s in strings.extract_ascii_strings(b, n=n):
+        print("0x%08X   %s" % (s.offset, s.s))
+    print("")
+
+    print("Static UTF-16 strings")
+    print("Offset       String")
+    print("----------   -------------------------------------")
+    for s in strings.extract_unicode_strings(b, n=n):
+        print("0x%08X   %s" % (s.offset, s.s))
+    print("")
+
+
 def main():
     # default to INFO, unless otherwise changed
     logging.basicConfig(level=logging.WARNING)
@@ -562,6 +506,10 @@ def main():
 
     sample_file_path = parse_sample_file_path(parser, args)
     min_length = parse_min_length_option(options.min_length)
+
+    if options.all_strings:
+        floss_logger.info("Extracting static strings")
+        print_all_strings(sample_file_path, n=min_length)
 
     floss_logger.info("Generating vivisect workspace")
     vw = viv_utils.getWorkspace(sample_file_path)
