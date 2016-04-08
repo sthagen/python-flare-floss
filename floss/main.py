@@ -113,40 +113,26 @@ class IdentificationManager(viv_utils.LoggingObject):
         return self.candidate_functions
 
 
-class StringDecoder(viv_utils.LoggingObject):
-    def __init__(self, vw):
-        viv_utils.LoggingObject.__init__(self)
-        self.vw = vw
-        self.function_index = viv_utils.InstructionFunctionIndex(vw)
+def identify_decoding_functions(vw, identification_plugins, functions):
+    identification_manager = IdentificationManager(vw, identification_plugins)
+    identification_manager.run_plugins(functions)
+    identification_manager.apply_plugin_weights()
+    return identification_manager
 
-    def identify_decoding_functions(self, identification_plugins, functions):
-        identification_manager = IdentificationManager(self.vw, identification_plugins)
-        identification_manager.run_plugins(functions)
-        identification_manager.apply_plugin_weights()
-        return identification_manager
 
-    def extract_decoding_contexts(self, function):
-        return get_function_contexts(self.vw, function)
+def extract_decoding_contexts(vw, function):
+    return get_function_contexts(vw, function)
 
-    def emulate_decoding_routine(self, function, context):
-        emu = makeEmulator(self.vw)
-        # Restore function context
-        emu.setEmuSnap(context.emu_snap)  # TODO somewhere else?
-        femu = FunctionEmulator(emu, function, self.function_index)
-        self.d("Emulating function at 0x%08X called at 0x%08X, return address: 0x%08X",
-               function, context.decoded_at_va, context.return_address)
-        deltas = femu.emulate_function(context.return_address, 2000)
-        return deltas
 
-    def decode_strings(self, decoding_functions_candidates, min_length):
-        decoded_strings = []
-        for fva, _ in decoding_functions_candidates.get_top_candidate_functions(10):
-            for ctx in self.extract_decoding_contexts(fva):
-                for delta in self.emulate_decoding_routine(fva, ctx):
-                    for delta_bytes in extract_delta_bytes(delta, ctx.decoded_at_va, fva):
-                        for decoded_string in extract_strings(delta_bytes, min_length):
-                            decoded_strings.append(decoded_string)
-        return decoded_strings
+def emulate_decoding_routine(vw, function_index, function, context):
+    emu = makeEmulator(vw)
+    # Restore function context
+    emu.setEmuSnap(context.emu_snap)
+    femu = FunctionEmulator(emu, function, function_index)
+    floss_logger.debug("Emulating function at 0x%08X called at 0x%08X, return address: 0x%08X",
+           function, context.decoded_at_va, context.return_address)
+    deltas = femu.emulate_function(context.return_address, 2000)
+    return deltas
 
 
 def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
@@ -198,7 +184,7 @@ def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
     return delta_bytes
 
 
-def extract_strings(delta, min_length):
+def extract_strings(delta):
     ret = []
     for s in strings.extract_ascii_strings(delta.s):
         if s.s == "A" * len(s.s):
@@ -212,6 +198,17 @@ def extract_strings(delta, min_length):
         ret.append(DecodedString(delta.va + s.offset, s.s, delta.decoded_at_va,
                                  delta.fva, delta.global_address))
     return ret
+
+
+def decode_strings(vw, function_index, decoding_functions_candidates):
+    decoded_strings = []
+    for fva, _ in decoding_functions_candidates.get_top_candidate_functions(10):
+        for ctx in extract_decoding_contexts(vw, fva):
+            for delta in emulate_decoding_routine(vw, function_index, fva, ctx):
+                for delta_bytes in extract_delta_bytes(delta, ctx.decoded_at_va, fva):
+                    for decoded_string in extract_strings(delta_bytes):
+                        decoded_strings.append(decoded_string)
+    return decoded_strings
 
 
 def sanitize_string_for_printing(s):
@@ -403,12 +400,12 @@ def print_decoding_results(decoded_strings, min_length, group_functions, quiet=F
             if len_ds > 0:
                 if not quiet:
                     print("Decoding function at 0x%X (decoded %d strings)" % (fva, len_ds))
-                output_strings(ds_filtered, min_length, quiet=quiet)
+                print_strings(ds_filtered, min_length, quiet=quiet)
     else:
-        output_strings(decoded_strings, min_length, quiet=quiet)
+        print_strings(decoded_strings, min_length, quiet=quiet)
 
 
-def output_strings(ds_filtered, min_length, quiet=False):
+def print_strings(ds_filtered, min_length, quiet=False):
     if not quiet:
         print("Offset       Called At    String")
         print("----------   ----------   -------------------------------------")
@@ -539,15 +536,14 @@ def main():
 
     time0 = time()
 
-    string_decoder = StringDecoder(vw)
-
     floss_logger.info("Identifying decoding functions...")
-    decoding_functions_candidates = string_decoder.identify_decoding_functions(selected_plugins, selected_functions)
+    decoding_functions_candidates = identify_decoding_functions(vw, selected_plugins, selected_functions)
     if not options.quiet:
         print_identification_results(sample_file_path, decoding_functions_candidates)
 
     floss_logger.info("Decoding strings...")
-    decoded_strings = string_decoder.decode_strings(decoding_functions_candidates, min_length)
+    function_index = viv_utils.InstructionFunctionIndex(vw)
+    decoded_strings = decode_strings(vw, function_index, decoding_functions_candidates)
     print_decoding_results(decoded_strings, min_length, options.group_functions, quiet=options.quiet)
 
     if options.ida_python_file:
