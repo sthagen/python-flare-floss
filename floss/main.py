@@ -402,12 +402,12 @@ def print_decoding_results(decoded_strings, min_length, group_functions, quiet=F
             if len_ds > 0:
                 if not quiet:
                     print("Decoding function at 0x%X (decoded %d strings)" % (fva, len_ds))
-                output_strings(ds_filtered, min_length, quiet=quiet)
+                print_strings(ds_filtered, min_length, quiet=quiet)
     else:
-        output_strings(decoded_strings, min_length, quiet=quiet)
+        print_strings(decoded_strings, min_length, quiet=quiet)
 
 
-def output_strings(ds_filtered, min_length, quiet=False):
+def print_strings(ds_filtered, min_length, quiet=False):
     if not quiet:
         print("Offset       Called At    String")
         print("----------   ----------   -------------------------------------")
