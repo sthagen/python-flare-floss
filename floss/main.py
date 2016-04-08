@@ -13,6 +13,7 @@ import plugnplay
 import viv_utils
 
 import strings
+import stackstrings
 import string_decoder
 import plugins.xor_plugin
 import identification_manager as im
@@ -326,6 +327,23 @@ def print_all_strings(path, n=4, quiet=False):
         print("")
 
 
+def print_stack_strings(extracted_strings, n=4, quiet=False):
+    if quiet:
+        for ss in extracted_strings:
+            if len(ss.s) >= n:
+                print("%s" % (ss.s))
+    else:
+        extracted_strings = list(extracted_strings)
+        count = len(filter(lambda s: len(s.s) >= 4, extracted_strings))
+        print("FLOSS extracted %d stack strings" % (count))
+        print("Function:   Frame offset  String:  ")
+        print("----------  ------------  -------")
+
+        for ss in extracted_strings:
+            if len(ss.s) >= n:
+                print("0x%08x  0x%04x    %s" % (ss.fva, ss.frame_offset, ss.s))
+
+
 def main():
     # default to INFO, unless otherwise changed
     logging.basicConfig(level=logging.WARNING)
@@ -374,9 +392,13 @@ def main():
     decoded_strings = decode_strings(vw, function_index, decoding_functions_candidates)
     print_decoding_results(decoded_strings, min_length, options.group_functions, quiet=options.quiet)
 
+    floss_logger.info("Extracting stackstrings...")
+    print_stack_strings(stackstrings.extract_stackstrings(vw), min_length, quiet=options.quiet)
+
     if options.ida_python_file:
         floss_logger.info("Creating IDA script...")
         create_script(sample_file_path, options.ida_python_file, decoded_strings)
+
 
     time1 = time()
     if not options.quiet:
