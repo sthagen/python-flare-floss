@@ -1,8 +1,12 @@
+import logging
 from collections import namedtuple
 
 import viv_utils
+import viv_utils.emulator_drivers
 import envi.memory
 
+
+floss_logger = logging.getLogger("floss")
 
 DecodedString = namedtuple("DecodedString", ["va", "s", "decoded_at_va", "fva", "global_address"])
 
@@ -274,6 +278,32 @@ class DeltaCollectorHook(viv_utils.emulator_drivers.Hook):
 
 
 def emulate_function(emu, function_index, fva, return_address, max_instruction_count):
+    '''
+    Emulate a function and collect snapshots at each interesting place.
+    These interesting places include calls to imported API functions
+     and the final state of the emulator.
+    Emulation continues until the return address is hit, or
+     the given max_instruction_count is hit.
+    Some library functions are shimmed, such as memory allocation routines.
+    This helps "normal" routines emulate correct using standard library function.
+    These include:
+      - GetProcessHeap
+      - RtlAllocateHeap
+      - AllocateHeap
+      - malloc
+
+    :type emu: envi.Emulator
+    :type function_index: viv_utils.FunctionIndex
+    :type fva: int
+    :param fva: The start address of the function to emulate.
+    :int return_address: int
+    :param return_address: The expected return address of the function.
+     Emulation stops here.
+    :type max_instruction_count: int
+    :param max_instruction_count: The max number of instructions to emulate.
+     This helps avoid unexpected infinite loops.
+    :rtype: Sequence[Delta]
+    '''
     pre_snap = make_snapshot(emu)
     delta_collector = DeltaCollectorHook(pre_snap)
 
