@@ -54,12 +54,18 @@ class FunctionArgumentGetter(viv_utils.LoggingObject):
         caller_function_vas = set([])
         for caller_va in self.vivisect_workspace.getCallers(function_va):
             self.d("    caller: %s" % hex(caller_va))
-            caller_function_va = self.index[caller_va]  # the address of the function that contains this instruction
+            try:
+                # the address of the function that contains this instruction
+                caller_function_va = self.index[caller_va]
+            except KeyError:
+                # there's a pointer outside a function, or
+                # maybe two functions share the same basic block.
+                # this is a limitation of viv_utils.FunctionIndex
+                self.w("unknown caller function: 0x%x", caller_va)
+                continue
+
             self.d("      function: %s" % hex(caller_function_va))
             caller_function_vas.add(caller_function_va)
-
-            # TODO: removeme
-            # break
         return caller_function_vas
 
     def get_contexts_via_monitor(self, fva, target_fva):
