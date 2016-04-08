@@ -24,7 +24,8 @@ from FunctionArgumentGetter import get_function_contexts
 from DecodingManager import DecodedString, FunctionEmulator
 
 
-floss_version = "1.0"
+floss_version = "1.0.3\n" \
+                "https://github.com/fireeye/flare-floss/"
 
 floss_logger = logging.getLogger("floss")
 
