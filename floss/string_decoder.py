@@ -12,12 +12,42 @@ floss_logger = logging.getLogger("floss")
 
 
 def extract_decoding_contexts(vw, function):
+    '''
+    Extract the CPU and memory contexts of all calls to the given function.
+    Under the hood, we brute-force emulate all code paths to extract the
+     state of the stack, registers, and global memory at each call to
+     the given address.
+
+    :param vw: The vivisect workspace in which the function is defined.
+    :type function: int
+    :param function: The address of the function whose contexts we'll find.
+    :rtype: Sequence[function_argument_getter.FunctionContext]
+    '''
     return get_function_contexts(vw, function)
 
 
 def emulate_decoding_routine(vw, function_index, function, context):
+    '''
+    Emulate a function with a given context and extract the CPU and
+     memory contexts at interesting points during emulation.
+    These "interesting points" include calls to other functions and
+     the final state.
+    Emulation terminates if the CPU executes an unexpected region of
+     memory, or the function returns.
+    Implementation note: currently limits emulation to 2000 instructions.
+     This prevents unexpected infinite loops.
+
+
+    :param vw: The vivisect workspace in which the function is defined.
+    :type function_index: viv_utils.FunctionIndex
+    :type function: int
+    :param function: The address of the function to emulate.
+    :type context: funtion_argument_getter.FunctionContext
+    :param context: The initial state of the CPU and memory
+      prior to the function being called.
+    :rtype: Sequence[decoding_manager.Delta]
+    '''
     emu = makeEmulator(vw)
-    # Restore function context
     emu.setEmuSnap(context.emu_snap)
     femu = FunctionEmulator(emu, function, function_index)
     floss_logger.debug("Emulating function at 0x%08X called at 0x%08X, return address: 0x%08X",
@@ -27,6 +57,18 @@ def emulate_decoding_routine(vw, function_index, function, context):
 
 
 def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
+    '''
+    Extract the sequence of byte sequences that differ from before
+     and after snapshots.
+
+    :type delta: decoding_manager.Delta
+    :param delta: The before and after snapshots of memory to diff.
+    :type decoded_at_va: int
+    :param decoded_at_va: TODO
+    :type source_fva: int
+    :param source_fva: TODO
+    :rtype: Sequence[DecodedString]
+    '''
     delta_bytes = []
 
     memory_snap_before = delta.pre_snap.memory
@@ -49,7 +91,7 @@ def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
         (_, _, _, bytes_after) = section_after
         if section_after_start not in mem_before:
             # TODO delta bytes instead of decoded strings
-            delta_bytes.append(DecodedString(section_after_start, bytes_after, 
+            delta_bytes.append(DecodedString(section_after_start, bytes_after,
                                              decoded_at_va, source_fva, False))
             continue
 
@@ -75,19 +117,27 @@ def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
     return delta_bytes
 
 
-def extract_strings(delta):
+def extract_strings(b):
+    '''
+    Extract the ASCII and UTF-16 strings from a bytestring.
+
+    :type b: decoding_manager.DecodedString
+    :param b: The data from which to extract the strings. Note its a
+      DecodedString instance that tracks extra metadata beyond the
+      bytestring contents.
+    :rtype: Sequence[decoding_manager.DecodedString]
+    '''
     ret = []
-    for s in strings.extract_ascii_strings(delta.s):
+    for s in strings.extract_ascii_strings(b.s):
         if s.s == "A" * len(s.s):
             # ignore strings of all "A", which is likely taint data
             continue
-        ret.append(DecodedString(delta.va + s.offset, s.s, delta.decoded_at_va,
-                                 delta.fva, delta.global_address))
-    for s in strings.extract_unicode_strings(delta.s):
+        ret.append(DecodedString(b.va + s.offset, s.s, b.decoded_at_va,
+                                 b.fva, b.global_address))
+    for s in strings.extract_unicode_strings(b.s):
         if s.s == "A" * len(s.s):
             continue
-        ret.append(DecodedString(delta.va + s.offset, s.s, delta.decoded_at_va,
-                                 delta.fva, delta.global_address))
+        ret.append(DecodedString(b.va + s.offset, s.s, b.decoded_at_va,
+                                 b.fva, b.global_address))
     return ret
-
 
