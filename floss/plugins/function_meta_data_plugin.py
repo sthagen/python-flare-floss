@@ -69,9 +69,9 @@ class FunctionArgumentCountPlugin(plugin_object.GeneralPlugin):
     def score(self, function_vas, vivisect_workspace=None):
         candidate_functions = {}
         for fva, arg_len in function_vas.items():
-            if arg_len > 0 and arg_len < 4:  # TODO scoring
+            if arg_len > 0 and arg_len < 4:
                 score = 1.0
-            elif arg_len > 4 and arg_len < 7:
+            elif arg_len >= 4 and arg_len < 7:
                 score = 0.5
             else:
                 score = 0.0
