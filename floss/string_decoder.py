@@ -3,9 +3,10 @@ import logging
 import envi.memory
 
 import strings
+import decoding_manager
 from utils import makeEmulator
 from function_argument_getter import get_function_contexts
-from decoding_manager import DecodedString, FunctionEmulator
+from decoding_manager import DecodedString
 
 
 floss_logger = logging.getLogger("floss")
@@ -49,10 +50,14 @@ def emulate_decoding_routine(vw, function_index, function, context):
     '''
     emu = makeEmulator(vw)
     emu.setEmuSnap(context.emu_snap)
-    femu = FunctionEmulator(emu, function, function_index)
     floss_logger.debug("Emulating function at 0x%08X called at 0x%08X, return address: 0x%08X",
            function, context.decoded_at_va, context.return_address)
-    deltas = femu.emulate_function(context.return_address, 2000)
+    deltas = decoding_manager.emulate_function(
+                emu,
+                function_index,
+                function,
+                context.return_address,
+                2000)
     return deltas
 
 

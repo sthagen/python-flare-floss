@@ -273,43 +273,40 @@ class DeltaCollectorHook(viv_utils.emulator_drivers.Hook):
             self.deltas.append(Delta(self._pre_snap, make_snapshot(driver._emu)))
 
 
-class FunctionEmulator(viv_utils.LoggingObject):
-    def __init__(self, emu, fva, function_index):
-        viv_utils.LoggingObject.__init__(self)
-        self.emu = emu
-        self.fva = fva
-        self.function_index = function_index
+def emulate_function(emu, function_index, fva, return_address, max_instruction_count):
+    pre_snap = make_snapshot(emu)
+    delta_collector = DeltaCollectorHook(pre_snap)
 
-    def emulate_function(self, return_address, max_instruction_count):
-        pre_snap = make_snapshot(self.emu)
-        delta_collector = DeltaCollectorHook(pre_snap)
+    try:
+        floss_logger.debug("Emulating function at 0x%08X", fva)
+        driver = viv_utils.emulator_drivers.DebuggerEmulatorDriver(emu)
+        monitor = ApiMonitor(emu.vw, function_index)
+        driver.add_monitor(monitor)
+        driver.add_hook(delta_collector)
+        driver.add_hook(GetProcessHeapHook())
+        driver.add_hook(RtlAllocateHeapHook())
+        driver.add_hook(AllocateHeap())
+        driver.add_hook(MallocHeap())
+        driver.add_hook(ExitProcessHook())
+        driver.runToVa(return_address, max_instruction_count)
+    except viv_utils.emulator_drivers.InstructionRangeExceededError:
+        floss_logger.debug("Halting as emulation has escaped!")
+    except envi.InvalidInstruction:
+        floss_logger.debug("vivisect encountered an invalid instruction. will continue processing.",
+                exc_info=True)
+    except envi.UnsupportedInstruction:
+        floss_logger.debug("vivisect encountered an unsupported instruction. will continue processing.",
+                exc_info=True)
+    except envi.BreakpointHit:
+        floss_logger.debug("vivisect encountered an unexpected emulation breakpoint. will continue processing.",
+                exc_info=True)
+    except viv_utils.emulator_drivers.StopEmulation as e:
+        pass
+    except Exception:
+        floss_logger.debug("vivisect encountered an unexpected exception. will continue processing.",
+                exc_info=True)
+    floss_logger.debug("Ended emulation at 0x%08X", emu.getProgramCounter())
 
-        try:
-            self.d("Emulating function at 0x%08X", self.fva)
-            driver = viv_utils.emulator_drivers.DebuggerEmulatorDriver(self.emu)
-            monitor = ApiMonitor(self.emu.vw, self.function_index)
-            driver.add_monitor(monitor)
-            driver.add_hook(delta_collector)
-            driver.add_hook(GetProcessHeapHook())
-            driver.add_hook(RtlAllocateHeapHook())
-            driver.add_hook(AllocateHeap())
-            driver.add_hook(MallocHeap())
-            driver.add_hook(ExitProcessHook())
-            driver.runToVa(return_address, max_instruction_count)
-        except viv_utils.emulator_drivers.InstructionRangeExceededError:
-            self.d("Halting as emulation has escaped!")
-        except envi.InvalidInstruction:
-            self.d("vivisect encountered an invalid instruction. will continue processing.", exc_info=True)
-        except envi.UnsupportedInstruction:
-            self.d("vivisect encountered an unsupported instruction. will continue processing.", exc_info=True)
-        except envi.BreakpointHit:
-            self.d("vivisect encountered an unexpected emulation breakpoint. will continue processing.", exc_info=True)
-        except viv_utils.emulator_drivers.StopEmulation as e:
-            pass
-        except Exception:
-            self.d("vivisect encountered an unexpected exception. will continue processing.", exc_info=True)
-        self.d("Ended emulation at 0x%08X", self.emu.getProgramCounter())
-
-        deltas = delta_collector.deltas
-        deltas.append(Delta(pre_snap, make_snapshot(self.emu)))
-        return deltas
+    deltas = delta_collector.deltas
+    deltas.append(Delta(pre_snap, make_snapshot(emu)))
+    return deltas
