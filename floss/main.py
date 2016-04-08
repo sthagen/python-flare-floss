@@ -521,6 +521,12 @@ def main():
         floss_logger.info("Extracting static strings...")
         print_all_strings(sample_file_path, n=min_length, quiet=options.quiet)
 
+    with open(sample_file_path, "rb") as f:
+        magic = f.read(2)
+    if magic != "MZ":
+        floss_logger.error("FLOSS currently supports the following formats: PE")
+        return
+
     floss_logger.info("Generating vivisect workspace")
     vw = viv_utils.getWorkspace(sample_file_path)
 
