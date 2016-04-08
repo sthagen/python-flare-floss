@@ -118,6 +118,7 @@ class RtlAllocateHeapHook(viv_utils.emulator_drivers.Hook):
         return va
 
     def hook(self, callname, driver, callconv, api, argv):
+        # works for kernel32.HeapAlloc
         if callname == "ntdll.RtlAllocateHeap":
             emu = driver
             size = driver.getStackValue(0xC)
@@ -132,7 +133,9 @@ class AllocateHeap(RtlAllocateHeapHook):
         super(AllocateHeap, self).__init__(*args, **kwargs)
 
     def hook(self, callname, driver, callconv, api, argv):
-        if callname == "kernel32.LocalAlloc":
+        if callname == "kernel32.LocalAlloc" or \
+           callname == "kernel32.GlobalAlloc" or \
+           callname == "kernel32.VirtualAlloc":
             emu = driver
             size = driver.getStackValue(0x8)
             va = self._allocate_mem(emu, size)
