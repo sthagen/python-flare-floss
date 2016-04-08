@@ -6,22 +6,19 @@ import sys
 import string
 import logging
 import pkg_resources
-import operator
 from time import time
 from optparse import OptionParser
 
 import plugnplay
 import viv_utils
-import envi.memory
 
 import strings
+import string_decoder
 import plugins.xor_plugin
+import identification_manager as im
 import plugins.library_function_plugin
 import plugins.function_meta_data_plugin
-from utils import makeEmulator
 from interfaces import DecodingRoutineIdentifier
-from function_argument_getter import get_function_contexts
-from decoding_manager import DecodedString, FunctionEmulator
 
 
 floss_version = "1.0.3\n" \
@@ -30,183 +27,13 @@ floss_version = "1.0.3\n" \
 floss_logger = logging.getLogger("floss")
 
 
-class IdentificationManager(viv_utils.LoggingObject):
-    PLUGIN_WEIGHTS = {"XORSimplePlugin": 0.5,
-                      "FunctionCrossReferencesToPlugin": 0.2,
-                      "FunctionArgumentCountPlugin": 0.2,
-                      "FunctionIsThunkPlugin": -1.0,
-                      "FunctionBlockCountPlugin": 0.025,
-                      "FunctionInstructionCountPlugin": 0.025,
-                      "FunctionSizePlugin": 0.025,
-                      "FunctionRecursivePlugin": 0.025,
-                      "FunctionIsLibraryPlugin": -1.0, }
-
-    def __init__(self, vw, identification_plugins):
-        viv_utils.LoggingObject.__init__(self)
-        self.vw = vw
-        self.plugins = set(identification_plugins)
-        self.candidate_functions = {}
-        self.candidates_weighted = None
-
-    def run_plugins(self, functions, raw_data=False):
-        plugins_to_run = []
-        # TODO: these plugin instances should be passed in from the outside
-        # or a client library cannot provide its own plugins
-        for identifier in get_all_plugins():
-            if str(identifier) in self.plugins:
-                plugins_to_run.append(identifier)
-
-        for plugin in plugins_to_run:
-            decoder_candidates = plugin.identify(self.vw, functions)
-            if raw_data:
-                self.merge_candidates(str(plugin), decoder_candidates)
-            else:
-                scored_candidates = plugin.score(decoder_candidates, self.vw)
-                self.merge_candidates(str(plugin), scored_candidates)
-
-    def merge_candidates(self, plugin_name, plugin_candidates):
-        """
-        Merge data from all plugins into candidate_functions dictionary.
-        """
-
-        if not plugin_candidates:
-            return self.candidate_functions
-
-        for candidate_function in plugin_candidates:
-            if candidate_function in self.candidate_functions.keys():
-                self.d("Function at 0x%08X is already in candidate list, merging", candidate_function)
-                self.candidate_functions[candidate_function][plugin_name] = plugin_candidates[candidate_function]
-            else:
-                self.d("Function at 0x%08X is new, adding", candidate_function)
-                self.candidate_functions[candidate_function] = {}
-                self.candidate_functions[candidate_function][plugin_name] = plugin_candidates[candidate_function]
-
-    def apply_plugin_weights(self):
-        """
-        Return {effective_function_address: weighted_score}, the weighted score is a sum of the score a
-        function received from each plugin multiplied by the plugin's weight. The
-        :return: dictionary storing {effective_function_address: total score}
-        """
-        functions_weighted = {}
-        for candidate_function, plugin_score in self.candidate_functions.items():
-            self.d("0x%08X" % candidate_function)
-            total_score = 0.0
-            for plugin_name, score in plugin_score.items():
-                if plugin_name not in self.PLUGIN_WEIGHTS.keys():
-                    raise Exception("Plugin weight not found: %s" % plugin_name)
-                self.d("[%s] %.05f (weight) * %.05f (score) = %.05f" % (plugin_name, self.PLUGIN_WEIGHTS[plugin_name],
-                                                                        score, self.PLUGIN_WEIGHTS[plugin_name] * score))
-                total_score = total_score + (self.PLUGIN_WEIGHTS[plugin_name] * score)
-            self.d("Total score: %.05f\n" % total_score)
-            functions_weighted[candidate_function] = total_score
-
-        self.candidates_weighted = functions_weighted
-
-    def sort_candidates_by_score(self):
-        # via http://stackoverflow.com/questions/613183/sort-a-python-dictionary-by-value
-        return sorted(self.candidates_weighted.items(), key=operator.itemgetter(1), reverse=True)
-
-    def get_top_candidate_functions(self, n=10):
-        return [(fva, score) for fva, score in self.sort_candidates_by_score()[:n]]
-
-    def get_candidate_functions(self):
-        return self.candidate_functions
-
-
-def identify_decoding_functions(vw, identification_plugins, functions):
-    identification_manager = IdentificationManager(vw, identification_plugins)
-    identification_manager.run_plugins(functions)
-    identification_manager.apply_plugin_weights()
-    return identification_manager
-
-
-def extract_decoding_contexts(vw, function):
-    return get_function_contexts(vw, function)
-
-
-def emulate_decoding_routine(vw, function_index, function, context):
-    emu = makeEmulator(vw)
-    # Restore function context
-    emu.setEmuSnap(context.emu_snap)
-    femu = FunctionEmulator(emu, function, function_index)
-    floss_logger.debug("Emulating function at 0x%08X called at 0x%08X, return address: 0x%08X",
-           function, context.decoded_at_va, context.return_address)
-    deltas = femu.emulate_function(context.return_address, 2000)
-    return deltas
-
-
-def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
-    delta_bytes = []
-
-    memory_snap_before = delta.pre_snap.memory
-    memory_snap_after = delta.post_snap.memory
-    sp = delta.post_snap.sp
-
-    # maps from region start to section tuple
-    mem_before = {m[0]: m for m in memory_snap_before}
-    mem_after = {m[0]: m for m in memory_snap_after}
-
-    stack_start = 0x0
-    stack_end = 0x0
-    for m in memory_snap_after:
-        if m[0] <= sp < m[1]:
-            stack_start, stack_end = m[0], m[1]
-
-    # iterate memory from after the decoding, since if somethings been allocated,
-    # we want to know. don't care if things have been deallocated.
-    for section_after_start, section_after in mem_after.items():
-        (_, _, _, bytes_after) = section_after
-        if section_after_start not in mem_before:
-            # TODO delta bytes instead of decoded strings
-            delta_bytes.append(DecodedString(section_after_start, bytes_after, 
-                                             decoded_at_va, source_fva, False))
-            continue
-
-        section_before = mem_before[section_after_start]
-        (_, _, _, bytes_before) = section_before
-
-        memory_diff = envi.memory.memdiff(bytes_before, bytes_after)
-        for offset, length in memory_diff:
-            address = section_after_start + offset
-
-            if stack_start <= address <= sp:
-                # every stack address that exceeds the stack pointer can be
-                # ignored because it is local to child stack frame
-                continue
-
-            diff_bytes = bytes_after[offset:offset + length]
-            global_address = False
-            if not (stack_start <= address < stack_end):
-                # address is in global memory
-                global_address = address
-            delta_bytes.append(DecodedString(address, diff_bytes, decoded_at_va,
-                                             source_fva, global_address))
-    return delta_bytes
-
-
-def extract_strings(delta):
-    ret = []
-    for s in strings.extract_ascii_strings(delta.s):
-        if s.s == "A" * len(s.s):
-            # ignore strings of all "A", which is likely taint data
-            continue
-        ret.append(DecodedString(delta.va + s.offset, s.s, delta.decoded_at_va,
-                                 delta.fva, delta.global_address))
-    for s in strings.extract_unicode_strings(delta.s):
-        if s.s == "A" * len(s.s):
-            continue
-        ret.append(DecodedString(delta.va + s.offset, s.s, delta.decoded_at_va,
-                                 delta.fva, delta.global_address))
-    return ret
-
-
 def decode_strings(vw, function_index, decoding_functions_candidates):
     decoded_strings = []
     for fva, _ in decoding_functions_candidates.get_top_candidate_functions(10):
-        for ctx in extract_decoding_contexts(vw, fva):
-            for delta in emulate_decoding_routine(vw, function_index, fva, ctx):
-                for delta_bytes in extract_delta_bytes(delta, ctx.decoded_at_va, fva):
-                    for decoded_string in extract_strings(delta_bytes):
+        for ctx in string_decoder.extract_decoding_contexts(vw, fva):
+            for delta in string_decoder.emulate_decoding_routine(vw, function_index, fva, ctx):
+                for delta_bytes in string_decoder.extract_delta_bytes(delta, ctx.decoded_at_va, fva):
+                    for decoded_string in string_decoder.extract_strings(delta_bytes):
                         decoded_strings.append(decoded_string)
     return decoded_strings
 
@@ -531,13 +358,14 @@ def main():
     selected_functions = select_functions(vw, options.functions)
     floss_logger.debug("Selected the following functions: %s", ", ".join(map(hex, selected_functions)))
 
-    selected_plugins = select_plugins(options.plugins)
-    floss_logger.debug("Selected the following plugins: %s", ", ".join(map(str, selected_plugins)))
+    selected_plugin_names = select_plugins(options.plugins)
+    floss_logger.debug("Selected the following plugins: %s", ", ".join(map(str, selected_plugin_names)))
+    selected_plugins = filter(lambda p: str(p) in selected_plugin_names, get_all_plugins())
 
     time0 = time()
 
     floss_logger.info("Identifying decoding functions...")
-    decoding_functions_candidates = identify_decoding_functions(vw, selected_plugins, selected_functions)
+    decoding_functions_candidates = im.identify_decoding_functions(vw, selected_plugins, selected_functions)
     if not options.quiet:
         print_identification_results(sample_file_path, decoding_functions_candidates)
 
