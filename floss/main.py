@@ -20,8 +20,8 @@ import plugins.library_function_plugin
 import plugins.function_meta_data_plugin
 from utils import makeEmulator
 from interfaces import DecodingRoutineIdentifier
-from FunctionArgumentGetter import get_function_contexts
-from DecodingManager import DecodedString, FunctionEmulator
+from function_argument_getter import get_function_contexts
+from decoding_manager import DecodedString, FunctionEmulator
 
 
 floss_version = "1.0.3\n" \
