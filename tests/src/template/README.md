@@ -22,4 +22,5 @@ TEMPLATE-Build-Windows
 eg. clang template.c -o template
 
 Build instructions (Cross compile for Windows on Linux):
+TEMPLATE-Build-XCompile-Windows-Linux
 i686-w64-mingw32-clang++ template.c -o template.exe
