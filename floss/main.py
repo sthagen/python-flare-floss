@@ -22,7 +22,7 @@ import plugins.function_meta_data_plugin
 from interfaces import DecodingRoutineIdentifier
 
 
-floss_version = "1.0.3\n" \
+floss_version = "1.1.0\n" \
                 "https://github.com/fireeye/flare-floss/"
 
 floss_logger = logging.getLogger("floss")

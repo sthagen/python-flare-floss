@@ -16,7 +16,7 @@ requirements = [
 
 setup(
     name='floss',
-    version='1.0.3',
+    version='1.1.0',
     description="",
     long_description="",
     author="Willi Ballenthin, Moritz Raabe",
