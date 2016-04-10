@@ -19,19 +19,6 @@ To try FLOSS right away, download a standalone executable file from the releases
 https://github.com/fireeye/flare-floss/releases
 
 
-## Quick Installation
-Alternatively, use the following steps to install FLOSS via the standard Python installer: pip.
-This will add an executable `floss` (or `floss.exe` on Windows) to your `$PATH`.
-
-- Install vivisect:
-
-    `$ pip install https://github.com/williballenthin/vivisect/zipball/master`
-
-- Install FLOSS:
-
-    `$ pip install https://github.com/fireeye/flare-floss/zipball/master`
-
-
 ## Usage
 Extract obfuscated strings from a malware binary:
 
