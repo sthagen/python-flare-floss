@@ -28,6 +28,9 @@ Display the help/usage screen to see all available switches.
 
     $ ./floss -h
 
+For a more detailed description of using FLOSS, review the documention
+ [here](doc/usage.md)
+
 
 ## Sample Output
 
