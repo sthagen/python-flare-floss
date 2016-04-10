@@ -13,8 +13,11 @@ test-decode-base64.c
 base64.h
 base64.c
 
-Build instructions (Linux):
+Build instructions (Windows):
 cl.exe test-decode-base64.c base64.c /Fetest-decode-base64.exe
 
-Build instructions (Windows):
+Build instructions (Linux):
 clang test-decode-base64.c base64.c -o test-decode-base64
+
+Build instructions (Cross compile for Windows on Linux):
+i686-w64-mingw32-clang++ test-decode-base64.c base64.c -o test-decode-base64.exe
