@@ -18,6 +18,9 @@ basic static analysis of unknown binaries.
 To try FLOSS right away, download a standalone executable file from the releases page:
 https://github.com/fireeye/flare-floss/releases
 
+For a detailed description of *installing* FLOSS, review the documention
+ [here](doc/installation.md)
+
 
 ## Usage
 Extract obfuscated strings from a malware binary:
@@ -28,8 +31,11 @@ Display the help/usage screen to see all available switches.
 
     $ ./floss -h
 
-For a more detailed description of using FLOSS, review the documention
+For a detailed description of *using* FLOSS, review the documention
  [here](doc/usage.md)
+
+For a detailed description of *testing* FLOSS, review the documention
+ [here](doc/test.md)
 
 
 ## Sample Output

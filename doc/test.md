@@ -1,4 +1,3 @@
-<img src="resources/logo.png?raw=true " width="350"/>
 # FireEye Labs Obfuscated String Solver
 
 ## Testing
