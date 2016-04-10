@@ -2,10 +2,10 @@
 
 ## Usage
 
-You can use FLOSS just like youd use `strings.exe`:
- to detect human readable strings from binary data.
+You can use FLOSS just like you'd use `strings.exe`:
+ to extract human readable strings from binary data.
 The enhancement that FLOSS provides is that it staticly
- analyzes exectuable files and extracts obfuscated strings.
+ analyzes exectuable files and decodes obfuscated strings.
 These include strings encrypted in global memory,
  deobfuscated onto the heap, or manually created on the
  stack (stackstrings).
@@ -13,10 +13,14 @@ Since FLOSS also extracts static strings (like `strings.exe`),
  you should consider replacing `strings.exe` with FLOSS
  within your analysis workflow.
 
-### Extract obfuscated strings (no flags)
+Here's a summary of the command line flags and options you
+ can provide to FLOSS to modify its behavior.
+
+
+### Extract obfuscated strings (default mode)
 
 The default mode for FLOSS is to extract obfuscated strings
- of minimum length four from an executable file and print
+ with minimum length four from an executable file and print
  the formatted results.
 This mode does not extract the static strings; see `-a` fo
  extracting all strings.
@@ -27,24 +31,24 @@ This mode does not extract the static strings; see `-a` fo
 ### Extract static strings (`-a`)
 
 You can also extract the static strings from a binary file
- using the flags `-a` or `--all_strings`.
+ using the flags `-a` or `--all-strings`.
 In this mode, FLOSS will print _both_ static and decoded
  strings.
 When FLOSS searches for static strings, it looks for
- human-readable ASCII and UTF-16 strings in across the
+ human-readable ASCII and UTF-16 strings across the
  entire binary contents of the file.
 This means you may be able to replace `strings.exe` with
  FLOSS in your analysis workflow
 
     floss.exe -a malware.bin
-    floss.exe --all_strings malware.bin
+    floss.exe --all-strings malware.bin
 
 
 ### Quiet mode (`-q`)
 
-You can supress formatting of FLOSS output by providing
+You can supress the formatting of FLOSS output by providing
  the flags `-q` or `--quiet`.
-These flags are appropriate if you will pipe the results
+These flags are appropriate if you will pipe the results of FLOSS
  into a filtering or searching program such as grep, and
  want to avoid matches on the section headers.
 In quiet mode, each recovered string is printed on its
@@ -99,7 +103,7 @@ By default, FLOSS uses heuristics to identify decoding
  routines in malware.
 This mode circumvents the identification phase and skips
  directly to the decoding phase.
-If youve previously done analysis on an executable program
+If you've previously done analysis on an executable program
  and manually identified the decoding routines, use
  this mode.
 This can improve performance as FLOSS by perhaps one-third
@@ -127,15 +131,15 @@ Provide the option `-i` or `--ida` instruct FLOSS to
 
 ### Verbose and debug modes (`-v`/`-d`)
 
-If FLOSS seems to encounter any issues, try re-running it
+If FLOSS seems to encounter any issues, try re-running the program
  in the verbose (`-v` or `--verbose`) or debug (`-d` or
  `--debug`) modes.
 In these modes, FLOSS prints status and debugging output
  to the standard error stream.
 This provides additional context if FLOSS encounters an
- exception, or appears to be running slowly.
+ exception or appears to be running slowly.
 The verbose mode enables a moderate amount of logging output,
- while the debug mode enables a high amount of logging output.
+ while the debug mode enables a large amount of logging output.
 
 
      floss.exe -v malware.bin
