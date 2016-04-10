@@ -18,7 +18,7 @@ $(WINDOWS64): $(SRC)
 
 
 clean:
-	rm -rf *~ *.bak *.exe *.viv *.swp *.idb *.i64 $(LINUX) $(WINODWS) $(WINDOWS64)
+	rm -rf *~ *.bak *.exe *.viv *.swp *.idb *.i64 a.out *.obj $(LINUX) $(WINODWS) $(WINDOWS64)
 
 
 all: $(LINUX) $(WINDOWS) $(WINDOWS64)
