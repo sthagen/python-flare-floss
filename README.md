@@ -13,6 +13,8 @@ static analysis techniques to automatically deobfuscate strings from
 malware binaries. You can use it just like `strings.exe` to enhance
 basic static analysis of unknown binaries.
 
+Please review the theory behind FLOSS [here](doc/theory.md).
+
 
 ## Quick Run
 To try FLOSS right away, download a standalone executable file from the releases page:
