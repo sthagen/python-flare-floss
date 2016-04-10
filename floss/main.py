@@ -78,7 +78,7 @@ def get_all_plugins():
 def make_parser():
     usage_message = "%prog [options] FILEPATH"
     parser = OptionParser(usage=usage_message, version="%prog " + floss_version)
-    parser.add_option("-a", "--all_strings", dest="all_strings", action="store_true",
+    parser.add_option("-a", "--all-strings", dest="all_strings", action="store_true",
                         help="also extract static ASCII and UTF-16 strings from the file")
     parser.add_option("-v", "--verbose", dest="verbose",
                         help="show verbose messages and warnings", action="store_true")
