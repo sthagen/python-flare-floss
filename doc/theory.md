@@ -8,11 +8,11 @@ However, many features of packing are easy to automatically identify
 Therefore, some authors obfuscate only the most sensitive resources used by
  malware in an attempt to blend in.
 We call this "string obfuscation".
-This maintains some difficulty around extracting host or network based
+String obfuscation maintains some difficulty around extracting host or network based
  signatures (such as filenames, registry keys, or domain names), while
  structuring the executable file like legitimate programs.
-String obfuscation is a technique that balances moderate anti-reverse
- engineering tricks with moderate stealth.
+This is a technique that balances moderate anti-reverse
+ engineering tricks with a moderate level of stealth.
 
 As a reverse engineer, it takes significant effort to extract obfuscated
  strings from a malware sample.
@@ -21,10 +21,12 @@ This is because there are a huge number of possible encoding functions,
 For example, some malware uses a single-byte XOR operating with a static
  key for all obfuscated strings, while other malware uses RC4 encryption
  with a unique key per string.
+Its often difficult to figure out how encoded data is protected without
+ opening IDA Pro or reviewing a debugger trace.
 
-Manual extraction often involves thoroughly studying a decryption routine
- and reimplmenting it in a scripting language.
-This is a tedious and error-prone process, that is fun at first, and
+Manual extraction of obfuscated strings commonly involves thoroughly
+ studying a decryption routine and reimplementing it in a scripting language.
+This is a tedious and error-prone process that is fun at first, and
  mind-numbing after a few iterations.
 Alternatively, an analyst may instrument a debugger to hop around
  hundreds of locations in hopes of forcing the malware to decode itself.
