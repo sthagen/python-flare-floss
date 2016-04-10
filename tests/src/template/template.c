@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 
-int decode(void *out, ssize_t out_len, const void *in, size_t in_len) {
+int decode(void *out, size_t out_len, const void *in, size_t in_len) {
     memcpy(out, in, out_len);
     return 0;
 }
