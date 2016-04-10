@@ -9,6 +9,10 @@ Decoded strings:
 TEMPLATE-Strings
 eg. Hello world!
 
+Source files:
+TEMPLATE-Source-files
+eg. template.c
+
 Build instructions (Linux):
 TEMPLATE-Build-Linux
 eg. cl.exe template.c /Fetemplate.exe
