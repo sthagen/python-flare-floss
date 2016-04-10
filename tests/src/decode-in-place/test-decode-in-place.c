@@ -14,9 +14,6 @@ int decode(void *buf, size_t buf_len, unsigned char key) {
     return 0;
 }
 
-char in[] = "hello world!";
-
-
 int main(int argc, char **argv) {
     char buf[] = "idmmn!vnsme";
     unsigned char key = 0x1;
