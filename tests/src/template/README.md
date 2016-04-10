@@ -13,10 +13,13 @@ Source files:
 TEMPLATE-Source-files
 eg. template.c
 
-Build instructions (Linux):
+Build instructions (Windows):
 TEMPLATE-Build-Linux
 eg. cl.exe template.c /Fetemplate.exe
 
-Build instructions (Windows):
+Build instructions (Linux):
 TEMPLATE-Build-Windows
 eg. clang template.c -o template
+
+Build instructions (Cross compile for Windows on Linux):
+i686-w64-mingw32-clang++ template.c -o template.exe
