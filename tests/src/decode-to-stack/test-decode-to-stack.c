@@ -22,7 +22,7 @@ int decode(void *out_buf, size_t out_len, const void *in_buf, size_t in_len, uns
 
 int main(int argc, char **argv) {
     char in[] = "idmmn!vnsme";
-    char out[12] = { 0 }};
+    char out[12] = { 0 };
     unsigned char key = 0x1;
 
     if (decode(out, sizeof(out), in, sizeof(in), 0x1)) {
