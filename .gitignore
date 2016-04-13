@@ -12,5 +12,9 @@ build/
 dist/
 lib/
 .cache
+
 # Pyenv file
 .python-version
+
+# Test executables
+bin/
