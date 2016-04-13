@@ -9,6 +9,7 @@ except ImportError:
 
 
 requirements = [
+    "tabulate",
     "vivisect",
     "plugnplay",
     "viv-utils",
