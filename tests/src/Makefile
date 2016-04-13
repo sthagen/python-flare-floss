@@ -11,7 +11,8 @@ TESTS= \
 	decode-to-global \
 	decode-to-heap \
 	decode-to-output-buf \
-	decode-to-stack
+	decode-to-stack \
+	decode-string-from-index
 
 
 clean:
