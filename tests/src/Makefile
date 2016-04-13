@@ -2,6 +2,7 @@ TESTS= \
 	decode-base64 \
 	decode-rc4 \
 	decode-single-byte-xor \
+	decode-string-with-header \
 	decode-from-global \
 	decode-from-heap \
 	decode-from-stack \
