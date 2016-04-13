@@ -1,12 +1,13 @@
 TESTS= \
-    decode-base64 \
+	decode-base64 \
+	decode-rc4 \
+	decode-single-byte-xor \
 	decode-from-global \
 	decode-from-heap \
 	decode-from-stack \
-	decode-global-stackstrings \
 	decode-in-place \
+	decode-global-stackstrings \
 	decode-local-stackstrings \
-	decode-single-byte-xor \
 	decode-split-stackstrings \
 	decode-to-global \
 	decode-to-heap \
