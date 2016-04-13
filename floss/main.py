@@ -223,34 +223,33 @@ def print_identification_results(sample_file_path, decoder_results):
 
 
 def print_decoding_results(decoded_strings, min_length, group_functions, quiet=False):
+    long_strings = filter(lambda ds: len(ds.s) >= min_length, decoded_strings)
+
     if not quiet:
-        print("FLOSS decoded %d strings" % len(decoded_strings))
+        print("FLOSS decoded %d strings" % len(long_strings))
 
     if group_functions:
-        fvas = set(map(lambda i: i.fva, decoded_strings))
+        fvas = set(map(lambda i: i.fva, long_strings))
         for fva in fvas:
-            ds_filtered = filter(lambda ds: ds.fva == fva, decoded_strings)
-            len_ds = len(ds_filtered)
+            grouped_strings = filter(lambda ds: ds.fva == fva, long_strings)
+            len_ds = len(grouped_strings)
             if len_ds > 0:
                 if not quiet:
                     print("Decoding function at 0x%X (decoded %d strings)" % (fva, len_ds))
-                print_strings(ds_filtered, min_length, quiet=quiet)
+                print_strings(grouped_strings, quiet=quiet)
     else:
-        print_strings(decoded_strings, min_length, quiet=quiet)
+        print_strings(long_strings, quiet=quiet)
 
 
-def print_strings(ds_filtered, min_length, quiet=False):
+def print_strings(ds_filtered, quiet=False):
     if quiet:
         for ds in ds_filtered:
-            s = sanitize_string_for_printing(ds.s)
-            if len(s) >= min_length:
-                print("%s" % (s))
+            print(sanitize_string_for_printing(ds.s))
     else:
         ss = []
         for ds in ds_filtered:
             s = sanitize_string_for_printing(ds.s)
-            if len(s) >= min_length:
-                ss.append((hex(ds.va or 0), hex(ds.decoded_at_va), s))
+            ss.append((hex(ds.va or 0), hex(ds.decoded_at_va), s))
 
         print(tabulate.tabulate(ss, headers=["Offset", "Called At", "String"]))
         print("")
