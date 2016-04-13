@@ -1,3 +1,4 @@
+Test Name: decode-from-stack
 Test Purpose: Demonstrate extraction of strings decoded from the stack.
 Decoding algorithm: single byte xor
 Input buffer location: stack

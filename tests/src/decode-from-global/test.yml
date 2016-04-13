@@ -1,3 +1,4 @@
+Test Name: decode-from-global
 Test Purpose: Demonstrate extraction of strings decoded from a global buffer.
 Decoding algorithm: single byte xor
 Input buffer location: global

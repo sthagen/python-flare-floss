@@ -1,3 +1,4 @@
+Test Name: decode-base64
 Test Purpose: Demonstrate detection of base64 routine and decoding of base64 data.
 Decoding algorithm: Base64
 Input buffer location: global

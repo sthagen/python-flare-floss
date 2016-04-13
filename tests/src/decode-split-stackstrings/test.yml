@@ -1,3 +1,4 @@
+Test Name: decode-split-stackstrings
 Test Purpose: Demonstrate extraction of different stackstrings split across basic blocks.
 Decoding algorithm: stackstrings
 Input buffer location: n/a

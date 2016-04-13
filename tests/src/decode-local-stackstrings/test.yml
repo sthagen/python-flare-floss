@@ -1,3 +1,4 @@
+Test Name: decode-local-stackstrings
 Test Purpose: Demonstrate extraction of local stackstrings.
 Decoding algorithm: stackstrings
 Input buffer location: n/a

@@ -1,3 +1,4 @@
+Test Name: decode-single-byte-xor
 Test Purpose: Demonstrate decoding of a single byte xor routine.
 Decoding algorithm: single byte xor
 Input buffer location: stack

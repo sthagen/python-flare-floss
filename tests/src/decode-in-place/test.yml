@@ -1,3 +1,4 @@
+Test Name: decode-in-place
 Test Purpose: Demonstrate extraction of strings decoded in place.
 Decoding algorithm: single byte xor
 Input buffer location: stack

@@ -1,3 +1,4 @@
+Test Name: decode-to-output-buf
 Test Purpose: Demonstrate extraction of strings decoded to an output buffer.
 Decoding algorithm: single byte xor
 Input buffer location: stack

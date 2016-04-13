@@ -1,3 +1,4 @@
+Test Name: eg. decode-template
 Test Purpose: eg. demonstrate detection of simple decoding routine
 Decoding algorithm: eg. single byte xor
 Input buffer location: eg. stack, heap, global

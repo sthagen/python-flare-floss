@@ -1,3 +1,4 @@
+Test Name: decode-to-heap
 Test Purpose: Demonstrate extraction of strings decoded to a newly allocated heap buffer.
 Decoding algorithm: single byte xor
 Input buffer location: stack
