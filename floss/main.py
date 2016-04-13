@@ -214,11 +214,14 @@ def parse_min_length_option(min_length_option):
 
 
 def print_identification_results(sample_file_path, decoder_results):
-    print("Most likely decoding functions in: " + sample_file_path)
-    print(tabulate.tabulate(
-        [(hex(fva), "%.5f" % (score,)) for fva, score in 
-            decoder_results.get_top_candidate_functions(10)],
-        headers=["address", "score"]))
+    candidates = decoder_results.get_top_candidate_functions(10)
+    if len(candidates) == 0:
+        print("No candidate functions found.")
+    else:
+        print("Most likely decoding functions in: " + sample_file_path)
+        print(tabulate.tabulate(
+            [(hex(fva), "%.5f" % (score,)) for fva, score in candidates],
+            headers=["address", "score"]))
     print("")
 
 
@@ -251,8 +254,9 @@ def print_strings(ds_filtered, quiet=False):
             s = sanitize_string_for_printing(ds.s)
             ss.append((hex(ds.va or 0), hex(ds.decoded_at_va), s))
 
-        print(tabulate.tabulate(ss, headers=["Offset", "Called At", "String"]))
-        print("")
+        if len(ss) > 0:
+            print(tabulate.tabulate(ss, headers=["Offset", "Called At", "String"]))
+            print("")
 
 
 def create_script_content(sample_file_path, decoded_strings):
@@ -317,16 +321,24 @@ def print_all_strings(path, n=4, quiet=False):
         for s in strings.extract_unicode_strings(b, n=n):
             print("%s" % (s.s))
     else:
+        ascii_strings = strings.extract_ascii_strings(b, n=n)
         print("Static ASCII strings")
-        print(tabulate.tabulate(
-            [(hex(s.offset), s.s) for s in strings.extract_ascii_strings(b, n=n)],
-            headers=["Offset", "String"]))
+        if len(ascii_strings) == 0:
+            print("none.")
+        else:
+            print(tabulate.tabulate(
+                [(hex(s.offset), s.s) for s in ascii_strings],
+                headers=["Offset", "String"]))
         print("")
 
+        uni_strings = strings.extract_unicode_strings(b, n=n)
         print("Static UTF-16 strings")
-        print(tabulate.tabulate(
-            [(hex(s.offset), s.s) for s in strings.extract_unicode_strings(b, n=n)],
-            headers=["Offset", "String"]))
+        if len(uni_strings) == 0:
+            print("none.")
+        else:
+            print(tabulate.tabulate(
+                [(hex(s.offset), s.s) for s in uni_strings],
+                headers=["Offset", "String"]))
         print("")
 
 
@@ -340,9 +352,10 @@ def print_stack_strings(extracted_strings, n=4, quiet=False):
         count = len(extracted_strings)
 
         print("FLOSS extracted %d stack strings" % (count))
-        print(tabulate.tabulate(
-            [(hex(s.fva), hex(s.frame_offset), s.s) for s in extracted_strings],
-            headers=["Function", "Frame Offset", "String"]))
+        if count > 0:
+            print(tabulate.tabulate(
+                [(hex(s.fva), hex(s.frame_offset), s.s) for s in extracted_strings],
+                headers=["Function", "Frame Offset", "String"]))
         print("")
 
 
