@@ -130,11 +130,17 @@ def extract_stackstrings(vw):
         seen = set([])
         for ctx in extract_call_contexts(vw, fva):
             for s in strings.extract_ascii_strings(ctx.stack_memory):
+                if s.s == "A" * len(s.s):
+                    # ignore vivisect taint strings
+                    continue
                 if s.s not in seen:
                     frame_offset = (ctx.init_sp - ctx.sp) - s.offset - getPointerSize(vw)
                     yield(StackString(fva, s.s, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
                     seen.add(s.s)
             for s in strings.extract_unicode_strings(ctx.stack_memory):
+                if s.s == "A" * len(s.s):
+                    # ignore vivisect taint strings
+                    continue
                 if s.s not in seen:
                     frame_offset = (ctx.init_sp - ctx.sp) - s.offset - getPointerSize(vw)
                     yield(StackString(fva, s.s, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
