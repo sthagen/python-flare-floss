@@ -12,9 +12,12 @@ def pytest_collect_file(parent, path):
 class YamlFile(pytest.File):
     def collect(self):
         spec = yaml.safe_load(self.fspath.open())
+        test_dir = os.path.dirname(str(self.fspath))
         for platform, archs in spec["Output Files"].items():
             for arch, filename in archs.items():
-                yield FLOSSTest(self, platform, arch, filename, spec)
+                filepath = os.path.join(test_dir, filename)
+                if os.path.exists(filepath):
+                    yield FLOSSTest(self, platform, arch, filename, spec)
 
 
 def extract_strings(sample_path):
