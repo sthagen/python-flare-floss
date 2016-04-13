@@ -1,4 +1,4 @@
-Test Name: decode-from-heap
+Test Name: test-decode-from-heap
 Test Purpose: Demonstrate extraction of strings decoded from an allocated heap buffer.
 Decoding algorithm: single byte xor
 Input buffer location: heap
@@ -9,6 +9,13 @@ Decoded strings:
 
 Source files:
      - test-decode-from-heap.c
+
+Output Files:
+    Linux:
+        32bit: test-decode-from-heap
+    Windows:
+        32bit: test-decode-from-heap.exe
+        64bit: test-decode-from-heap64.exe
 
 Build instructions (Windows): |
       cl.exe test-decode-from-heap.c /Fetest-decode-from-heap.exe

@@ -1,4 +1,4 @@
-Test Name: decode-from-global
+Test Name: test-decode-from-global
 Test Purpose: Demonstrate extraction of strings decoded from a global buffer.
 Decoding algorithm: single byte xor
 Input buffer location: global
@@ -9,6 +9,13 @@ Decoded strings:
 
 Source files:
     - test-decode-from-global.c
+
+Output Files:
+    Linux:
+        32bit: test-decode-from-global
+    Windows:
+        32bit: test-decode-from-global.exe
+        64bit: test-decode-from-global64.exe
 
 Build instructions (Windows): |
     cl.exe test-decode-from-global.c /Fetest-decode-from-global.exe

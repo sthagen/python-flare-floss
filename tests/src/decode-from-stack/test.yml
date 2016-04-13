@@ -1,4 +1,4 @@
-Test Name: decode-from-stack
+Test Name: test-decode-from-stack
 Test Purpose: Demonstrate extraction of strings decoded from the stack.
 Decoding algorithm: single byte xor
 Input buffer location: stack
@@ -9,6 +9,13 @@ Decoded strings:
 
 Source files:
     - test-decode-from-stack.c
+
+Output Files:
+    Linux:
+        32bit: test-decode-from-stack
+    Windows:
+        32bit: test-decode-from-stack.exe
+        64bit: test-decode-from-stack64.exe
 
 Build instructions (Windows): |
     cl.exe test-decode-from-stack.c /Fetest-decode-from-stack.exe

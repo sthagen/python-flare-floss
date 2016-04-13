@@ -1,4 +1,4 @@
-Test Name: decode-to-output-buf
+Test Name: test-decode-to-output-buf
 Test Purpose: Demonstrate extraction of strings decoded to an output buffer.
 Decoding algorithm: single byte xor
 Input buffer location: stack
@@ -9,6 +9,13 @@ Decoded strings:
 
 Source files:
     - test-decode-to-output-buf.c
+
+Output Files:
+    Linux:
+        32bit: test-decode-to-output-buf
+    Windows:
+        32bit: test-decode-to-output-buf.exe
+        64bit: test-decode-to-output-buf64.exe
 
 Build instructions (Windows): |
     cl.exe test-decode-to-output-buf.c /Fetest-decode-to-output-buf.exe

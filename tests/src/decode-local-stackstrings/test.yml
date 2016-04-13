@@ -1,4 +1,4 @@
-Test Name: decode-local-stackstrings
+Test Name: test-decode-local-stackstrings
 Test Purpose: Demonstrate extraction of local stackstrings.
 Decoding algorithm: stackstrings
 Input buffer location: n/a
@@ -10,6 +10,13 @@ Decoded strings:
 
 Source files:
     - test-decode-local-stackstrings.c
+
+Output Files:
+    Linux:
+        32bit: test-decode-local-stackstrings
+    Windows:
+        32bit: test-decode-local-stackstrings.exe
+        64bit: test-decode-local-stackstrings64.exe
 
 Build instructions (Windows): |
     cl.exe test-decode-local-stackstrings.c /Fetest-decode-local-stackstrings.exe

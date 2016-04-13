@@ -1,4 +1,4 @@
-Test Name: decode-base64
+Test Name: test-decode-base64
 Test Purpose: Demonstrate detection of base64 routine and decoding of base64 data.
 Decoding algorithm: Base64
 Input buffer location: global
@@ -11,6 +11,13 @@ Source files:
   - test-decode-base64.c
   - base64.h
   - base64.c
+
+Output Files:
+    Linux:
+        32bit: test-decode-base64
+    Windows:
+        32bit: test-decode-base64.exe
+        64bit: test-decode-base6464.exe
 
 Build instructions (Windows): |
     cl.exe test-decode-base64.c base64.c /Fetest-decode-base64.exe

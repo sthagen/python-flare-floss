@@ -1,4 +1,4 @@
-Test Name: decode-split-stackstrings
+Test Name: test-decode-split-stackstrings
 Test Purpose: Demonstrate extraction of different stackstrings split across basic blocks.
 Decoding algorithm: stackstrings
 Input buffer location: n/a
@@ -10,6 +10,13 @@ Decoded strings:
 
 Source files:
     - test-decode-split-stackstrings.c
+
+Output Files:
+    Linux:
+        32bit: test-decode-split-stackstrings
+    Windows:
+        32bit: test-decode-split-stackstrings.exe
+        64bit: test-decode-split-stackstrings64.exe
 
 Build instructions (Windows): |
     cl.exe test-decode-split-stackstrings.c /Fetest-decode-split-stackstrings.exe

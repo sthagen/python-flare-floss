@@ -1,4 +1,4 @@
-Test Name: eg. decode-template
+Test Name: eg. test-decode-template
 Test Purpose: eg. demonstrate detection of simple decoding routine
 Decoding algorithm: eg. single byte xor
 Input buffer location: eg. stack, heap, global
@@ -10,6 +10,13 @@ Decoded strings:
 
 Source files:
     - eg. template.c
+
+Output Files:
+    Linux:
+        32bit: eg. template
+    Windows:
+        32bit: eg. template.exe
+        64bit: eg. template64.exe
 
 Build instructions (Windows): |
     eg. rm template.exe

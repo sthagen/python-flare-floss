@@ -1,4 +1,4 @@
-Test Name: decode-in-place
+Test Name: test-decode-in-place
 Test Purpose: Demonstrate extraction of strings decoded in place.
 Decoding algorithm: single byte xor
 Input buffer location: stack
@@ -9,6 +9,13 @@ Decoded strings:
 
 Source files:
     - test-decode-in-place.c
+
+Output Files:
+    Linux:
+        32bit: test-decode-in-place
+    Windows:
+        32bit: test-decode-in-place.exe
+        64bit: test-decode-in-place64.exe
 
 Build instructions (Windows): |
     cl.exe test-decode-in-place.c /Fetest-decode-in-place.exe
