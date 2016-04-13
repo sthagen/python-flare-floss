@@ -4,17 +4,20 @@ Input buffer location: eg. stack, heap, global
 Output buffer location: eg. stack, heap, global
 
 Decoded strings:
-  - eg. Hello world!
-  - eg. Hello moon!
+    - eg. Hello world!
+    - eg. Hello moon!
 
 Source files:
-  - eg. template.c
+    - eg. template.c
 
-Build instructions (Windows):
-  - eg. cl.exe template.c /Fetemplate.exe
+Build instructions (Windows): |
+    eg. rm template.exe
+    eg. cl.exe template.c /Fetemplate.exe
 
-Build instructions (Linux):
-  - eg. clang template.c -o template
+Build instructions (Linux): |
+    eg. rm template
+    eg. clang template.c -o template
 
-Build instructions (Cross compile for Windows on Linux):
-  - i686-w64-mingw32-clang template.c -o template.exe
+Build instructions (Cross compile for Windows on Linux): |
+    eg. rm template.exe
+    eg. i686-w64-mingw32-clang template.c -o template.exe
