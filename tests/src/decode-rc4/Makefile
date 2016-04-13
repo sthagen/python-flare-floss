@@ -1,4 +1,4 @@
-NAME=test-decode-global-stackstrings
+NAME=test-decode-rc4
 
 BUILDDIR=bin
 SRC=$(NAME).c

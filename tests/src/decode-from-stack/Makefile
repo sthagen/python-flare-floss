@@ -1,24 +1,30 @@
 NAME=test-decode-from-stack
 
+BUILDDIR=bin
 SRC=$(NAME).c
 LINUX=$(NAME)
 WINDOWS=$(NAME).exe
 WINDOWS64=$(NAME)64.exe
 
-$(LINUX): $(SRC)
-	clang $(SRC) -o $(LINUX)
+dir=@mkdir -p $(@D)
+
+$(BUILDDIR)/$(LINUX): $(SRC)
+	$(dir)
+	clang $(SRC) -o $@
 
 
-$(WINDOWS): $(SRC)
-	i686-w64-mingw32-clang $(SRC) -o $(WINDOWS)
+$(BUILDDIR)/$(WINDOWS): $(SRC)
+	$(dir)
+	i686-w64-mingw32-clang $(SRC) -o $@
 
 
-$(WINDOWS64): $(SRC)
-	x86_64-w64-mingw32-clang $(SRC) -o $(WINDOWS64)
+$(BUILDDIR)/$(WINDOWS64): $(SRC)
+	$(dir)
+	x86_64-w64-mingw32-clang $(SRC) -o $@
 
 
 clean:
-	rm -rf *~ *.bak *.exe *.viv *.swp *.idb *.i64 a.out *.obj $(LINUX) $(WINODWS) $(WINDOWS64)
+	rm -rf $(BUILDDIR)/*~ $(BUILDDIR)/*.bak $(BUILDDIR)/*.exe $(BUILDDIR)/*.viv $(BUILDDIR)/*.swp $(BUILDDIR)/$(LINUX)
 
 
-all: $(LINUX) $(WINDOWS) $(WINDOWS64)
+all: $(BUILDDIR)/$(LINUX) $(BUILDDIR)/$(WINDOWS) $(BUILDDIR)/$(WINDOWS64)
