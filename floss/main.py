@@ -29,6 +29,10 @@ floss_version = "1.1.0\n" \
 floss_logger = logging.getLogger("floss")
 
 
+def hex(i):
+    return "0x%X" % (i)
+
+
 def decode_strings(vw, function_index, decoding_functions_candidates):
     decoded_strings = []
     for fva, _ in decoding_functions_candidates.get_top_candidate_functions(10):
@@ -212,7 +216,7 @@ def parse_min_length_option(min_length_option):
 def print_identification_results(sample_file_path, decoder_results):
     print("Most likely decoding functions in: " + sample_file_path)
     print(tabulate.tabulate(
-        [("0x%X" % (fva,), "%.5f" % (score,)) for fva, score in 
+        [(hex(fva), "%.5f" % (score,)) for fva, score in 
             decoder_results.get_top_candidate_functions(10)],
         headers=["address", "score"]))
     print("")
@@ -246,7 +250,7 @@ def print_strings(ds_filtered, min_length, quiet=False):
         for ds in ds_filtered:
             s = sanitize_string_for_printing(ds.s)
             if len(s) >= min_length:
-                ss.append(("0x%X" % (ds.va or 0,), "0x%X" % (ds.decoded_at_va,), s))
+                ss.append((hex(ds.va or 0), hex(ds.decoded_at_va), s))
 
         print(tabulate.tabulate(ss, headers=["Offset", "Called At", "String"]))
         print("")
@@ -316,13 +320,13 @@ def print_all_strings(path, n=4, quiet=False):
     else:
         print("Static ASCII strings")
         print(tabulate.tabulate(
-            [("0x%X" % (s.offset,), s.s) for s in strings.extract_ascii_strings(b, n=n)],
+            [(hex(s.offset), s.s) for s in strings.extract_ascii_strings(b, n=n)],
             headers=["Offset", "String"]))
         print("")
 
         print("Static UTF-16 strings")
         print(tabulate.tabulate(
-            [("0x%X" % (s.offset,), s.s) for s in strings.extract_unicode_strings(b, n=n)],
+            [(hex(s.offset), s.s) for s in strings.extract_unicode_strings(b, n=n)],
             headers=["Offset", "String"]))
         print("")
 
@@ -338,7 +342,7 @@ def print_stack_strings(extracted_strings, n=4, quiet=False):
 
         print("FLOSS extracted %d stack strings" % (count))
         print(tabulate.tabulate(
-            [("0x%X" % (s.fva,), "0x%X" % (s.frame_offset,), s.s) for s in extracted_strings],
+            [(hex(s.fva), hex(s.frame_offset), s.s) for s in extracted_strings],
             headers=["Function", "Frame Offset", "String"]))
         print("")
 
