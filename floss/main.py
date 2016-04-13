@@ -9,6 +9,7 @@ import pkg_resources
 from time import time
 from optparse import OptionParser
 
+import tabulate
 import plugnplay
 import viv_utils
 
@@ -209,17 +210,18 @@ def parse_min_length_option(min_length_option):
 
 
 def print_identification_results(sample_file_path, decoder_results):
-    print("\nMost likely decoding functions in: " + sample_file_path)
-    print("address:    score:  ")
-    print("----------  -------")
-    for fva, score in decoder_results.get_top_candidate_functions(10):
-        print("0x%08X %.5f" % (fva, score))
+    print("Most likely decoding functions in: " + sample_file_path)
+    print(tabulate.tabulate(
+        [("0x%X" % (fva,), "%.5f" % (score,)) for fva, score in 
+            decoder_results.get_top_candidate_functions(10)],
+        headers=["address", "score"]))
     print("")
 
 
 def print_decoding_results(decoded_strings, min_length, group_functions, quiet=False):
     if not quiet:
         print("FLOSS decoded %d strings" % len(decoded_strings))
+
     if group_functions:
         fvas = set(map(lambda i: i.fva, decoded_strings))
         for fva in fvas:
@@ -234,19 +236,19 @@ def print_decoding_results(decoded_strings, min_length, group_functions, quiet=F
 
 
 def print_strings(ds_filtered, min_length, quiet=False):
-    if not quiet:
-        print("Offset       Called At    String")
-        print("----------   ----------   -------------------------------------")
-
-    for ds in ds_filtered:
-        va = ds.va or 0
-        s = sanitize_string_for_printing(ds.s)
-        if len(s) >= min_length:
-            if quiet:
+    if quiet:
+        for ds in ds_filtered:
+            s = sanitize_string_for_printing(ds.s)
+            if len(s) >= min_length:
                 print("%s" % (s))
-            else:
-                print("0x%08X   0x%08X   %s" % (va, ds.decoded_at_va, s))
-    if not quiet:
+    else:
+        ss = []
+        for ds in ds_filtered:
+            s = sanitize_string_for_printing(ds.s)
+            if len(s) >= min_length:
+                ss.append(("0x%X" % (ds.va or 0,), "0x%X" % (ds.decoded_at_va,), s))
+
+        print(tabulate.tabulate(ss, headers=["Offset", "Called At", "String"]))
         print("")
 
 
@@ -313,17 +315,15 @@ def print_all_strings(path, n=4, quiet=False):
             print("%s" % (s.s))
     else:
         print("Static ASCII strings")
-        print("Offset       String")
-        print("----------   -------------------------------------")
-        for s in strings.extract_ascii_strings(b, n=n):
-            print("0x%08X   %s" % (s.offset, s.s))
+        print(tabulate.tabulate(
+            [("0x%X" % (s.offset,), s.s) for s in strings.extract_ascii_strings(b, n=n)],
+            headers=["Offset", "String"]))
         print("")
 
         print("Static UTF-16 strings")
-        print("Offset       String")
-        print("----------   -------------------------------------")
-        for s in strings.extract_unicode_strings(b, n=n):
-            print("0x%08X   %s" % (s.offset, s.s))
+        print(tabulate.tabulate(
+            [("0x%X" % (s.offset,), s.s) for s in strings.extract_unicode_strings(b, n=n)],
+            headers=["Offset", "String"]))
         print("")
 
 
@@ -333,15 +333,14 @@ def print_stack_strings(extracted_strings, n=4, quiet=False):
             if len(ss.s) >= n:
                 print("%s" % (ss.s))
     else:
-        extracted_strings = list(extracted_strings)
-        count = len(filter(lambda s: len(s.s) >= 4, extracted_strings))
-        print("FLOSS extracted %d stack strings" % (count))
-        print("Function:   Frame offset  String:  ")
-        print("----------  ------------  -------")
+        extracted_strings = list(filter(lambda s: len(s.s) >= n, extracted_strings))
+        count = len(extracted_strings)
 
-        for ss in extracted_strings:
-            if len(ss.s) >= n:
-                print("0x%08x  0x%04x    %s" % (ss.fva, ss.frame_offset, ss.s))
+        print("FLOSS extracted %d stack strings" % (count))
+        print(tabulate.tabulate(
+            [("0x%X" % (s.fva,), "0x%X" % (s.frame_offset,), s.s) for s in extracted_strings],
+            headers=["Function", "Frame Offset", "String"]))
+        print("")
 
 
 def main():
