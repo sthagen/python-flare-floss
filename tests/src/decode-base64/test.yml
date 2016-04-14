@@ -14,10 +14,10 @@ Source files:
 
 Output Files:
     Linux:
-        32bit: test-decode-base64
+        32bit: bin/test-decode-base64
     Windows:
-        32bit: test-decode-base64.exe
-        64bit: test-decode-base6464.exe
+        32bit: bin/test-decode-base64.exe
+        64bit: bin/test-decode-base6464.exe
 
 Build instructions (Windows): |
     cl.exe test-decode-base64.c base64.c /Fetest-decode-base64.exe
