@@ -20,6 +20,7 @@ import sys
 import yaml
 import json
 import struct
+import logging
 from pprint import pprint
 
 
@@ -32,52 +33,48 @@ SIZE_LEN = 4
 SIZE_MAGIC = len(MAGIC)
 
 
+logger = logging.getLogger(__name__)
+
+
 def does_contain_magic_footer(sample_path):
     try:
-        f = open(sample_path, "rb")
-        f.seek((-SIZE_MAGIC), FILE_END)
-        m = f.read(SIZE_MAGIC)
-    except Exception as e:
-        print str(e)
-    finally:
-        f.close()
-    return m == MAGIC
+        with open(sample_path, "rb") as f:
+            f = open(sample_path, "rb")
+            f.seek((-SIZE_MAGIC), FILE_END)
+            return f.read(SIZE_MAGIC) == MAGIC
+    except Exception:
+        logger.warning("failed to check magic footer", exc_info=True)
+
+
+class NoFooterException(Exception):
+    pass
 
 
 def read_test_dict_from_file(sample_path):
     if not does_contain_magic_footer(sample_path):
-        return None
+        raise NoFooterException()
 
-    test_dict = None
     try:
-        f = open(sample_path, "rb")
-        f.seek((-(SIZE_MAGIC + SIZE_OFFSET + SIZE_LEN)), FILE_END)
-        test_dict_meta = f.read(SIZE_OFFSET + SIZE_LEN)
-        (data_offset, data_len) = struct.unpack("<II", test_dict_meta)
-        f.seek(data_offset, FILE_START)
-        test_dict_meta = f.read(data_len)
-        test_dict = json.loads(test_dict_meta)
+        with open(sample_path, "rb") as f:
+            f.seek((-(SIZE_MAGIC + SIZE_OFFSET + SIZE_LEN)), FILE_END)
+            test_dict_meta = f.read(SIZE_OFFSET + SIZE_LEN)
+            (data_offset, data_len) = struct.unpack("<II", test_dict_meta)
+            f.seek(data_offset, FILE_START)
+            test_dict_meta = f.read(data_len)
+            return json.loads(test_dict_meta)
     except Exception as e:
-        print str(e)
-    finally:
-        f.close()
-
-    return test_dict
+        logger.warning("failed to read footer", exc_info=True)
 
 
 def get_test_dict_from_yaml(yaml_file):
-    test_dict = {}
     try:
-        f = open(yaml_file, "r")
-        spec = yaml.safe_load(f)
-        test_dict["all"] = spec["Decoded strings"]
-        # TODO add decoding function offsets
+        with open(yaml_file, "rb") as f:
+            spec = yaml.safe_load(f)
+            return {
+                "all": spec["Decoded strings"]
+            }
     except Exception as e:
-        print str(e)
-        return test_dict
-    finally:
-        f.close()
-    return test_dict
+        logger.warning("failed to read spec", exc_info=True)
 
 
 def append_test_dict_to_file(sample_path, test_dict):
@@ -89,15 +86,10 @@ def append_test_dict_to_file(sample_path, test_dict):
 
 
 def append_data(sample_path, data):
-    try:
-        f = open(sample_path, "ab")
+    with open(sample_path, "ab") as f:
         f.write(data)
-    except Exception as e:
-        print str(e)
-        return False
-    finally:
-        f.close()
-    return True
+        return True
+    return False
 
 
 def main():
