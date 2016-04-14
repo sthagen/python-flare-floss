@@ -57,12 +57,9 @@ class YamlFile(pytest.File):
         test_dir = os.path.dirname(str(self.fspath))
         for platform, archs in spec["Output Files"].items():
             for arch, filename in archs.items():
-                # TODO only test Windows PE files for now
-                _, fileext = os.path.splitext(filename)
-                if fileext == ".exe":
-                    filepath = os.path.join(test_dir, "bin", filename)
-                    if os.path.exists(filepath):
-                        yield FLOSSTest(self, platform, arch, os.path.join("bin", filename), spec)
+                filepath = os.path.join(test_dir, filename)
+                if os.path.exists(filepath):
+                    yield FLOSSTest(self, platform, arch, filename, spec)
 
 
 class FLOSSTest(pytest.Item):
@@ -82,13 +79,17 @@ class FLOSSTest(pytest.Item):
         test_dir = os.path.dirname(spec_path)
         test_path = os.path.join(test_dir, self.filename)
 
+        # TODO: add support for ELF, MACHO
+        if not test_path.lower().endswith(".exe"):
+            pytest.xfail("unsupported file format (known issue)")
+
         # TODO: alternatively, get test data from appended data:
         # expected_strings = set(read_test_dict(test_path))
         expected_strings = set(self.spec["Decoded strings"])
         found_strings = set(extract_strings(test_path))
 
-        # assert that expected_strings is not empty
-        assert expected_strings and (expected_strings <= found_strings)
+        if expected_strings:
+            assert expected_strings <= found_strings
 
     def reportinfo(self):
         return self.fspath, 0, "usecase: %s" % self.name

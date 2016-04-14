@@ -9,6 +9,8 @@ except ImportError:
 
 
 requirements = [
+    "q",
+    "pyyaml",
     "tabulate",
     "vivisect",
     "plugnplay",

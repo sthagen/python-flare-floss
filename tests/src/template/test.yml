@@ -13,19 +13,19 @@ Source files:
 
 Output Files:
     Linux:
-        32bit: eg. template
+        32bit: eg. bin/template
     Windows:
-        32bit: eg. template.exe
-        64bit: eg. template64.exe
+        32bit: eg. bin/template.exe
+        64bit: eg. bin/template64.exe
 
 Build instructions (Windows): |
     eg. rm template.exe
-    eg. cl.exe template.c /Fetemplate.exe
+    eg. cl.exe template.c /Febin/template.exe
 
 Build instructions (Linux): |
     eg. rm template
-    eg. clang template.c -o template
+    eg. clang template.c -o bin/template
 
 Build instructions (Cross compile for Windows on Linux): |
     eg. rm template.exe
-    eg. i686-w64-mingw32-clang template.c -o template.exe
+    eg. i686-w64-mingw32-clang template.c -o bin/template.exe

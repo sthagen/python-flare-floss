@@ -12,10 +12,10 @@ Source files:
 
 Output Files:
     Linux:
-        32bit: test-decode-from-global
+        32bit: bin/test-decode-from-global
     Windows:
-        32bit: test-decode-from-global.exe
-        64bit: test-decode-from-global64.exe
+        32bit: bin/test-decode-from-global.exe
+        64bit: bin/test-decode-from-global64.exe
 
 Build instructions (Windows): |
     cl.exe test-decode-from-global.c /Fetest-decode-from-global.exe
