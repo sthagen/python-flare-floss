@@ -10,4 +10,4 @@ install:
     - pushd wclang; cmake -DCMAKE_INSTALL_PREFIX=/usr/local && make && sudo make install; popd
     - pushd tests/src; make all; popd
 
-script: py.test tests/src/
+script: py.test tests/src/ -v
