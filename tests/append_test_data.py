@@ -32,7 +32,7 @@ SIZE_LEN = 4
 SIZE_MAGIC = len(MAGIC)
 
 
-def contains_magic(sample_path):
+def does_contain_magic_footer(sample_path):
     try:
         f = open(sample_path, "rb")
         f.seek((-SIZE_MAGIC), FILE_END)
@@ -45,7 +45,7 @@ def contains_magic(sample_path):
 
 
 def read_test_dict_from_file(sample_path):
-    if not contains_magic(sample_path):
+    if not does_contain_magic_footer(sample_path):
         return None
 
     test_dict = None
@@ -110,7 +110,7 @@ def main():
         print("%s is not a file" % sample_path)
         return
 
-    if contains_magic(sample_path):
+    if does_contain_magic_footer(sample_path):
         print("%s already contains test data:" % sample_path)
         pprint(read_test_dict_from_file(sample_path))
         return
