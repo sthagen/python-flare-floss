@@ -1,0 +1,13 @@
+language: python
+python:
+  - "2.7"
+
+install:
+    - pip install https://github.com/williballenthin/vivisect/zipball/master
+    - pip install -e .
+    - sudo apt-get install git clang mingw-w64 cmake make
+    - git clone https://github.com/tpoechtrager/wclang.git wclang
+    - cd wclang && cmake -DCMAKE_INSTALL_PREFIX=/usr/local && make && sudo make install
+    - cd tests/src && make all
+
+script: nosetests
