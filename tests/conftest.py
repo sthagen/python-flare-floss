@@ -1,4 +1,3 @@
-import q
 import os
 import yaml
 import pytest
@@ -48,6 +47,12 @@ class YamlFile(pytest.File):
                     yield FLOSSTest(self, platform, arch, filename, spec)
 
 
+class FLOSSStringsNotExtracted(Exception):
+    def __init__(self, expected, got):
+        self.expected = expected
+        self.got = got
+
+
 class FLOSSTest(pytest.Item):
     def __init__(self, path, platform, arch, filename, spec):
         name = "{name:s}::{platform:s}::{arch:s}".format(
@@ -73,7 +78,19 @@ class FLOSSTest(pytest.Item):
         found_strings = set(extract_strings(test_path))
 
         if expected_strings:
-            assert expected_strings <= found_strings
+            if not (expected_strings <= found_strings):
+                raise FLOSSStringsNotExtracted(expected_strings, found_strings)
 
     def reportinfo(self):
         return self.fspath, 0, "usecase: %s" % self.name
+
+    def repr_failure(self, excinfo):
+        if isinstance(excinfo.value, FLOSSStringsNotExtracted):
+            expected = excinfo.value.expected
+            got = excinfo.value.got
+            return "\n".join([
+                "FLOSS extraction failed:",
+                "   expected: %s" % str(expected),
+                "   got: %s" % str(got),
+            ])
+
