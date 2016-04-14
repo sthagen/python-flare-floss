@@ -15,7 +15,8 @@ TESTS= \
 	decode-to-output-buf \
 	decode-to-stack \
 	decode-string-by-index \
-	decode-reencode-string
+	decode-reencode-string \
+	decode-wrapped-decoder
 
 
 clean:

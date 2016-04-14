@@ -43,7 +43,8 @@ class YamlFile(pytest.File):
         for platform, archs in spec["Output Files"].items():
             for arch, filename in archs.items():
                 filepath = os.path.join(test_dir, filename)
-                if os.path.exists(filepath) and footer.has_footer(filepath):
+                if os.path.exists(filepath):
+                    #and footer.has_footer(filepath):
                     yield FLOSSTest(self, platform, arch, filename, spec)
 
 
@@ -74,7 +75,11 @@ class FLOSSTest(pytest.Item):
         if not test_path.lower().endswith(".exe"):
             pytest.xfail("unsupported file format (known issue)")
 
-        expected_strings = set(footer.read_footer(test_path)["all"])
+        if footer.has_footer(test_path):
+            expected_strings = set(footer.read_footer(test_path)["all"])
+        else:
+            expected_strings = set(self.spec["Decoded strings"])
+
         found_strings = set(extract_strings(test_path))
 
         if expected_strings:
