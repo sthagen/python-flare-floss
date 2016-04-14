@@ -12,16 +12,16 @@ Source files:
 
 Output Files:
     Linux:
-        32bit: test-decode-from-heap
+        32bit: bin/test-decode-from-heap
     Windows:
-        32bit: test-decode-from-heap.exe
-        64bit: test-decode-from-heap64.exe
+        32bit: bin/test-decode-from-heap.exe
+        64bit: bin/test-decode-from-heap64.exe
 
 Build instructions (Windows): |
-      cl.exe test-decode-from-heap.c /Fetest-decode-from-heap.exe
+      cl.exe test-decode-from-heap.c /Febin/test-decode-from-heap.exe
 
 Build instructions (Linux): |
-      clang test-decode-from-heap.c -o test-decode-from-heap
+      clang test-decode-from-heap.c -o bin/test-decode-from-heap
 
 Build instructions (Cross compile for Windows on Linux): |
-      i686-w64-mingw32-clang test-decode-from-heap.c -o test-decode-from-heap.exe
+      i686-w64-mingw32-clang test-decode-from-heap.c -o bin/test-decode-from-heap.exe

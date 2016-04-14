@@ -12,16 +12,16 @@ Source files:
 
 Output Files:
     Linux:
-        32bit: test-decode-to-stack
+        32bit: bin/test-decode-to-stack
     Windows:
-        32bit: test-decode-to-stack.exe
-        64bit: test-decode-to-stack64.exe
+        32bit: bin/test-decode-to-stack.exe
+        64bit: bin/test-decode-to-stack64.exe
 
 Build instructions (Windows): |
-    cl.exe test-decode-to-stack.c /Fetest-decode-to-stack.exe
+    cl.exe test-decode-to-stack.c /Febin/test-decode-to-stack.exe
 
 Build instructions (Linux): |
-    clang test-decode-to-stack.c -o test-decode-to-stack
+    clang test-decode-to-stack.c -o bin/test-decode-to-stack
 
 Build instructions (Cross compile for Windows on Linux): |
-    i686-w64-mingw32-clang test-decode-to-stack.c -o test-decode-to-stack.exe
+    i686-w64-mingw32-clang test-decode-to-stack.c -o bin/test-decode-to-stack.exe

@@ -8,20 +8,20 @@ Decoded strings:
     - Hello world
 
 Source files:
-    - eg. test-decode-string-with-header.c
+    - test-decode-string-with-header.c
 
 Output Files:
     Linux:
-        32bit: test-decode-string-with-header
+        32bit: bin/test-decode-string-with-header
     Windows:
-        32bit: test-decode-string-with-header.exe
-        64bit: test-decode-string-with-header64.exe
+        32bit: bin/test-decode-string-with-header.exe
+        64bit: bin/test-decode-string-with-header64.exe
 
 Build instructions (Windows): |
-    cl.exe test-decode-string-with-header.c /Fetest-decode-string-with-header.exe
+    cl.exe test-decode-string-with-header.c /Febin/test-decode-string-with-header.exe
 
 Build instructions (Linux): |
-    clang test-decode-string-with-header.c -o test-decode-string-with-header
+    clang test-decode-string-with-header.c -o bin/test-decode-string-with-header
 
 Build instructions (Cross compile for Windows on Linux): |
-    i686-w64-mingw32-clang test-decode-string-with-header.c -o test-decode-string-with-header.exe
+    i686-w64-mingw32-clang test-decode-string-with-header.c -o bin/test-decode-string-with-header.exe
