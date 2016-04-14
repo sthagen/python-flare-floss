@@ -5,8 +5,8 @@ Input buffer location: n/a
 Output buffer location: stack
 
 Decoded strings:
-    - hello world
-    - hello moon
+    - goodbye world
+    - goodbye moon
 
 Source files:
     - test-decode-split-stackstrings.c
