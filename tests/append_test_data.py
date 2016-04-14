@@ -22,6 +22,7 @@ import json
 import struct
 import logging
 from pprint import pprint
+from pprint import pformat
 
 
 FILE_START = 0
@@ -66,58 +67,51 @@ def read_test_dict_from_file(sample_path):
         logger.warning("failed to read footer", exc_info=True)
 
 
-def get_test_dict_from_yaml(yaml_file):
-    try:
-        with open(yaml_file, "rb") as f:
-            spec = yaml.safe_load(f)
-            return {
-                "all": spec["Decoded strings"]
-            }
-    except Exception as e:
-        logger.warning("failed to read spec", exc_info=True)
+class DuplicateFooterException(Exception):
+    pass
 
 
 def append_test_dict_to_file(sample_path, test_dict):
+    if does_contain_magic_footer(sample_path):
+        raise DuplicateFooterException()
+
     json_data = json.dumps(test_dict)
     data_len = len(json_data)
     file_size = os.path.getsize(sample_path)
     test_data = struct.pack("<II", file_size, data_len)
-    return append_data(sample_path, json_data + test_data + MAGIC)
-
-
-def append_data(sample_path, data):
     with open(sample_path, "ab") as f:
-        f.write(data)
-        return True
-    return False
+        f.write(json_data + test_data + MAGIC)
 
 
 def main():
+    logging.basicConfig(level=logging.INFO)
     if len(sys.argv) != 2:
-        print("Usage: %s <SAMPLE_PATH>" % sys.argv[0])
+        print("Usage: %s <SPEC_FILE>" % sys.argv[0])
         return -1
 
-    sample_path = sys.argv[1]
-    if not os.path.isfile(sample_path):
-        print("%s is not a file" % sample_path)
-        return
+    spec_path = sys.argv[1]
+    spec_dir = os.path.dirname(spec_path)
+    with open(spec_path, "rb") as f:
+        spec = yaml.safe_load(f)
 
-    if does_contain_magic_footer(sample_path):
-        print("%s already contains test data:" % sample_path)
-        pprint(read_test_dict_from_file(sample_path))
-        return
+    strings = spec["Decoded strings"]
+    test_dict = { "all": strings }
+    logging.info("created test dictionary from %s:\n  %s", spec_path, pformat(test_dict))
 
-    testdir = os.path.dirname(os.path.dirname(sample_path))
-    yaml_file = os.path.join(testdir, "test.yml")
+    for platform, archs in spec["Output Files"].items():
+        for arch, filename in archs.items():
+            filepath = os.path.join(spec_dir, filename)
+            if not os.path.isfile(filepath):
+                logging.warning("not a file: %s", filepath)
+                continue
 
-    test_dict = get_test_dict_from_yaml(yaml_file)
+            if does_contain_magic_footer(filepath):
+                logging.info("already has footer, skipping: %s", filepath)
+                continue
 
-    if test_dict:
-        print("Created test dictionary from %s:" % yaml_file)
-        pprint(test_dict)
+            append_test_dict_to_file(filepath, {"all": strings})
+            logging.info("set footer: %s", filepath)
 
-    if append_test_dict_to_file(sample_path, test_dict):
-        print("Successfully appended test data to %s" % sample_path)
 
 if __name__ == "__main__":
     main()
