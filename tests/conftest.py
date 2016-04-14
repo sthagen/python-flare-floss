@@ -1,28 +1,13 @@
-import q
 import os
 import yaml
 import pytest
 
 import viv_utils
 
+import footer
 import floss.main as floss_main
 import floss.identification_manager as im
 import floss.stackstrings as stackstrings
-from append_test_data import read_test_dict_from_file
-
-
-def read_test_dict(sample_path):
-    """
-    Reads appended test dictionary from sample and returns "all" items for now.
-    Use tests/append_test_data.py to append test data from test.yml file to a sample.
-    """
-    test_dict = read_test_dict_from_file(sample_path)
-    if test_dict is None:
-        # sample does not contain test data
-        return []
-    else:
-        # TODO can extract decoding functions offsets from test_dict
-        return test_dict["all"]
 
 
 def extract_strings(sample_path):
@@ -58,8 +43,14 @@ class YamlFile(pytest.File):
         for platform, archs in spec["Output Files"].items():
             for arch, filename in archs.items():
                 filepath = os.path.join(test_dir, filename)
-                if os.path.exists(filepath):
+                if os.path.exists(filepath) and footer.has_footer(filepath):
                     yield FLOSSTest(self, platform, arch, filename, spec)
+
+
+class FLOSSStringsNotExtracted(Exception):
+    def __init__(self, expected, got):
+        self.expected = expected
+        self.got = got
 
 
 class FLOSSTest(pytest.Item):
@@ -83,13 +74,23 @@ class FLOSSTest(pytest.Item):
         if not test_path.lower().endswith(".exe"):
             pytest.xfail("unsupported file format (known issue)")
 
-        # TODO: alternatively, get test data from appended data:
-        # expected_strings = set(read_test_dict(test_path))
-        expected_strings = set(self.spec["Decoded strings"])
+        expected_strings = set(footer.read_footer(test_path)["all"])
         found_strings = set(extract_strings(test_path))
 
         if expected_strings:
-            assert expected_strings <= found_strings
+            if not (expected_strings <= found_strings):
+                raise FLOSSStringsNotExtracted(expected_strings, found_strings)
 
     def reportinfo(self):
         return self.fspath, 0, "usecase: %s" % self.name
+
+    def repr_failure(self, excinfo):
+        if isinstance(excinfo.value, FLOSSStringsNotExtracted):
+            expected = excinfo.value.expected
+            got = excinfo.value.got
+            return "\n".join([
+                "FLOSS extraction failed:",
+                "   expected: %s" % str(expected),
+                "   got: %s" % str(got),
+            ])
+

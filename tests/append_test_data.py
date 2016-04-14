@@ -19,68 +19,14 @@ import os
 import sys
 import yaml
 import json
-import struct
 import logging
 from pprint import pprint
 from pprint import pformat
 
-
-FILE_START = 0
-FILE_END = 2
-
-MAGIC = "FLSS"
-SIZE_OFFSET = 4
-SIZE_LEN = 4
-SIZE_MAGIC = len(MAGIC)
+import footer
 
 
 logger = logging.getLogger(__name__)
-
-
-def does_contain_magic_footer(sample_path):
-    try:
-        with open(sample_path, "rb") as f:
-            f = open(sample_path, "rb")
-            f.seek((-SIZE_MAGIC), FILE_END)
-            return f.read(SIZE_MAGIC) == MAGIC
-    except Exception:
-        logger.warning("failed to check magic footer", exc_info=True)
-
-
-class NoFooterException(Exception):
-    pass
-
-
-def read_test_dict_from_file(sample_path):
-    if not does_contain_magic_footer(sample_path):
-        raise NoFooterException()
-
-    try:
-        with open(sample_path, "rb") as f:
-            f.seek((-(SIZE_MAGIC + SIZE_OFFSET + SIZE_LEN)), FILE_END)
-            test_dict_meta = f.read(SIZE_OFFSET + SIZE_LEN)
-            (data_offset, data_len) = struct.unpack("<II", test_dict_meta)
-            f.seek(data_offset, FILE_START)
-            test_dict_meta = f.read(data_len)
-            return json.loads(test_dict_meta)
-    except Exception as e:
-        logger.warning("failed to read footer", exc_info=True)
-
-
-class DuplicateFooterException(Exception):
-    pass
-
-
-def append_test_dict_to_file(sample_path, test_dict):
-    if does_contain_magic_footer(sample_path):
-        raise DuplicateFooterException()
-
-    json_data = json.dumps(test_dict)
-    data_len = len(json_data)
-    file_size = os.path.getsize(sample_path)
-    test_data = struct.pack("<II", file_size, data_len)
-    with open(sample_path, "ab") as f:
-        f.write(json_data + test_data + MAGIC)
 
 
 def main():
@@ -105,11 +51,11 @@ def main():
                 logging.warning("not a file: %s", filepath)
                 continue
 
-            if does_contain_magic_footer(filepath):
+            if footer.has_footer(filepath):
                 logging.info("already has footer, skipping: %s", filepath)
                 continue
 
-            append_test_dict_to_file(filepath, {"all": strings})
+            footer.write_footer(filepath, {"all": strings})
             logging.info("set footer: %s", filepath)
 
 
