@@ -140,7 +140,7 @@ def set_logging_level(should_debug=False, should_verbose=False):
 
         # ignore messages like:
         # WARNING:plugins.xor_plugin.XORSimplePlugin:identify: Invalid instruction encountered in basic block, skipping: 0x4a0637
-        logging.getLogger("plugins.xor_plugin.XORSimplePlugin").setLevel(logging.ERROR)
+        logging.getLogger("floss.plugins.xor_plugin.XORSimplePlugin").setLevel(logging.ERROR)
 
 
 def parse_functions_option(functions_option):
