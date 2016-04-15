@@ -35,8 +35,9 @@ def emulate_decoding_routine(vw, function_index, function, context):
      the final state.
     Emulation terminates if the CPU executes an unexpected region of
      memory, or the function returns.
-    Implementation note: currently limits emulation to 2000 instructions.
+    Implementation note: currently limits emulation to 20,000 instructions.
      This prevents unexpected infinite loops.
+     This number is taken from emulating the decoding of "Hello world" using RC4.
 
 
     :param vw: The vivisect workspace in which the function is defined.
@@ -57,7 +58,7 @@ def emulate_decoding_routine(vw, function_index, function, context):
                 function_index,
                 function,
                 context.return_address,
-                2000)
+                20000)
     return deltas
 
 
