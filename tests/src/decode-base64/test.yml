@@ -29,6 +29,5 @@ Build instructions (Cross compile for Windows on Linux): |
     i686-w64-mingw32-clang++ test-decode-base64.c base64.c -o test-decode-base64.exe
 
 Xfail:
-    - Windows-64bit
     - Linux-32bit
 
