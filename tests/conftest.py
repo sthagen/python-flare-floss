@@ -67,13 +67,16 @@ class FLOSSTest(pytest.Item):
         self.filename = filename
 
     def runtest(self):
+        xfail = self.spec.get("Xfail", {})
+        if "all" in xfail:
+            pytest.xfail("unsupported test case (known issue)")
+
+        if "{0.platform:s}-{0.arch:s}".format(self) in xfail:
+            pytest.xfail("unsupported platform&arch test case (known issue)")
+
         spec_path = self.location[0]
         test_dir = os.path.dirname(spec_path)
         test_path = os.path.join(test_dir, self.filename)
-
-        # TODO: add support for ELF, MACHO
-        if not test_path.lower().endswith(".exe"):
-            pytest.xfail("unsupported file format (known issue)")
 
         if footer.has_footer(test_path):
             expected_strings = set(footer.read_footer(test_path)["all"])

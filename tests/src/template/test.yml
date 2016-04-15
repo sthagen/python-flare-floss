@@ -29,3 +29,7 @@ Build instructions (Linux): |
 Build instructions (Cross compile for Windows on Linux): |
     eg. rm template.exe
     eg. i686-w64-mingw32-clang template.c -o bin/template.exe
+
+Xfail:
+    - Linux-32bit
+
