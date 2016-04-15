@@ -8,11 +8,11 @@ class IdentificationManager(viv_utils.LoggingObject):
     IdentificationManager runs identification plugins and computes
      the weights of their results.
     '''
-
     # this defines the weight of each plugin
     # positive values mark functions likely decoding routines, while
     # negative values mark functions as not-decoding routines
-    PLUGIN_WEIGHTS = {"XORSimplePlugin": 0.5,
+    PLUGIN_WEIGHTS = {"XORPlugin": 0.5,
+                      "ShiftPlugin": 0.5,
                       "FunctionCrossReferencesToPlugin": 0.2,
                       "FunctionArgumentCountPlugin": 0.2,
                       "FunctionIsThunkPlugin": -1.0,
