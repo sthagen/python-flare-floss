@@ -44,14 +44,22 @@ class YamlFile(pytest.File):
             for arch, filename in archs.items():
                 filepath = os.path.join(test_dir, filename)
                 if os.path.exists(filepath):
-                    #and footer.has_footer(filepath):
                     yield FLOSSTest(self, platform, arch, filename, spec)
 
 
-class FLOSSStringsNotExtracted(Exception):
+class FLOSSTestError(Exception):
+
     def __init__(self, expected, got):
         self.expected = expected
         self.got = got
+
+
+class FLOSSStringsNotExtracted(FLOSSTestError):
+    pass
+
+
+class FLOSSDecodingFunctionNotFound(Exception):
+    pass
 
 
 class FLOSSTest(pytest.Item):
@@ -66,6 +74,39 @@ class FLOSSTest(pytest.Item):
         self.arch = arch
         self.filename = filename
 
+    def _test_strings(self, test_path):
+        if footer.has_footer(test_path):
+            expected_strings = set(footer.read_footer(test_path)["all"])
+        else:
+            expected_strings = set(self.spec["Decoded strings"])
+
+        if not expected_strings:
+            return
+
+        found_strings = set(extract_strings(test_path))
+
+        if not (expected_strings <= found_strings):
+            raise FLOSSStringsNotExtracted(expected_strings, found_strings)
+
+    def _test_detection(self, test_path):
+        if footer.has_footer(test_path):
+            expected_functions = set(footer.read_footer(test_path).keys()) - set("all")
+        else:
+            try:
+                expected_functions = set(self.spec["Decoding routines"][self.platform][self.arch])
+            except KeyError:
+                expected_functions = set([])
+
+        if not expected_functions:
+            return
+
+        vw = viv_utils.getWorkspace(test_path)
+        fs = map(lambda p: p[0], identify_decoding_functions(vw).get_top_candidate_functions())
+        found_functions = set(fs)
+
+        if not (expected_functions <= found_functions):
+            raise FLOSSDecodingFunctionNotFound(expected_functions, found_functions)
+
     def runtest(self):
         xfail = self.spec.get("Xfail", {})
         if "all" in xfail:
@@ -78,16 +119,8 @@ class FLOSSTest(pytest.Item):
         test_dir = os.path.dirname(spec_path)
         test_path = os.path.join(test_dir, self.filename)
 
-        if footer.has_footer(test_path):
-            expected_strings = set(footer.read_footer(test_path)["all"])
-        else:
-            expected_strings = set(self.spec["Decoded strings"])
-
-        found_strings = set(extract_strings(test_path))
-
-        if expected_strings:
-            if not (expected_strings <= found_strings):
-                raise FLOSSStringsNotExtracted(expected_strings, found_strings)
+        self._test_detection(test_path)
+        self._test_strings(test_path)
 
     def reportinfo(self):
         return self.fspath, 0, "usecase: %s" % self.name
