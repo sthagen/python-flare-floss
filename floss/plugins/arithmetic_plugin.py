@@ -92,4 +92,4 @@ class ShiftPlugin(plugin_object.GeneralPlugin):
         return candidate_functions
 
     def score(self, function_vas, vivisect_workspace=None):
-        return function_vas  # scoring simply means identifying functions with non-zero XOR instructions
+        return function_vas  # scoring simply means identifying functions with shift instructions
