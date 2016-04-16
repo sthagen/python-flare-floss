@@ -16,7 +16,7 @@ import viv_utils
 import strings
 import stackstrings
 import string_decoder
-import plugins.xor_plugin
+import plugins.arithmetic_plugin
 import identification_manager as im
 import plugins.library_function_plugin
 import plugins.function_meta_data_plugin
@@ -76,7 +76,8 @@ def get_all_plugins():
         ps.append(plugins.function_meta_data_plugin.FunctionSizePlugin())
         ps.append(plugins.function_meta_data_plugin.FunctionRecursivePlugin())
         ps.append(plugins.library_function_plugin.FunctionIsLibraryPlugin())
-        ps.append(plugins.xor_plugin.XORSimplePlugin())
+        ps.append(plugins.arithmetic_plugin.XORPlugin())
+        ps.append(plugins.arithmetic_plugin.ShiftPlugin())
     return ps
 
 
@@ -139,8 +140,9 @@ def set_logging_level(should_debug=False, should_verbose=False):
         logging.getLogger("envi/codeflow.addCodeFlow").setLevel(logging.ERROR)
 
         # ignore messages like:
-        # WARNING:plugins.xor_plugin.XORSimplePlugin:identify: Invalid instruction encountered in basic block, skipping: 0x4a0637
-        logging.getLogger("floss.plugins.xor_plugin.XORSimplePlugin").setLevel(logging.ERROR)
+        # WARNING:plugins.arithmetic_plugin.XORPlugin:identify: Invalid instruction encountered in basic block, skipping: 0x4a0637
+        logging.getLogger("floss.plugins.arithmetic_plugin.XORPlugin").setLevel(logging.ERROR)
+        logging.getLogger("floss.plugins.arithmetic_plugin.ShiftPlugin").setLevel(logging.ERROR)
 
 
 def parse_functions_option(functions_option):

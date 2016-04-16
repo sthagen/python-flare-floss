@@ -5,7 +5,7 @@ import plugin_object
 import floss.interfaces as interfaces
 
 
-class XORSimplePlugin(plugin_object.GeneralPlugin):
+class XORPlugin(plugin_object.GeneralPlugin):
     """
     Identify unusual XOR instructions.
     """
@@ -59,6 +59,37 @@ class XORSimplePlugin(plugin_object.GeneralPlugin):
             return True
 
         return False
+
+    def score(self, function_vas, vivisect_workspace=None):
+        return function_vas  # scoring simply means identifying functions with non-zero XOR instructions
+
+
+class ShiftPlugin(plugin_object.GeneralPlugin):
+    """
+    Identify shift instructions.
+    """
+    implements = [interfaces.DecodingRoutineIdentifier]
+    version = 1.0
+
+    def identify(self, vivisect_workspace, fvas):
+        candidate_functions = {}
+        for fva in fvas:
+            f = viv_utils.Function(vivisect_workspace, fva)
+            mnems = set([])
+            shift_mnems = set(["shl", "shr", "sar", "sal", "rol", "ror"])
+            for bb in f.basic_blocks:
+                try:
+                    for i in bb.instructions:
+                        mnems.add(i.mnem)
+                        if i.mnem in shift_mnems:
+                            self.d("shift instruction: %s va: 0x%x function: 0x%x", i, i.va, f.va)
+                except envi.InvalidInstruction:
+                    self.w("Invalid instruction encountered in basic block, skipping: 0x%x", bb.va)
+                    continue
+
+            candidate_functions[fva] = 1 - (len(shift_mnems - mnems) / float(len(shift_mnems)))
+            self.d("0x%x %f", fva, candidate_functions[fva])
+        return candidate_functions
 
     def score(self, function_vas, vivisect_workspace=None):
         return function_vas  # scoring simply means identifying functions with non-zero XOR instructions
