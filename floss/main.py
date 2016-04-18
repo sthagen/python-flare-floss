@@ -34,7 +34,15 @@ def hex(i):
 
 
 def decode_strings(vw, function_index, decoding_functions_candidates):
+    """
+    FLOSS string decoding algorithm
+    :param vw: vivisect workspace
+    :param function_index: function data
+    :param decoding_functions_candidates: identification manager
+    :return: list of decoded strings ([DecodedString])
+    """
     decoded_strings = []
+    # TODO pass function list instead of identification manager
     for fva, _ in decoding_functions_candidates.get_top_candidate_functions(10):
         for ctx in string_decoder.extract_decoding_contexts(vw, fva):
             for delta in string_decoder.emulate_decoding_routine(vw, function_index, fva, ctx):
@@ -45,6 +53,11 @@ def decode_strings(vw, function_index, decoding_functions_candidates):
 
 
 def sanitize_string_for_printing(s):
+    """
+    Return sanitized string for printing.
+    :param s: input string
+    :return: sanitized string
+    """
     sanitized_string = s.replace('\n', '\\n')
     sanitized_string = sanitized_string.replace('\r', '\\r')
     sanitized_string = sanitized_string.replace('\t', '\\t')
@@ -53,6 +66,11 @@ def sanitize_string_for_printing(s):
 
 
 def sanitize_string_for_script(s):
+    """
+    Return sanitized string that is added to IDAPython script content.
+    :param s: input string
+    :return: sanitized string
+    """
     sanitized_string = sanitize_string_for_printing(s)
     sanitized_string = sanitized_string.replace('\\', '\\\\')
     sanitized_string = sanitized_string.replace('\"', '\\\"')
@@ -66,6 +84,9 @@ def print_plugin_list():
 
 # TODO add --plugin_dir switch at some point
 def get_all_plugins():
+    """
+    Return all plugins to be run.
+    """
     ps = DecodingRoutineIdentifier.implementors()
     if len(ps) == 0:
         ps.append(plugins.function_meta_data_plugin.FunctionCrossReferencesToPlugin())
@@ -146,6 +167,9 @@ def set_logging_level(should_debug=False, should_verbose=False):
 
 
 def parse_functions_option(functions_option):
+    """
+    Return parsed -f command line option or None.
+    """
     fvas = None
     if functions_option:
         fvas = [int(fva, 0x10) for fva in functions_option.split(",")]
@@ -153,6 +177,9 @@ def parse_functions_option(functions_option):
 
 
 def parse_sample_file_path(parser, args):
+    """
+    Return validated input file path or terminate program.
+    """
     try_help_msg = "Try '%s -h' for more information" % parser.get_prog_name()
     if len(args) != 1:
         parser.error("Please provide a valid file path\n%s" % try_help_msg)
@@ -166,8 +193,11 @@ def parse_sample_file_path(parser, args):
 
 def select_functions(vw, functions_option):
     """
-    given a workspace and sequence of function addresses, 
-     return the list of valid functions, or all valid function addresses.
+    Given a workspace and sequence of function addresses, return the list
+    of valid functions, or all valid function addresses.
+    :param vw: vivisect workspace
+    :param functions_option: -f command line option
+    :return: list of all valid function addresses
     """
     function_vas = parse_functions_option(functions_option)
 
@@ -185,12 +215,18 @@ def select_functions(vw, functions_option):
 
 
 def parse_plugins_option(plugins_option):
+    """
+    Return parsed -p command line option or "".
+    """
     return (plugins_option or "").split(",")
 
 
 def select_plugins(plugins_option):
     """
-    return the list of valid plugin names from the list of plugin names, or all valid plugin names.
+    Return the list of valid plugin names from the list of
+    plugin names, or all valid plugin names.
+    :param plugins_option: -p command line argument value
+    :return: list of strings of all selected plugins
     """
     plugin_names = parse_plugins_option(plugins_option)
 
@@ -210,12 +246,21 @@ def select_plugins(plugins_option):
 
 
 def parse_min_length_option(min_length_option):
+    """
+    Return parsed -n command line option or default length.
+    """
     default_min_length = 3
     min_length = int(min_length_option or str(default_min_length))
     return min_length
 
 
 def print_identification_results(sample_file_path, decoder_results):
+    """
+    Print results of string decoding routine identification phase.
+    :param sample_file_path: input file
+    :param decoder_results: identification_manager
+    """
+    # TODO pass functions instead of identification_manager
     candidates = decoder_results.get_top_candidate_functions(10)
     if len(candidates) == 0:
         print("No candidate functions found.")
@@ -228,6 +273,13 @@ def print_identification_results(sample_file_path, decoder_results):
 
 
 def print_decoding_results(decoded_strings, min_length, group_functions, quiet=False):
+    """
+    Print results of string decoding phase.
+    :param decoded_strings: list of decoded strings ([DecodedString])
+    :param min_length: minimum string length
+    :param group_functions: group output by VA of decoding routines
+    :param quiet: print strings only, suppresses headers
+    """
     long_strings = filter(lambda ds: len(ds.s) >= min_length, decoded_strings)
 
     if not quiet:
@@ -241,18 +293,23 @@ def print_decoding_results(decoded_strings, min_length, group_functions, quiet=F
             if len_ds > 0:
                 if not quiet:
                     print("Decoding function at 0x%X (decoded %d strings)" % (fva, len_ds))
-                print_strings(grouped_strings, quiet=quiet)
+                print_decoded_strings(grouped_strings, quiet=quiet)
     else:
-        print_strings(long_strings, quiet=quiet)
+        print_decoded_strings(long_strings, quiet=quiet)
 
 
-def print_strings(ds_filtered, quiet=False):
+def print_decoded_strings(decoded_strings, quiet=False):
+    """
+    Print decoded strings.
+    :param decoded_strings: list of decoded strings ([DecodedString])
+    :param quiet: print strings only, suppresses headers
+    """
     if quiet:
-        for ds in ds_filtered:
+        for ds in decoded_strings:
             print(sanitize_string_for_printing(ds.s))
     else:
         ss = []
-        for ds in ds_filtered:
+        for ds in decoded_strings:
             s = sanitize_string_for_printing(ds.s)
             ss.append((hex(ds.va or 0), hex(ds.decoded_at_va), s))
 
@@ -262,6 +319,12 @@ def print_strings(ds_filtered, quiet=False):
 
 
 def create_script_content(sample_file_path, decoded_strings):
+    """
+    Create IDAPython script contents for IDB file annotations.
+    :param sample_file_path: input file path
+    :param decoded_strings: list of decoded strings ([DecodedString])
+    :return: content of the IDAPython script
+    """
     main_commands = []
     for ds in decoded_strings:
         if ds.s != "":
@@ -303,6 +366,12 @@ if __name__ == "__main__":
 
 
 def create_script(sample_file_path, ida_python_file, decoded_strings):
+    """
+    Create an IDAPython script to annotate an IDB file with decoded strings.
+    :param sample_file_path: input file path
+    :param ida_python_file: output file path
+    :param decoded_strings: list of decoded strings ([DecodedString])
+    """
     script_content = create_script_content(sample_file_path, decoded_strings)
     ida_python_file = os.path.abspath(ida_python_file)
     with open(ida_python_file, 'wb') as f:
@@ -311,19 +380,27 @@ def create_script(sample_file_path, ida_python_file, decoded_strings):
             print("Wrote IDAPython script file to %s\n" % ida_python_file)
         except Exception as e:
             raise e
+    # TODO return, catch exception in main()
 
 
-def print_all_strings(path, n=4, quiet=False):
+# TODO min_length is 4 throughout the default values here, should be 3?
+def print_all_strings(path, min_length=4, quiet=False):
+    """
+    Print static ASCII and UTF-16 strings from provided file.
+    :param path: input file
+    :param min_length: minimum string length
+    :param quiet: print strings only, suppresses headers
+    """
     with open(path, "rb") as f:
         b = f.read()
 
     if quiet:
-        for s in strings.extract_ascii_strings(b, n=n):
+        for s in strings.extract_ascii_strings(b, n=min_length):
             print("%s" % (s.s))
-        for s in strings.extract_unicode_strings(b, n=n):
+        for s in strings.extract_unicode_strings(b, n=min_length):
             print("%s" % (s.s))
     else:
-        ascii_strings = strings.extract_ascii_strings(b, n=n)
+        ascii_strings = strings.extract_ascii_strings(b, n=min_length)
         print("Static ASCII strings")
         if len(ascii_strings) == 0:
             print("none.")
@@ -333,7 +410,7 @@ def print_all_strings(path, n=4, quiet=False):
                 headers=["Offset", "String"]))
         print("")
 
-        uni_strings = strings.extract_unicode_strings(b, n=n)
+        uni_strings = strings.extract_unicode_strings(b, n=min_length)
         print("Static UTF-16 strings")
         if len(uni_strings) == 0:
             print("none.")
@@ -344,13 +421,19 @@ def print_all_strings(path, n=4, quiet=False):
         print("")
 
 
-def print_stack_strings(extracted_strings, n=4, quiet=False):
+def print_stack_strings(extracted_strings, min_length=4, quiet=False):
+    """
+    Print extracted stackstrings.
+    :param extracted_strings: list of decoded strings ([DecodedString])
+    :param min_length: minimum string length
+    :param quiet: print strings only, suppresses headers
+    """
     if quiet:
         for ss in extracted_strings:
-            if len(ss.s) >= n:
+            if len(ss.s) >= min_length:
                 print("%s" % (ss.s))
     else:
-        extracted_strings = list(filter(lambda s: len(s.s) >= n, extracted_strings))
+        extracted_strings = list(filter(lambda s: len(s.s) >= min_length, extracted_strings))
         count = len(extracted_strings)
 
         print("FLOSS extracted %d stack strings" % (count))
@@ -379,7 +462,7 @@ def main():
 
     if options.all_strings:
         floss_logger.info("Extracting static strings...")
-        print_all_strings(sample_file_path, n=min_length, quiet=options.quiet)
+        print_all_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
 
     with open(sample_file_path, "rb") as f:
         magic = f.read(2)

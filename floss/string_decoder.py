@@ -70,9 +70,10 @@ def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
     :type delta: decoding_manager.Delta
     :param delta: The before and after snapshots of memory to diff.
     :type decoded_at_va: int
-    :param decoded_at_va: TODO
+    :param decoded_at_va: The virtual address of a specific call to
+    the decoding function candidate that resulted in a memory diff
     :type source_fva: int
-    :param source_fva: TODO
+    :param source_fva: function VA of the decoding routine candidate
     :rtype: Sequence[DecodedString]
     '''
     delta_bytes = []
