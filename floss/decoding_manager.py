@@ -8,6 +8,11 @@ import envi.memory
 
 floss_logger = logging.getLogger("floss")
 
+# A DecodedString stores the decoded string and meta data about it:
+# va: va of string in memory, s: decoded string, decoded_at_va: VA where decoding routine is called,
+# fva: function VA of decoding routine, global_address: VA of string if address is in global memory
+# or False
+# TODO va == global_address?
 DecodedString = namedtuple("DecodedString", ["va", "s", "decoded_at_va", "fva", "global_address"])
 
 
@@ -39,7 +44,9 @@ class ApiMonitor(viv_utils.emulator_drivers.Monitor):
     def _check_return(self, emu, op):
         '''
         Ensure that the target of the return is within the allowed set of functions.
-        TODO(mr): describes what happens on success, failure.
+        Do nothing, if return address is valid. If return address is invalid:
+        _fix_return modifies program counter and stack pointer if a valid return address is found
+        on the stack or raises an Exception if no valid return address is found.
         '''
         function_start = self.function_index[op.va]
         return_addresses = self._get_return_vas(emu, function_start)
@@ -47,8 +54,10 @@ class ApiMonitor(viv_utils.emulator_drivers.Monitor):
         if return_address not in return_addresses:
             self._logger.debug("Return address 0x%08X is invalid", return_address)
             self._fix_return(emu, return_address, return_addresses)
+            # TODO return, handle Exception
         else:
             self._logger.debug("Return address 0x%08X is valid, returning", return_address)
+            # TODO return?
 
     def _get_return_vas(self, emu, function_start):
         '''
@@ -64,8 +73,9 @@ class ApiMonitor(viv_utils.emulator_drivers.Monitor):
 
     def _fix_return(self, emu, return_address, return_addresses):
         '''
-        find correct return address and adjust stack.
-        TODO(mr): what does "correct" mean? how does the stack get adjusted? for what purpose?
+        Find a valid return address from return_addresses on the stack. Adjust the stack accordingly
+        or raise an Exception if no valid address is found within the search boundaries.
+        Modify program counter and stack pointer, so the emulator does not return to a garbage address.
         '''
         self.dumpStack(emu)
         NUM_ADDRESSES = 4
