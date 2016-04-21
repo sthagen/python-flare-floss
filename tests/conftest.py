@@ -18,7 +18,8 @@ def extract_strings(sample_path):
     function_index = viv_utils.InstructionFunctionIndex(vw)
     decoding_functions_candidates = identify_decoding_functions(vw)
     decoded_strings = floss_main.decode_strings(vw, function_index, decoding_functions_candidates)
-    decoded_stackstrings = stackstrings.extract_stackstrings(vw)
+    selected_functions = floss_main.select_functions(vw, None)
+    decoded_stackstrings = stackstrings.extract_stackstrings(vw, selected_functions)
     decoded_strings.extend(decoded_stackstrings)
     return [ds.s for ds in decoded_strings]
 

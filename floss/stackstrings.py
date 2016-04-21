@@ -119,14 +119,14 @@ def getPointerSize(vw):
         raise NotImplementedError("unexpected architecture: %s" % (vw.arch.__class__.__name__))
 
 
-def extract_stackstrings(vw):
+def extract_stackstrings(vw, selected_functions):
     '''
     Extracts the stackstrings from functions in the given workspace.
 
     :param vw: The vivisect workspace from which to extract stackstrings.
     :rtype: Generator[StackString]
     '''
-    for fva in vw.getFunctions():
+    for fva in selected_functions:
         seen = set([])
         for ctx in extract_call_contexts(vw, fva):
             for s in strings.extract_ascii_strings(ctx.stack_memory):

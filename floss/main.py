@@ -494,7 +494,7 @@ def main():
     print_decoding_results(decoded_strings, min_length, options.group_functions, quiet=options.quiet)
 
     floss_logger.info("Extracting stackstrings...")
-    print_stack_strings(stackstrings.extract_stackstrings(vw), min_length, quiet=options.quiet)
+    print_stack_strings(stackstrings.extract_stackstrings(vw, selected_functions), min_length, quiet=options.quiet)
 
     if options.ida_python_file:
         floss_logger.info("Creating IDA script...")
