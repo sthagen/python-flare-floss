@@ -29,6 +29,9 @@ floss_version = "1.1.0\n" \
 floss_logger = logging.getLogger("floss")
 
 
+MIN_LENGTH_DEFAULT = 4
+
+
 def hex(i):
     return "0x%X" % (i)
 
@@ -120,7 +123,7 @@ def make_parser():
     parser.add_option("-i", "--ida", dest="ida_python_file",
                         help="create an IDAPython script to annotate the decoded strings in an IDB file")
     parser.add_option("-n", "--minimum-length", dest="min_length",
-                        help="minimum string length (default is 3)")
+                        help="minimum string length (default is %d)" % MIN_LENGTH_DEFAULT)
     parser.add_option("-p", "--plugins", dest="plugins",
                         help="apply the specified identification plugins only (comma-separated)")
     parser.add_option("-l", "--list-plugins", dest="list_plugins",
@@ -249,8 +252,7 @@ def parse_min_length_option(min_length_option):
     """
     Return parsed -n command line option or default length.
     """
-    default_min_length = 3
-    min_length = int(min_length_option or str(default_min_length))
+    min_length = int(min_length_option or str(MIN_LENGTH_DEFAULT))
     return min_length
 
 
@@ -383,8 +385,7 @@ def create_script(sample_file_path, ida_python_file, decoded_strings):
     # TODO return, catch exception in main()
 
 
-# TODO min_length is 4 throughout the default values here, should be 3?
-def print_all_strings(path, min_length=4, quiet=False):
+def print_all_strings(path, min_length, quiet=False):
     """
     Print static ASCII and UTF-16 strings from provided file.
     :param path: input file
@@ -421,7 +422,7 @@ def print_all_strings(path, min_length=4, quiet=False):
         print("")
 
 
-def print_stack_strings(extracted_strings, min_length=4, quiet=False):
+def print_stack_strings(extracted_strings, min_length, quiet=False):
     """
     Print extracted stackstrings.
     :param extracted_strings: list of decoded strings ([DecodedString])
