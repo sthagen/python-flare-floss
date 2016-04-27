@@ -401,7 +401,7 @@ def print_all_strings(path, min_length, quiet=False):
         for s in strings.extract_unicode_strings(b, n=min_length):
             print("%s" % (s.s))
     else:
-        ascii_strings = strings.extract_ascii_strings(b, n=min_length)
+        ascii_strings = list(strings.extract_ascii_strings(b, n=min_length))
         print("Static ASCII strings")
         if len(ascii_strings) == 0:
             print("none.")
@@ -411,7 +411,7 @@ def print_all_strings(path, min_length, quiet=False):
                 headers=["Offset", "String"]))
         print("")
 
-        uni_strings = strings.extract_unicode_strings(b, n=min_length)
+        uni_strings = list(strings.extract_unicode_strings(b, n=min_length))
         print("Static UTF-16 strings")
         if len(uni_strings) == 0:
             print("none.")
