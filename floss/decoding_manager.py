@@ -50,6 +50,11 @@ class ApiMonitor(viv_utils.emulator_drivers.Monitor):
         '''
         function_start = self.function_index[op.va]
         return_addresses = self._get_return_vas(emu, function_start)
+
+        if op.opers:
+            # adjust stack in case of `ret imm16` instruction
+            emu.setStackCounter(emu.getStackCounter() - op.opers[0].imm)
+
         return_address = self.getStackValue(emu, -4)
         if return_address not in return_addresses:
             self._logger.debug("Return address 0x%08X is invalid", return_address)
@@ -201,6 +206,7 @@ class AllocateHeap(RtlAllocateHeapHook):
            callname == "kernel32.GlobalAlloc" or \
            callname == "kernel32.VirtualAlloc":
             emu = driver
+            # TODO dependant on calling convention, see issue #124
             size = driver.getStackValue(0x8)
             va = self._allocate_mem(emu, size)
             callconv.execCallReturn(emu, va, len(argv))
