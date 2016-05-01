@@ -21,6 +21,7 @@ import identification_manager as im
 import plugins.library_function_plugin
 import plugins.function_meta_data_plugin
 from interfaces import DecodingRoutineIdentifier
+from decoding_manager import LocationType
 
 
 floss_version = "1.1.0\n" \
@@ -313,7 +314,13 @@ def print_decoded_strings(decoded_strings, quiet=False):
         ss = []
         for ds in decoded_strings:
             s = sanitize_string_for_printing(ds.s)
-            ss.append((hex(ds.va or 0), hex(ds.decoded_at_va), s))
+            if ds.characteristics["location_type"] == LocationType.STACK:
+                offset_string = "[STACK]"
+            elif ds.characteristics["location_type"] == LocationType.HEAP:
+                offset_string = "[HEAP]"
+            else:
+                offset_string = hex(ds.va or 0)
+            ss.append((offset_string, hex(ds.decoded_at_va), s))
 
         if len(ss) > 0:
             print(tabulate.tabulate(ss, headers=["Offset", "Called At", "String"]))
@@ -331,9 +338,9 @@ def create_script_content(sample_file_path, decoded_strings):
     for ds in decoded_strings:
         if ds.s != "":
             sanitized_string = sanitize_string_for_script(ds.s)
-            if ds.global_address:
-                main_commands.append("AppendComment(%d, \"FLOSS: %s\", True)" % (ds.global_address, sanitized_string))
-                main_commands.append("print \"FLOSS: string \\\"%s\\\" at global VA 0x%X\"" % (sanitized_string, ds.global_address))
+            if ds.characteristics["location_type"] == LocationType.GLOBAL:
+                main_commands.append("AppendComment(%d, \"FLOSS: %s\", True)" % (ds.va, sanitized_string))
+                main_commands.append("print \"FLOSS: string \\\"%s\\\" at global VA 0x%X\"" % (sanitized_string, ds.va))
             else:
                 main_commands.append("AppendComment(%d, \"FLOSS: %s\")" % (ds.decoded_at_va, sanitized_string))
                 main_commands.append("print \"FLOSS: string \\\"%s\\\" decoded at VA 0x%X\"" % (sanitized_string, ds.decoded_at_va))
@@ -499,7 +506,6 @@ def main():
     if options.ida_python_file:
         floss_logger.info("Creating IDA script...")
         create_script(sample_file_path, options.ida_python_file, decoded_strings)
-
 
     time1 = time()
     if not options.quiet:

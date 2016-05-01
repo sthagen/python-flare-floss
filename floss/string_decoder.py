@@ -6,7 +6,7 @@ import strings
 import decoding_manager
 from utils import makeEmulator
 from function_argument_getter import get_function_contexts
-from decoding_manager import DecodedString
+from decoding_manager import DecodedString, LocationType
 
 
 floss_logger = logging.getLogger("floss")
@@ -52,7 +52,7 @@ def emulate_decoding_routine(vw, function_index, function, context):
     emu = makeEmulator(vw)
     emu.setEmuSnap(context.emu_snap)
     floss_logger.debug("Emulating function at 0x%08X called at 0x%08X, return address: 0x%08X",
-           function, context.decoded_at_va, context.return_address)
+                       function, context.decoded_at_va, context.return_address)
     deltas = decoding_manager.emulate_function(
                 emu,
                 function_index,
@@ -97,9 +97,9 @@ def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
     for section_after_start, section_after in mem_after.items():
         (_, _, _, bytes_after) = section_after
         if section_after_start not in mem_before:
-            # TODO delta bytes instead of decoded strings
+            characteristics = {"location_type": LocationType.HEAP}
             delta_bytes.append(DecodedString(section_after_start, bytes_after,
-                                             decoded_at_va, source_fva, False))
+                                             decoded_at_va, source_fva, characteristics))
             continue
 
         section_before = mem_before[section_after_start]
@@ -115,12 +115,13 @@ def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
                 continue
 
             diff_bytes = bytes_after[offset:offset + length]
-            global_address = False
             if not (stack_start <= address < stack_end):
                 # address is in global memory
-                global_address = address
+                characteristics = {"location_type": LocationType.GLOBAL}
+            else:
+                characteristics = {"location_type": LocationType.STACK}
             delta_bytes.append(DecodedString(address, diff_bytes, decoded_at_va,
-                                             source_fva, global_address))
+                                             source_fva, characteristics))
     return delta_bytes
 
 
@@ -140,11 +141,10 @@ def extract_strings(b):
             # ignore strings of all "A", which is likely taint data
             continue
         ret.append(DecodedString(b.va + s.offset, s.s, b.decoded_at_va,
-                                 b.fva, b.global_address))
+                                 b.fva, b.characteristics))
     for s in strings.extract_unicode_strings(b.s):
         if s.s == "A" * len(s.s):
             continue
         ret.append(DecodedString(b.va + s.offset, s.s, b.decoded_at_va,
-                                 b.fva, b.global_address))
+                                 b.fva, b.characteristics))
     return ret
-
