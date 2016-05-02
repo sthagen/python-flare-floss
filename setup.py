@@ -15,6 +15,7 @@ requirements = [
     "vivisect",
     "plugnplay",
     "viv-utils",
+    "enum34"
 ]
 
 setup(
