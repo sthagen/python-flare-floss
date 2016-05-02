@@ -1,6 +1,7 @@
 import logging
 from collections import namedtuple
 
+from enum import Enum
 import viv_utils
 import viv_utils.emulator_drivers
 import envi.memory
@@ -10,10 +11,15 @@ floss_logger = logging.getLogger("floss")
 
 # A DecodedString stores the decoded string and meta data about it:
 # va: va of string in memory, s: decoded string, decoded_at_va: VA where decoding routine is called,
-# fva: function VA of decoding routine, global_address: VA of string if address is in global memory
-# or False
-# TODO va == global_address?
-DecodedString = namedtuple("DecodedString", ["va", "s", "decoded_at_va", "fva", "global_address"])
+# fva: function VA of decoding routine, characteristics: meta information dictionary for the
+# identified memory location
+DecodedString = namedtuple("DecodedString", ["va", "s", "decoded_at_va", "fva", "characteristics"])
+
+
+class LocationType(Enum):
+    STACK = 1
+    GLOBAL = 2
+    HEAP = 3
 
 
 class ApiMonitor(viv_utils.emulator_drivers.Monitor):
@@ -172,6 +178,7 @@ class RtlAllocateHeapHook(viv_utils.emulator_drivers.Hook):
         self._heap_addr = 0x69690000
 
     MAX_ALLOCATION_SIZE = 10 * 1024 * 1024
+
     def _allocate_mem(self, emu, size):
         size = round(size, 0x1000)
         if size > self.MAX_ALLOCATION_SIZE:
