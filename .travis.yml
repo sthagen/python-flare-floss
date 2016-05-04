@@ -17,6 +17,9 @@ install:
     - pushd ../wclang; cmake -DCMAKE_INSTALL_PREFIX=/usr/local && make && sudo make install; popd
     - pushd tests/src; make all; popd
     - pyinstaller floss.spec
+    - git ls-files -o
+    - git ls-files -o | grep "\\bin\\"
+    - git ls-files -o | grep "\\bin\\" | tr "\n" ":"
 
 script: py.test tests/src/ -v
 
