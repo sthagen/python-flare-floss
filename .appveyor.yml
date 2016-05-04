@@ -12,8 +12,9 @@ install:
     - "%PYTHON%\\Scripts\\pip install https://github.com/williballenthin/vivisect/zipball/master"
     - "%PYTHON%\\Scripts\\pip install pyinstaller"
     - "%PYTHON%\\Scripts\\pip install -e ."
+    - "%PYTHON%\\Scripts\\pyinstaller floss.spec"
 
-build_script: "%PYTHON%\\Scripts\\pyinstaller floss.spec"
+build: off
 
 artifacts:
     - path: "dist\\floss.exe"
