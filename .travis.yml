@@ -26,4 +26,5 @@ script: py.test tests/src/ -v
 addons:
     artifacts:
         paths:
-            - dist/floss:$(git ls-files -o | grep "/bin/" | tr "\n" ":")
+            - dist/floss
+            - $(git ls-files -o | grep "/bin/" | tr "\n" ":")
