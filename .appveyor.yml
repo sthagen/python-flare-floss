@@ -1,18 +1,30 @@
+clone_depth: 2
+
 environment:
     matrix:
         - PYTHON: "C:\\Python27"
         - PYTHON: "C:\\Python27-x64"
 
-language: python
-python:
-  - "2.7"
+init:
 
 install:
-    - pip install https://github.com/williballenthin/vivisect/zipball/master
-    - pip install -e .
-    - sudo apt-get install -y git clang mingw-w64 gcc-mingw-w64 cmake make gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-dev  binutils-mingw-w64-i686 gcc-mingw-w64-i686 g++-mingw-w64-i686
-    - git clone https://github.com/tpoechtrager/wclang.git wclang
-    - pushd wclang; cmake -DCMAKE_INSTALL_PREFIX=/usr/local && make && sudo make install; popd
-    - pushd tests/src; make all; popd
+    - "%PYTHON%\\python.exe --version"
+    - "%PYTHON%\\Scripts\\pip install https://github.com/williballenthin/vivisect/zipball/master"
+    - "%PYTHON%\\Scripts\\pip install pyinstaller"
+    - "%PYTHON%\\Scripts\\pip install -e ."
 
-script: py.test tests/src/ -v
+build_script: "%PYTHON%\\Scripts\\pyinstaller floss.spec"
+
+artifacts:
+    - path: "dist\\floss.exe"
+
+deploy:
+  - provider: S3
+    access_key_id:
+      secure: 62mhuS0Iui9H3jf
+    secret_access_key:
+      secure: nP7uNhSUZZwamVfsS80Z+gBbMjSvAvYG/avK6pTKtH78jBcKeyfKFZSTM+siO6os
+    bucket: build-artifacts.floss.flare.fireeye.com
+    folder: appveyor
+    #artifact:
+    set_public: false
