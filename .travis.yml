@@ -18,12 +18,12 @@ install:
     - pushd tests/src; make all; popd
     - pyinstaller floss.spec
     - git ls-files -o
-    - git ls-files -o | grep "\\bin\\"
-    - git ls-files -o | grep "\\bin\\" | tr "\n" ":"
+    - git ls-files -o | grep "/bin/"
+    - git ls-files -o | grep "/bin/" | tr "\n" ":"
 
 script: py.test tests/src/ -v
 
 addons:
     artifacts:
         paths:
-            - dist/floss:$(git ls-files -o | grep "\\bin\\" | tr "\n" ":")
+            - dist/floss:$(git ls-files -o | grep "/bin/" | tr "\n" ":")
