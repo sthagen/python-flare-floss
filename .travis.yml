@@ -28,3 +28,4 @@ addons:
         paths:
             - dist/floss
             - $(git ls-files -o | grep "/bin/" | tr "\n" ":")
+        target_paths: travis/
