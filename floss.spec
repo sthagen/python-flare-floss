@@ -122,7 +122,7 @@ a = Analysis(
               "vstruct.defs.windows.win_6_3_wow64",
               "vstruct.defs.windows.win_6_3_wow64.ntdll",
              ],
-             hookspath=["./hooks/"],
+             hookspath=None,
              runtime_hooks=None,
              excludes=["tkinter", "_tkinter", "Tkinter"],
              win_no_prefer_redirects=None,
