@@ -12,6 +12,7 @@ install:
     - "%PYTHON%\\python.exe --version"
     - "%PYTHON%\\Scripts\\pip install https://github.com/williballenthin/vivisect/zipball/master"
     - "%PYTHON%\\Scripts\\pip install pyinstaller"
+    - ps: "__version__ = '" + (& git describe --tags) + "'" | Set-Content "floss\\version.py"
     - "%PYTHON%\\Scripts\\pip install -e ."
     - "%PYTHON%\\Scripts\\pyinstaller floss.spec"
 
