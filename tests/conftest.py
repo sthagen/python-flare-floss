@@ -33,7 +33,6 @@ def identify_decoding_functions(vw):
 
 
 def pytest_collect_file(parent, path):
-    return
     if path.basename == "test.yml":
         return YamlFile(path, parent)
 
