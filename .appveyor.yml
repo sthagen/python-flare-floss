@@ -1,0 +1,32 @@
+
+clone_depth: 2
+
+environment:
+    matrix:
+        - PYTHON: "C:\\Python27"
+        - PYTHON: "C:\\Python27-x64"
+
+init:
+
+install:
+    - "%PYTHON%\\python.exe --version"
+    - "%PYTHON%\\Scripts\\pip install https://github.com/williballenthin/vivisect/zipball/master"
+    - "%PYTHON%\\Scripts\\pip install pyinstaller"
+    - "%PYTHON%\\Scripts\\pip install -e ."
+    - "%PYTHON%\\Scripts\\pyinstaller floss.spec"
+
+build: off
+
+artifacts:
+    - path: "dist\\floss.exe"
+
+deploy:
+  - provider: S3
+    access_key_id:
+      secure: 62mhuS0Iui9H3jf/PdcZ3srxaX1frZacjH9SRIplljM=
+    secret_access_key:
+      secure: nP7uNhSUZZwamVfsS80Z+gBbMjSvAvYG/avK6pTKtH78jBcKeyfKFZSTM+siO6os
+    bucket: build-artifacts.floss.flare.fireeye.com
+    folder: appveyor
+    #artifact:
+    set_public: false
