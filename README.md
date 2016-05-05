@@ -23,6 +23,7 @@ https://github.com/fireeye/flare-floss/releases
 For a detailed description of *installing* FLOSS, review the documention
  [here](doc/installation.md).
 
+Standalone Linux binary nightly build: [here](https://s3.amazonaws.com/build-artifacts.floss.flare.fireeye.com/travis/dist/floss)
 Standalone Windows binary nightly build: [here](http://s3.amazonaws.com/build-artifacts.floss.flare.fireeye.com/appveyor/dist/floss.exe)
 
 
