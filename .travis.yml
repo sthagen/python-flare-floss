@@ -17,7 +17,7 @@ install:
     - pushd ../wclang; cmake -DCMAKE_INSTALL_PREFIX=/usr/local && make && sudo make install; popd
     - pushd tests/src; make all; popd
     - pyinstaller floss.spec
-    - find . -type f | grep -e '/bin/' -e 'dist/floss$' | awk 1 ORS=:
+    - find . -type f | grep -e '/bin/' -e 'dist/floss$' | awk 1 ORS=':'
 
 script: py.test tests/src/ -v
 
@@ -25,5 +25,5 @@ addons:
     artifacts:
         debug: true
         paths:
-            - $(find . -type f | grep -e '/bin/' -e 'dist/floss$' | awk 1 ORS=:)
+            - $(find . -type f | grep -e '/bin/' -e 'dist/floss$' | awk 1 ORS=':')
         target_paths: travis/
