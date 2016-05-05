@@ -25,5 +25,5 @@ addons:
     artifacts:
         debug: true
         paths:
-            - $(find . -type f | grep "\(/bin/\|dist/floss\)" | tr "\n" ":")
+            - $(find . -type f | grep '\(/bin/\|dist/floss$\)' | tr '\n' ":")
         target_paths: travis/
