@@ -13,6 +13,7 @@ import tabulate
 import plugnplay
 import viv_utils
 
+import version
 import strings
 import stackstrings
 import string_decoder
@@ -23,9 +24,6 @@ import plugins.function_meta_data_plugin
 from interfaces import DecodingRoutineIdentifier
 from decoding_manager import LocationType
 
-
-floss_version = "1.1.0\n" \
-                "https://github.com/fireeye/flare-floss/"
 
 floss_logger = logging.getLogger("floss")
 
@@ -108,7 +106,8 @@ def get_all_plugins():
 
 def make_parser():
     usage_message = "%prog [options] FILEPATH"
-    parser = OptionParser(usage=usage_message, version="%prog " + floss_version)
+
+    parser = OptionParser(usage=usage_message, version="%prog {:s}\nhttps://github.com/fireeye/flare-floss/".format(version.__version__))
     parser.add_option("-a", "--all-strings", dest="all_strings", action="store_true",
                         help="also extract static ASCII and UTF-16 strings from the file")
     parser.add_option("-v", "--verbose", dest="verbose",
