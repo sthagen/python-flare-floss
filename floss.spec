@@ -124,7 +124,7 @@ a = Analysis(
              ],
              hookspath=["./hooks/"],
              runtime_hooks=None,
-             excludes=None,
+             excludes=["tkinter", "_tkinter", "Tkinter"],
              win_no_prefer_redirects=None,
              win_private_assemblies=None,
              cipher=block_cipher)
