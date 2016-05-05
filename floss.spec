@@ -129,6 +129,14 @@ a = Analysis(
              win_private_assemblies=None,
              cipher=block_cipher)
 
+a.binaries = a.binaries - TOC([
+ ('sqlite3.dll', None, None),
+ ('tcl85.dll', None, None),
+ ('tk85.dll', None, None),
+ ('_sqlite3', None, None),
+ ('_ssl', None, None),
+ ('_tkinter', None, None)])
+
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 
