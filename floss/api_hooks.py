@@ -234,7 +234,7 @@ class MallocHeap(RtlAllocateHeapHook):
            callname == "msvcrt.calloc":
             emu = driver
             size = argv[0]
-            va = self._allocate_mem(emu, 0x100)  # TODO hard-coded!
+            va = self._allocate_mem(emu, size)
             callconv.execCallReturn(emu, va, len(argv))
             return True
         raise viv_utils.emulator_drivers.UnsupportedFunction()
