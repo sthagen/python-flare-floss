@@ -196,7 +196,7 @@ class RtlAllocateHeapHook(viv_utils.emulator_drivers.Hook):
         # works for kernel32.HeapAlloc
         if callname == "ntdll.RtlAllocateHeap":
             emu = driver
-            size = driver.getStackValue(0xC)
+            hheap, flags, size = argv
             va = self._allocate_mem(emu, size)
             callconv.execCallReturn(emu, va, len(argv))
             return True
@@ -215,8 +215,7 @@ class AllocateHeap(RtlAllocateHeapHook):
            callname == "kernel32.GlobalAlloc" or \
            callname == "kernel32.VirtualAlloc":
             emu = driver
-            # TODO dependant on calling convention, see issue #124
-            size = driver.getStackValue(0x8)
+            size = argv[0]
             va = self._allocate_mem(emu, size)
             callconv.execCallReturn(emu, va, len(argv))
             return True
@@ -234,7 +233,7 @@ class MallocHeap(RtlAllocateHeapHook):
         if callname == "msvcrt.malloc" or \
            callname == "msvcrt.calloc":
             emu = driver
-            size = driver.getStackValue(0x4)
+            size = argv[0]
             va = self._allocate_mem(emu, 0x100)  # TODO hard-coded!
             callconv.execCallReturn(emu, va, len(argv))
             return True
