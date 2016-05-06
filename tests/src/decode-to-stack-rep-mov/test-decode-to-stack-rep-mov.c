@@ -21,20 +21,31 @@ int decode(void *out_buf, size_t out_len, const void *in_buf, size_t in_len, uns
 
 
 int main(int argc, char **argv) {
-    // use rep movsd to load raw into in
+    // use rep movsd to load raw string into buffer `in`
     char raw[] = "idmmn!vnsme";
     char in[12] = { 0 };
     char out[12] = { 0 };
 
     // memcpy(in, raw, 12);
+    #if UINTPTR_MAX == 0xffffffff
     __asm__ (
-         "leal %0, %%edi\n" // ; lea edi, [in]
-         "movl %1, %%esi\n" // ; mov esi, [raw]
-         "movl $3, %%ecx\n" // ; mov ecx, 3
-         "rep movsd\n"
-         : "=m" ( in )
-         : "r" ( raw )
-         );
+        "leal %0, %%edi\n" // ; lea edi, [in]
+        "movl %1, %%esi\n" // ; mov esi, [raw]
+        "movl $3, %%ecx\n" // ; mov ecx, 3
+        "rep movsd\n"
+        : "=m" ( in )
+        : "r" ( raw )
+    );
+    #elif UINTPTR_MAX == 0xffffffffffffffff
+    __asm__ (
+        "leaq %0, %%rdi\n" // ; lea rdi, [in]
+        "movq %1, %%rsi\n" // ; mov rsi, [raw]
+        "movq $3, %%rcx\n" // ; mov rcx, 3
+        "rep movsd\n"
+        : "=m" ( in )
+        : "r" ( raw )
+    );
+    #endif
 
     unsigned char key = 0x1;
 

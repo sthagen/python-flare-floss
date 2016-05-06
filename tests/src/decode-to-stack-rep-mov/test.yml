@@ -11,14 +11,21 @@ Source files:
     - test-decode-to-stack-rep-mov.c
 
 Output Files:
+    Linux:
+        32bit: bin/test-decode-to-stack-rep-mov
     Windows:
         32bit: bin/test-decode-to-stack-rep-mov.exe
+        64bit: bin/test-decode-to-stack-rep-mov64.exe
 
 Build instructions (Windows): |
     cl.exe test-decode-to-stack-rep-mov.c /Febin/test-decode-to-stack-rep-mov.exe
+
+Build instructions (Linux): |
+    clang test-decode-to-stack-rep-mov.c -o bin/test-decode-to-stack-rep-mov
 
 Build instructions (Cross compile for Windows on Linux): |
     i686-w64-mingw32-clang test-decode-to-stack-rep-mov.c -o bin/test-decode-to-stack-rep-mov.exe
 
 Xfail:
-    - Windows-32bit
+    - Linux-32bit
+    - all
