@@ -72,7 +72,7 @@ class FunctionArgumentGetter(viv_utils.LoggingObject):
         """ run the given function while collecting arguments to a target function """
         monitor = self.setup_monitor(target_fva)
         self.d("    emulating: %s, watching %s" % (hex(self.index[fva]), hex(target_fva)))
-        self.driver.runFunction(self.index[fva], maxhit=1, func_only=True)
+        self.driver.runFunction(self.index[fva], maxhit=1, maxrep=0x100, func_only=True)
         contexts = monitor.get_contexts()
         self.driver.remove_monitor(monitor)
         self.d("      results:")

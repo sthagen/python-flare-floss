@@ -50,7 +50,7 @@ def extract_call_contexts(vw, fva):
     monitor = CallContextMonitor(vw, emu.getStackCounter())
     driver = viv_utils.emulator_drivers.FunctionRunnerEmulatorDriver(emu)
     driver.add_monitor(monitor)
-    driver.runFunction(fva, maxhit=1, func_only=True)
+    driver.runFunction(fva, maxhit=1, maxrep=0x100, func_only=True)
     return monitor.ctxs
 
 
