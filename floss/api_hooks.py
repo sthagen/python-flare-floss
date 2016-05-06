@@ -231,7 +231,8 @@ class MallocHeap(RtlAllocateHeapHook):
         super(MallocHeap, self).__init__(*args, **kwargs)
 
     def hook(self, callname, driver, callconv, api, argv):
-        if callname == "msvcrt.malloc":
+        if callname == "msvcrt.malloc" or \
+           callname == "msvcrt.calloc":
             emu = driver
             size = driver.getStackValue(0x4)
             va = self._allocate_mem(emu, 0x100)  # TODO hard-coded!
