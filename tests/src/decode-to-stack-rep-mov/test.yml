@@ -28,4 +28,3 @@ Build instructions (Cross compile for Windows on Linux): |
 
 Xfail:
     - Linux-32bit
-    - all
