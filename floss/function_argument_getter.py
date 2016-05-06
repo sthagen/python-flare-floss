@@ -3,6 +3,7 @@ from collections import namedtuple
 import viv_utils
 import viv_utils.emulator_drivers
 
+import api_hooks
 from utils import makeEmulator
 
 # TODO get return address from emu_snap
@@ -25,11 +26,10 @@ class CallMonitor(viv_utils.emulator_drivers.Monitor):
     def get_contexts(self):
         return self.function_contexts
 
-#    def prehook(self, emu, op, starteip):
-#        self.d("%s: %s", hex(starteip), op)
+    def prehook(self, emu, op, starteip):
+        self.d("%s: %s", hex(starteip), op)
 
 
-# TODO LoggingObject should have its own file or be in general utils...
 class FunctionArgumentGetter(viv_utils.LoggingObject):
     def __init__(self, vivisect_workspace):
         viv_utils.LoggingObject.__init__(self)
@@ -69,21 +69,28 @@ class FunctionArgumentGetter(viv_utils.LoggingObject):
         return caller_function_vas
 
     def get_contexts_via_monitor(self, fva, target_fva):
-        """ run the given function while collecting arguments to a target function """
-        monitor = self.setup_monitor(target_fva)
-        self.d("    emulating: %s, watching %s" % (hex(self.index[fva]), hex(target_fva)))
-        self.driver.runFunction(self.index[fva], maxhit=1, maxrep=0x100, func_only=True)
-        contexts = monitor.get_contexts()
-        self.driver.remove_monitor(monitor)
+        """
+        run the given function while collecting arguments to a target function
+        """
+
+        try:
+            self.d("    emulating: %s, watching %s" % (hex(self.index[fva]), hex(target_fva)))
+            monitor = CallMonitor(self.vivisect_workspace, target_fva)
+            self.driver.add_monitor(monitor)
+
+            with api_hooks.defaultHooks(self.driver):
+                self.driver.runFunction(self.index[fva], maxhit=1, maxrep=0x100, func_only=True)
+
+            contexts = monitor.get_contexts()
+
+        finally:
+            self.driver.remove_monitor(monitor)
+
         self.d("      results:")
         for c in contexts:
             self.d("        <context>")
-        return contexts
 
-    def setup_monitor(self, target_fva):
-        monitor = CallMonitor(self.vivisect_workspace, target_fva)
-        self.driver.add_monitor(monitor)
-        return monitor
+        return contexts
 
 
 def get_function_contexts(vw, fva):

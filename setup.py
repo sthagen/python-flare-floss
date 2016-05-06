@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+import os
 
 try:
     from setuptools import setup
@@ -18,9 +18,15 @@ requirements = [
     "enum34"
 ]
 
+# this sets __version__
+# via: http://stackoverflow.com/a/7071358/87207
+# and: http://stackoverflow.com/a/2073599/87207
+with open(os.path.join("floss", "version.py"), "rb") as f:
+    exec(f.read())
+
 setup(
     name='floss',
-    version='1.1.0',
+    version=__version__,
     description="",
     long_description="",
     author="Willi Ballenthin, Moritz Raabe",
