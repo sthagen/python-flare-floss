@@ -3,6 +3,7 @@
 from __future__ import print_function
 import os
 import sys
+import mmap
 import string
 import logging
 import pkg_resources
@@ -390,6 +391,9 @@ def create_script(sample_file_path, ida_python_file, decoded_strings):
             raise e
     # TODO return, catch exception in main()
 
+KILOBYTE = 1024
+MEGABYTE = 1024 * KILOBYTE
+MAX_FILE_SIZE = 16 * MEGABYTE
 
 def print_static_strings(path, min_length, quiet=False):
     """
@@ -399,33 +403,60 @@ def print_static_strings(path, min_length, quiet=False):
     :param quiet: print strings only, suppresses headers
     """
     with open(path, "rb") as f:
-        b = f.read()
+        b = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
 
-    if quiet:
-        for s in strings.extract_ascii_strings(b, n=min_length):
-            print("%s" % (s.s))
-        for s in strings.extract_unicode_strings(b, n=min_length):
-            print("%s" % (s.s))
-    else:
-        ascii_strings = list(strings.extract_ascii_strings(b, n=min_length))
-        print("Static ASCII strings")
-        if len(ascii_strings) == 0:
-            print("none.")
-        else:
-            print(tabulate.tabulate(
-                [(hex(s.offset), s.s) for s in ascii_strings],
-                headers=["Offset", "String"]))
-        print("")
+        if quiet:
+            for s in strings.extract_ascii_strings(b, n=min_length):
+                print("%s" % (s.s))
+            for s in strings.extract_unicode_strings(b, n=min_length):
+                print("%s" % (s.s))
 
-        uni_strings = list(strings.extract_unicode_strings(b, n=min_length))
-        print("Static UTF-16 strings")
-        if len(uni_strings) == 0:
-            print("none.")
+        elif os.path.getsize(path) > MAX_FILE_SIZE:
+            # for large files, there might be a huge number of strings,
+            # so don't worry about forming everything into a perfect table
+            print("Static ASCII strings")
+            print("Offset   String")
+            print("------   ------")
+            has_string = False
+            for s in strings.extract_ascii_strings(b, n=min_length):
+                print("%s %s" % (hex(s.offset), s.s))
+                has_string = True
+            if not has_string:
+                print("none.")
+            print("")
+
+            print("Static Unicode strings")
+            print("Offset   String")
+            print("------   ------")
+            has_string = False
+            for s in strings.extract_unicode_strings(b, n=min_length):
+                print("%s %s" % (hex(s.offset), s.s))
+                has_string = True
+            if not has_string:
+                print("none.")
+            print("")
         else:
-            print(tabulate.tabulate(
-                [(hex(s.offset), s.s) for s in uni_strings],
-                headers=["Offset", "String"]))
-        print("")
+            # for reasonably sized files, we can read all the strings at once
+            # and format them nicely in a table.
+            ascii_strings = list(strings.extract_ascii_strings(b, n=min_length))
+            print("Static ASCII strings")
+            if len(ascii_strings) == 0:
+                print("none.")
+            else:
+                print(tabulate.tabulate(
+                    [(hex(s.offset), s.s) for s in ascii_strings],
+                    headers=["Offset", "String"]))
+            print("")
+
+            uni_strings = list(strings.extract_unicode_strings(b, n=min_length))
+            print("Static UTF-16 strings")
+            if len(uni_strings) == 0:
+                print("none.")
+            else:
+                print(tabulate.tabulate(
+                    [(hex(s.offset), s.s) for s in uni_strings],
+                    headers=["Offset", "String"]))
+            print("")
 
 
 def print_stack_strings(extracted_strings, min_length, quiet=False):
