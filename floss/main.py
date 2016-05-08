@@ -435,6 +435,11 @@ def print_static_strings(path, min_length, quiet=False):
             if not has_string:
                 print("none.")
             print("")
+
+            if os.path.getsize(path) > sys.maxint:
+                floss_logger.warning("File too large, strings listings may be trucated.")
+                floss_logger.warning("FLOSS cannot handle files larger than 4GB on 32bit systems.")
+
         else:
             # for reasonably sized files, we can read all the strings at once
             # and format them nicely in a table.
