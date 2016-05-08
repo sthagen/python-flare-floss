@@ -3,6 +3,7 @@
 from __future__ import print_function
 import os
 import sys
+import mmap
 import string
 import logging
 import pkg_resources
@@ -28,7 +29,13 @@ from decoding_manager import LocationType
 floss_logger = logging.getLogger("floss")
 
 
-MIN_LENGTH_DEFAULT = 4
+KILOBYTE = 1024
+MEGABYTE = 1024 * KILOBYTE
+MAX_FILE_SIZE = 16 * MEGABYTE
+
+SUPPORTED_FILE_MAGIC = set(["MZ"])
+
+MIN_STRING_LENGTH_DEFAULT = 4
 
 
 def hex(i):
@@ -123,7 +130,7 @@ def make_parser():
     parser.add_option("-i", "--ida", dest="ida_python_file",
                         help="create an IDAPython script to annotate the decoded strings in an IDB file")
     parser.add_option("-n", "--minimum-length", dest="min_length",
-                        help="minimum string length (default is %d)" % MIN_LENGTH_DEFAULT)
+                      help="minimum string length (default is %d)" % MIN_STRING_LENGTH_DEFAULT)
     parser.add_option("-p", "--plugins", dest="plugins",
                         help="apply the specified identification plugins only (comma-separated)")
     parser.add_option("-l", "--list-plugins", dest="list_plugins",
@@ -252,7 +259,7 @@ def parse_min_length_option(min_length_option):
     """
     Return parsed -n command line option or default length.
     """
-    min_length = int(min_length_option or str(MIN_LENGTH_DEFAULT))
+    min_length = int(min_length_option or str(MIN_STRING_LENGTH_DEFAULT))
     return min_length
 
 
@@ -391,7 +398,7 @@ def create_script(sample_file_path, ida_python_file, decoded_strings):
     # TODO return, catch exception in main()
 
 
-def print_all_strings(path, min_length, quiet=False):
+def print_static_strings(path, min_length, quiet=False):
     """
     Print static ASCII and UTF-16 strings from provided file.
     :param path: input file
@@ -399,33 +406,65 @@ def print_all_strings(path, min_length, quiet=False):
     :param quiet: print strings only, suppresses headers
     """
     with open(path, "rb") as f:
-        b = f.read()
+        b = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
 
-    if quiet:
-        for s in strings.extract_ascii_strings(b, n=min_length):
-            print("%s" % (s.s))
-        for s in strings.extract_unicode_strings(b, n=min_length):
-            print("%s" % (s.s))
-    else:
-        ascii_strings = list(strings.extract_ascii_strings(b, n=min_length))
-        print("Static ASCII strings")
-        if len(ascii_strings) == 0:
-            print("none.")
-        else:
-            print(tabulate.tabulate(
-                [(hex(s.offset), s.s) for s in ascii_strings],
-                headers=["Offset", "String"]))
-        print("")
+        if quiet:
+            for s in strings.extract_ascii_strings(b, n=min_length):
+                print("%s" % (s.s))
+            for s in strings.extract_unicode_strings(b, n=min_length):
+                print("%s" % (s.s))
 
-        uni_strings = list(strings.extract_unicode_strings(b, n=min_length))
-        print("Static UTF-16 strings")
-        if len(uni_strings) == 0:
-            print("none.")
+        elif os.path.getsize(path) > MAX_FILE_SIZE:
+            # for large files, there might be a huge number of strings,
+            # so don't worry about forming everything into a perfect table
+            print("Static ASCII strings")
+            print("Offset   String")
+            print("------   ------")
+            has_string = False
+            for s in strings.extract_ascii_strings(b, n=min_length):
+                print("%s %s" % (hex(s.offset), s.s))
+                has_string = True
+            if not has_string:
+                print("none.")
+            print("")
+
+            print("Static Unicode strings")
+            print("Offset   String")
+            print("------   ------")
+            has_string = False
+            for s in strings.extract_unicode_strings(b, n=min_length):
+                print("%s %s" % (hex(s.offset), s.s))
+                has_string = True
+            if not has_string:
+                print("none.")
+            print("")
+
+            if os.path.getsize(path) > sys.maxint:
+                floss_logger.warning("File too large, strings listings may be trucated.")
+                floss_logger.warning("FLOSS cannot handle files larger than 4GB on 32bit systems.")
+
         else:
-            print(tabulate.tabulate(
-                [(hex(s.offset), s.s) for s in uni_strings],
-                headers=["Offset", "String"]))
-        print("")
+            # for reasonably sized files, we can read all the strings at once
+            # and format them nicely in a table.
+            ascii_strings = list(strings.extract_ascii_strings(b, n=min_length))
+            print("Static ASCII strings")
+            if len(ascii_strings) == 0:
+                print("none.")
+            else:
+                print(tabulate.tabulate(
+                    [(hex(s.offset), s.s) for s in ascii_strings],
+                    headers=["Offset", "String"]))
+            print("")
+
+            uni_strings = list(strings.extract_unicode_strings(b, n=min_length))
+            print("Static UTF-16 strings")
+            if len(uni_strings) == 0:
+                print("none.")
+            else:
+                print(tabulate.tabulate(
+                    [(hex(s.offset), s.s) for s in uni_strings],
+                    headers=["Offset", "String"]))
+            print("")
 
 
 def print_stack_strings(extracted_strings, min_length, quiet=False):
@@ -467,14 +506,23 @@ def main():
     sample_file_path = parse_sample_file_path(parser, args)
     min_length = parse_min_length_option(options.min_length)
 
-    if options.all_strings:
-        floss_logger.info("Extracting static strings...")
-        print_all_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
-
     with open(sample_file_path, "rb") as f:
         magic = f.read(2)
-    if magic != "MZ":
+
+    if options.all_strings:
+        floss_logger.info("Extracting static strings...")
+        print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
+
+    if magic not in SUPPORTED_FILE_MAGIC:
         floss_logger.error("FLOSS currently supports the following formats: PE")
+        if not options.all_strings:
+            floss_logger.error("Recommend passing flag `-a` to extract static strings from any file type.")
+        return
+
+    if os.path.getsize(sample_file_path) > MAX_FILE_SIZE:
+        floss_logger.error("FLOSS cannot emulate files larger than %d bytes" % (MAX_FILE_SIZE))
+        if not options.all_strings:
+            floss_logger.error("Recommend passing flag `-a` to extract static strings from any sized file.")
         return
 
     floss_logger.info("Generating vivisect workspace")
