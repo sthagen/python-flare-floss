@@ -476,12 +476,11 @@ def main():
     if options.all_strings:
         floss_logger.info("Extracting static strings...")
         print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
-    elif magic not in SUPPORTED_FILE_MAGIC:
-        floss_logger.warning("Unsupported input file type, automatically extracting only static strings...")
-        print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
 
     if magic not in SUPPORTED_FILE_MAGIC:
         floss_logger.error("FLOSS currently supports the following formats: PE")
+        if not options.all_strings:
+            floss_logger.error("Recommend passing flag `-a` to extract static strings from any file type.")
         return
 
     floss_logger.info("Generating vivisect workspace")
