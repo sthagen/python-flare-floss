@@ -29,7 +29,13 @@ from decoding_manager import LocationType
 floss_logger = logging.getLogger("floss")
 
 
-MIN_LENGTH_DEFAULT = 4
+KILOBYTE = 1024
+MEGABYTE = 1024 * KILOBYTE
+MAX_FILE_SIZE = 16 * MEGABYTE
+
+SUPPORTED_FILE_MAGIC = set(["MZ"])
+
+MIN_STRING_LENGTH_DEFAULT = 4
 
 
 def hex(i):
@@ -124,7 +130,7 @@ def make_parser():
     parser.add_option("-i", "--ida", dest="ida_python_file",
                         help="create an IDAPython script to annotate the decoded strings in an IDB file")
     parser.add_option("-n", "--minimum-length", dest="min_length",
-                        help="minimum string length (default is %d)" % MIN_LENGTH_DEFAULT)
+                      help="minimum string length (default is %d)" % MIN_STRING_LENGTH_DEFAULT)
     parser.add_option("-p", "--plugins", dest="plugins",
                         help="apply the specified identification plugins only (comma-separated)")
     parser.add_option("-l", "--list-plugins", dest="list_plugins",
@@ -253,7 +259,7 @@ def parse_min_length_option(min_length_option):
     """
     Return parsed -n command line option or default length.
     """
-    min_length = int(min_length_option or str(MIN_LENGTH_DEFAULT))
+    min_length = int(min_length_option or str(MIN_STRING_LENGTH_DEFAULT))
     return min_length
 
 
@@ -391,9 +397,6 @@ def create_script(sample_file_path, ida_python_file, decoded_strings):
             raise e
     # TODO return, catch exception in main()
 
-KILOBYTE = 1024
-MEGABYTE = 1024 * KILOBYTE
-MAX_FILE_SIZE = 16 * MEGABYTE
 
 def print_static_strings(path, min_length, quiet=False):
     """
@@ -485,9 +488,6 @@ def print_stack_strings(extracted_strings, min_length, quiet=False):
                 [(hex(s.fva), hex(s.frame_offset), s.s) for s in extracted_strings],
                 headers=["Function", "Frame Offset", "String"]))
         print("")
-
-
-SUPPORTED_FILE_MAGIC = set(["MZ"])
 
 
 def main():
