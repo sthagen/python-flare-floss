@@ -391,7 +391,7 @@ def create_script(sample_file_path, ida_python_file, decoded_strings):
     # TODO return, catch exception in main()
 
 
-def print_all_strings(path, min_length, quiet=False):
+def print_static_strings(path, min_length, quiet=False):
     """
     Print static ASCII and UTF-16 strings from provided file.
     :param path: input file
@@ -469,10 +469,11 @@ def main():
 
     if options.all_strings:
         floss_logger.info("Extracting static strings...")
-        print_all_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
+        print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
 
     with open(sample_file_path, "rb") as f:
         magic = f.read(2)
+
     if magic != "MZ":
         floss_logger.error("FLOSS currently supports the following formats: PE")
         return
