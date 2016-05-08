@@ -451,6 +451,9 @@ def print_stack_strings(extracted_strings, min_length, quiet=False):
         print("")
 
 
+SUPPORTED_FILE_MAGIC = set(["MZ"])
+
+
 def main():
     # default to INFO, unless otherwise changed
     logging.basicConfig(level=logging.WARNING)
@@ -467,14 +470,17 @@ def main():
     sample_file_path = parse_sample_file_path(parser, args)
     min_length = parse_min_length_option(options.min_length)
 
-    if options.all_strings:
-        floss_logger.info("Extracting static strings...")
-        print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
-
     with open(sample_file_path, "rb") as f:
         magic = f.read(2)
 
-    if magic != "MZ":
+    if options.all_strings:
+        floss_logger.info("Extracting static strings...")
+        print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
+    elif magic not in SUPPORTED_FILE_MAGIC:
+        floss_logger.warning("Unsupported input file type, automatically extracting only static strings...")
+        print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
+
+    if magic not in SUPPORTED_FILE_MAGIC:
         floss_logger.error("FLOSS currently supports the following formats: PE")
         return
 
