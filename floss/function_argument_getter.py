@@ -79,7 +79,7 @@ class FunctionArgumentGetter(viv_utils.LoggingObject):
             self.driver.add_monitor(monitor)
 
             with api_hooks.defaultHooks(self.driver):
-                self.driver.runFunction(self.index[fva], maxhit=1, func_only=True)
+                self.driver.runFunction(self.index[fva], maxhit=1, maxrep=0x100, func_only=True)
 
             contexts = monitor.get_contexts()
 
