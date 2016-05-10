@@ -10,7 +10,7 @@ env:
 
 install:
     - pip install https://github.com/williballenthin/vivisect/zipball/master
-    - pip install pyinstaller
+    - pip install pyinstaller pep8
     - echo "__version__ = '$(git describe --tags)'" > floss/version.py
     - pip install -e .
     - sudo apt-get install -y git clang mingw-w64 gcc-mingw-w64 cmake make gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-dev  binutils-mingw-w64-i686 gcc-mingw-w64-i686 g++-mingw-w64-i686
@@ -19,7 +19,9 @@ install:
     - pushd tests/src; make all; popd
     - pyinstaller floss.spec
 
-script: py.test tests/src/ -v
+script:
+    - find . -name \*.py -exec pep8 --ignore=E501 {} \;
+    - py.test tests/src/ -v
 
 addons:
     artifacts:
