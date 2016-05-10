@@ -54,11 +54,11 @@ def emulate_decoding_routine(vw, function_index, function, context):
     floss_logger.debug("Emulating function at 0x%08X called at 0x%08X, return address: 0x%08X",
                        function, context.decoded_at_va, context.return_address)
     deltas = decoding_manager.emulate_function(
-                emu,
-                function_index,
-                function,
-                context.return_address,
-                20000)
+        emu,
+        function_index,
+        function,
+        context.return_address,
+        20000)
     return deltas
 
 

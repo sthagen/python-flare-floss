@@ -41,7 +41,7 @@ def main():
         spec = yaml.safe_load(f)
 
     strings = spec["Decoded strings"]
-    test_dict = { "all": strings }
+    test_dict = {"all": strings}
     logging.info("created test dictionary from %s:\n  %s", spec_path, pformat(test_dict))
 
     for platform, archs in spec["Output Files"].items():

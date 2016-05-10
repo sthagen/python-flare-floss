@@ -98,4 +98,3 @@ def identify_decoding_functions(vw, identification_plugins, functions):
     identification_manager.run_plugins(identification_plugins, functions)
     identification_manager.apply_plugin_weights()
     return identification_manager
-
