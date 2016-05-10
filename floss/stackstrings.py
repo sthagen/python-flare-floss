@@ -10,12 +10,12 @@ from utils import makeEmulator
 
 
 CallContext = namedtuple("CallContext",
-        [
-            "pc",  # the current program counter, type: int
-            "sp",  # the current stack counter, type: int
-            "init_sp",   # the initial stack counter at start of function, type: int
-            "stack_memory",  # the active stack frame contents, type: str
-        ])
+                         [
+                             "pc",  # the current program counter, type: int
+                             "sp",  # the current stack counter, type: int
+                             "init_sp",   # the initial stack counter at start of function, type: int
+                             "stack_memory",  # the active stack frame contents, type: str
+                         ])
 
 
 class CallContextMonitor(viv_utils.emulator_drivers.Monitor):
@@ -56,58 +56,58 @@ def extract_call_contexts(vw, fva):
 
 # StackString represents a stackstring extracted from a function.
 StackString = namedtuple("StackString",
-        [
-            # type: int
-            # the address from which the stackstring was extracted.
-            "fva",
+                         [
+                             # type: int
+                             # the address from which the stackstring was extracted.
+                             "fva",
 
-            # type: str
-            # the string contents.
-            "s",
+                             # type: str
+                             # the string contents.
+                             "s",
 
-            # type: int
-            # the program counter at which the stackstring existed.
-            "pc",
+                             # type: int
+                             # the program counter at which the stackstring existed.
+                             "pc",
 
-            # here's what the following members represent...
-            #
-            #
-            # [smaller addresses]
-            #
-            # +---------------+  <- sp (top of stack)
-            # |               | \
-            # +---------------+  | offset
-            # |               | /
-            # +---------------+
-            # | "abc"         | \
-            # +---------------+  |
-            # |               |  |
-            # +---------------+  | frame_offset
-            # |               |  |
-            # +---------------+  |
-            # |               | /
-            # +---------------+  <- init_sp (bottom of stack, probably bp)
-            #
-            # [bigger addresses]
+                             # here's what the following members represent...
+                             #
+                             #
+                             # [smaller addresses]
+                             #
+                             # +---------------+  <- sp (top of stack)
+                             # |               | \
+                             # +---------------+  | offset
+                             # |               | /
+                             # +---------------+
+                             # | "abc"         | \
+                             # +---------------+  |
+                             # |               |  |
+                             # +---------------+  | frame_offset
+                             # |               |  |
+                             # +---------------+  |
+                             # |               | /
+                             # +---------------+  <- init_sp (bottom of stack, probably bp)
+                             #
+                             # [bigger addresses]
 
-            # type: int
-            # the stack counter at which the stackstring existed.
-            # aka, the top of the stack frame
-            "sp",
+                             # type: int
+                             # the stack counter at which the stackstring existed.
+                             # aka, the top of the stack frame
+                             "sp",
 
-            # type: int
-            # the initial stack counter at the start of the function.
-            # aka, the bottom of the stack frame
-            "init_sp",
+                             # type: int
+                             # the initial stack counter at the start of the function.
+                             # aka, the bottom of the stack frame
+                             "init_sp",
 
-            # type: int
-            # the offset into the stack frame at which the stackstring existed.
-            "offset",
+                             # type: int
+                             # the offset into the stack frame at which the stackstring existed.
+                             "offset",
 
-            # type: int
-            # the offset from the function frame at which the stackstring existed.
-            "frame_offset",
-        ])
+                             # type: int
+                             # the offset from the function frame at which the stackstring existed.
+                             "frame_offset",
+                         ])
 
 
 def getPointerSize(vw):

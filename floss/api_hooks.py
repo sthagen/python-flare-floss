@@ -8,6 +8,7 @@ class ApiMonitor(viv_utils.emulator_drivers.Monitor):
     '''
     The ApiMonitor observes emulation and cleans up API function returns.
     '''
+
     def __init__(self, vw, function_index):
         viv_utils.emulator_drivers.Monitor.__init__(self, vw)
         self.function_index = function_index
@@ -23,11 +24,12 @@ class ApiMonitor(viv_utils.emulator_drivers.Monitor):
         # to assist with debugging
         # add an address to this object, and you'll drop into an interactive shell
         bps = self.bps
-        #bps.add(0x401560)
+        # bps.add(0x401560)
         if startpc in bps:
             self.dumpState(emu)
             from hexdump import hexdump
-            from IPython import embed; embed()
+            from IPython import embed
+            embed()
 
         #self.d("%s: %s", hex(startpc), op)
 
@@ -147,6 +149,7 @@ class GetProcessHeapHook(viv_utils.emulator_drivers.Hook):
     '''
     Hook and handle calls to GetProcessHeap, returning 0.
     '''
+
     def hook(self, callname, emu, callconv, api, argv):
         if callname == "kernel32.GetProcessHeap":
             # nop
@@ -175,6 +178,7 @@ class RtlAllocateHeapHook(viv_utils.emulator_drivers.Hook):
     The base heap address is 0x69690000.
     The max allocation size is 10 MB.
     '''
+
     def __init__(self, *args, **kwargs):
         super(RtlAllocateHeapHook, self).__init__(*args, **kwargs)
         self._heap_addr = 0x69690000
@@ -207,6 +211,7 @@ class AllocateHeap(RtlAllocateHeapHook):
     '''
     Hook calls to AllocateHeap and handle them like calls to RtlAllocateHeapHook.
     '''
+
     def __init__(self, *args, **kwargs):
         super(AllocateHeap, self).__init__(*args, **kwargs)
 
@@ -226,6 +231,7 @@ class MallocHeap(RtlAllocateHeapHook):
     '''
     Hook calls to malloc and handle them like calls to RtlAllocateHeapHook.
     '''
+
     def __init__(self, *args, **kwargs):
         super(MallocHeap, self).__init__(*args, **kwargs)
 
@@ -244,6 +250,7 @@ class MemcpyHook(viv_utils.emulator_drivers.Hook):
     '''
     Hook and handle calls to memcpy.
     '''
+
     def __init__(self, *args, **kwargs):
         super(MemcpyHook, self).__init__(*args, **kwargs)
 
@@ -263,6 +270,7 @@ class ExitProcessHook(viv_utils.emulator_drivers.Hook):
     '''
     Hook calls to ExitProcess and stop emulation when these are hit.
     '''
+
     def __init__(self, *args, **kwargs):
         super(ExitProcessHook, self).__init__(*args, **kwargs)
 

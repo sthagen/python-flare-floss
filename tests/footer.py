@@ -60,5 +60,3 @@ def write_footer(sample_path, test_dict):
     test_data = struct.pack("<II", file_size, data_len)
     with open(sample_path, "ab") as f:
         f.write(json_data + test_data + MAGIC)
-
-
