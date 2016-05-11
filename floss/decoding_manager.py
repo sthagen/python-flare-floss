@@ -37,10 +37,10 @@ def is_import(emu, va):
 
 # A snapshot represents the current state of the CPU and memory
 Snapshot = namedtuple("Snapshot",
-        [   "memory",  # The memory snapshot, type: envi.MemorySnapshot
-            "sp",  # The current stack counter, type: int
-            "pc",  # The current instruction pointer, type: int
-            ])
+                      ["memory",  # The memory snapshot, type: envi.MemorySnapshot
+                       "sp",  # The current stack counter, type: int
+                       "pc",  # The current instruction pointer, type: int
+                       ])
 
 
 def make_snapshot(emu):
@@ -56,15 +56,16 @@ def make_snapshot(emu):
 #  after an operation. It facilitates diffing the state of
 #  an emalutor.
 Delta = namedtuple("Delta",
-        [   "pre_snap",  # type: Snapshot
-            "post_snap",  # type: Snapshot
-            ])
+                   ["pre_snap",  # type: Snapshot
+                    "post_snap",  # type: Snapshot
+                    ])
 
 
 class DeltaCollectorHook(viv_utils.emulator_drivers.Hook):
     """
     hook that collects Deltas at each imported API call.
     """
+
     def __init__(self, pre_snap):
         super(DeltaCollectorHook, self).__init__()
 
@@ -121,18 +122,18 @@ def emulate_function(emu, function_index, fva, return_address, max_instruction_c
         floss_logger.debug("Halting as emulation has escaped!")
     except envi.InvalidInstruction:
         floss_logger.debug("vivisect encountered an invalid instruction. will continue processing.",
-                exc_info=True)
+                           exc_info=True)
     except envi.UnsupportedInstruction:
         floss_logger.debug("vivisect encountered an unsupported instruction. will continue processing.",
-                exc_info=True)
+                           exc_info=True)
     except envi.BreakpointHit:
         floss_logger.debug("vivisect encountered an unexpected emulation breakpoint. will continue processing.",
-                exc_info=True)
+                           exc_info=True)
     except viv_utils.emulator_drivers.StopEmulation as e:
         pass
     except Exception:
         floss_logger.debug("vivisect encountered an unexpected exception. will continue processing.",
-                exc_info=True)
+                           exc_info=True)
     floss_logger.debug("Ended emulation at 0x%08X", emu.getProgramCounter())
 
     deltas = delta_collector.deltas
