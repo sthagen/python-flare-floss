@@ -12,10 +12,14 @@ matrix:
           sudo: required
           python: 2.7
 
+        # travis doesn't have py2.7 available, so we have to do it ourselves
+        # ref: https://github.com/travis-ci/travis-ci/issues/2312
         - os: osx
           language: generic
 
 before_install:
+    # travis doesn't have py2.7 available, so we have to do it ourselves
+    # ref: https://github.com/travis-ci/travis-ci/issues/2312
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
         git clone https://github.com/MacPython/terryfy ../terryfy;
         source ../terryfy/travis_tools.sh;
@@ -28,6 +32,7 @@ install:
     - echo "__version__ = '$(git describe --tags)'" > floss/version.py
     - pip install -e .
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+        # haven't figured how to build wclang on osx yet, so don't build tests
         sudo apt-get install -y git clang mingw-w64 gcc-mingw-w64 cmake make gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-dev  binutils-mingw-w64-i686 gcc-mingw-w64-i686 g++-mingw-w64-i686;
         git clone https://github.com/tpoechtrager/wclang.git ../wclang;
         pushd ../wclang; cmake -DCMAKE_INSTALL_PREFIX=/usr/local && make && sudo make install; popd;
@@ -38,6 +43,7 @@ install:
 script:
     - find . -name \*.py -exec pep8 --ignore=E501 {} \;
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+        # haven't figured how to build wclang on osx yet, so no tests
         py.test tests/src/ -v;
       fi
 
