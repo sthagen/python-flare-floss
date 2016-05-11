@@ -1,3 +1,7 @@
+os:
+  - linux
+  - osx
+
 language: python
 python:
   - "2.7"
@@ -13,19 +17,19 @@ install:
     - pip install pyinstaller pep8
     - echo "__version__ = '$(git describe --tags)'" > floss/version.py
     - pip install -e .
-    - sudo apt-get install -y git clang mingw-w64 gcc-mingw-w64 cmake make gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-dev  binutils-mingw-w64-i686 gcc-mingw-w64-i686 g++-mingw-w64-i686
-    - git clone https://github.com/tpoechtrager/wclang.git ../wclang
-    - pushd ../wclang; cmake -DCMAKE_INSTALL_PREFIX=/usr/local && make && sudo make install; popd
-    - pushd tests/src; make all; popd
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install -y git clang mingw-w64 gcc-mingw-w64 cmake make gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-dev  binutils-mingw-w64-i686 gcc-mingw-w64-i686 g++-mingw-w64-i686; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then git clone https://github.com/tpoechtrager/wclang.git ../wclang; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pushd ../wclang; cmake -DCMAKE_INSTALL_PREFIX=/usr/local && make && sudo make install; popd; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pushd tests/src; make all; popd; fi
     - pyinstaller floss.spec
 
 script:
     - find . -name \*.py -exec pep8 --ignore=E501 {} \;
-    - py.test tests/src/ -v
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then py.test tests/src/ -v; fi
 
 addons:
     artifacts:
         debug: true
         paths:
             - $(find . -type f | grep -e '/bin/' -e 'dist/floss$' | awk 1 ORS=':')
-        target_paths: travis/
+        target_paths: travis/$TRAVIS_OS_NAME/
