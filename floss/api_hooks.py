@@ -31,7 +31,7 @@ class ApiMonitor(viv_utils.emulator_drivers.Monitor):
             from IPython import embed
             embed()
 
-        #self.d("%s: %s", hex(startpc), op)
+        # self.d("%s: %s", hex(startpc), op)
 
     def posthook(self, emu, op, endpc):
         # overridden from Monitor
