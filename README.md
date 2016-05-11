@@ -26,6 +26,7 @@ For a detailed description of *installing* FLOSS, review the documention
 Standalone nightly builds:
   - Windows: [here](http://s3.amazonaws.com/build-artifacts.floss.flare.fireeye.com/appveyor/dist/floss.exe)
   - Linux: [here](https://s3.amazonaws.com/build-artifacts.floss.flare.fireeye.com/travis/dist/linux/floss)
+  - OSX: [here](https://s3.amazonaws.com/build-artifacts.floss.flare.fireeye.com/travis/dist/osx/floss)
 
 
 ## Usage
