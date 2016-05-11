@@ -116,28 +116,28 @@ def make_parser():
 
     parser = OptionParser(usage=usage_message, version="%prog {:s}\nhttps://github.com/fireeye/flare-floss/".format(version.__version__))
     parser.add_option("-a", "--all-strings", dest="all_strings", action="store_true",
-                        help="also extract static ASCII and UTF-16 strings from the file")
+                      help="also extract static ASCII and UTF-16 strings from the file")
     parser.add_option("-v", "--verbose", dest="verbose",
-                        help="show verbose messages and warnings", action="store_true")
+                      help="show verbose messages and warnings", action="store_true")
     parser.add_option("-d", "--debug", dest="debug",
-                        help="show all trace messages", action="store_true")
+                      help="show all trace messages", action="store_true")
     parser.add_option("-f", "--functions", dest="functions",
-                        help="only analyze the specified functions (comma-separated)",
-                        type="string")
+                      help="only analyze the specified functions (comma-separated)",
+                      type="string")
     parser.add_option("-g", "--group", dest="group_functions",
-                        help="group output by virtual address of decoding functions",
-                        action="store_true")
+                      help="group output by virtual address of decoding functions",
+                      action="store_true")
     parser.add_option("-i", "--ida", dest="ida_python_file",
-                        help="create an IDAPython script to annotate the decoded strings in an IDB file")
+                      help="create an IDAPython script to annotate the decoded strings in an IDB file")
     parser.add_option("-n", "--minimum-length", dest="min_length",
                       help="minimum string length (default is %d)" % MIN_STRING_LENGTH_DEFAULT)
     parser.add_option("-p", "--plugins", dest="plugins",
-                        help="apply the specified identification plugins only (comma-separated)")
+                      help="apply the specified identification plugins only (comma-separated)")
     parser.add_option("-l", "--list-plugins", dest="list_plugins",
-                        help="list all available identification plugins and exit",
-                        action="store_true")
+                      help="list all available identification plugins and exit",
+                      action="store_true")
     parser.add_option("-q", "--quiet", dest="quiet", action="store_true",
-                        help="suppress headers and formatting to print only extracted strings")
+                      help="suppress headers and formatting to print only extracted strings")
     return parser
 
 
