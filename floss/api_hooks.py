@@ -12,7 +12,6 @@ class ApiMonitor(viv_utils.emulator_drivers.Monitor):
     def __init__(self, vw, function_index):
         viv_utils.emulator_drivers.Monitor.__init__(self, vw)
         self.function_index = function_index
-        self.bps = set([])
 
     def apicall(self, emu, op, pc, api, argv):
         # overridden from Monitor
@@ -20,18 +19,7 @@ class ApiMonitor(viv_utils.emulator_drivers.Monitor):
 
     def prehook(self, emu, op, startpc):
         # overridden from Monitor
-
-        # to assist with debugging
-        # add an address to this object, and you'll drop into an interactive shell
-        bps = self.bps
-        # bps.add(0x401560)
-        if startpc in bps:
-            self.dumpState(emu)
-            from hexdump import hexdump
-            from IPython import embed
-            embed()
-
-        # self.d("%s: %s", hex(startpc), op)
+        pass
 
     def posthook(self, emu, op, endpc):
         # overridden from Monitor
@@ -112,7 +100,7 @@ class ApiMonitor(viv_utils.emulator_drivers.Monitor):
             else:
                 sp = "%02x" % (-i)
             stack_str = "%s\n0x%08x - 0x%08x %s" % (stack_str, (esp - i), self.getStackValue(emu, -i), sp)
-        self.i(stack_str)
+        self.d(stack_str)
 
     def dumpState(self, emu):
         self.i("eip: 0x%x", emu.getRegisterByName("eip"))
