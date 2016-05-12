@@ -6,7 +6,6 @@ import sys
 import mmap
 import string
 import logging
-import pkg_resources
 from time import time
 from optparse import OptionParser
 
