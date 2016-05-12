@@ -6,7 +6,6 @@ import sys
 import mmap
 import string
 import logging
-import pkg_resources
 from time import time
 from optparse import OptionParser
 
@@ -490,12 +489,17 @@ def print_stack_strings(extracted_strings, min_length, quiet=False):
         print("")
 
 
-def main():
-    # default to INFO, unless otherwise changed
+def main(argv=None):
+    """
+    :param argv: optional command line arguments, like sys.argv[1:]
+    """
     logging.basicConfig(level=logging.WARNING)
 
     parser = make_parser()
-    options, args = parser.parse_args()
+    if argv is not None:
+        options, args = parser.parse_args(argv)
+    else:
+        options, args = parser.parse_args()
 
     set_logging_level(options.debug, options.verbose)
 
