@@ -53,3 +53,4 @@ addons:
         paths:
             - $(find . -type f | grep -e '/bin/' -e 'dist/floss$' | awk 1 ORS=':')
         target_paths: travis/$TRAVIS_OS_NAME/
+
