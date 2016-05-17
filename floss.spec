@@ -158,3 +158,4 @@ coll = COLLECT(exe,
                strip=None,
                upx=True,
                name='floss-dat')
+
