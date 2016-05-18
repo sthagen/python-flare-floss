@@ -137,6 +137,8 @@ def make_parser():
                       action="store_true")
     parser.add_option("-q", "--quiet", dest="quiet", action="store_true",
                       help="suppress headers and formatting to print only extracted strings")
+    parser.add_option("-u", "--unique", dest="unique",
+                      help="only print unique lines", action="store_true")
     return parser
 
 
@@ -252,6 +254,17 @@ def select_plugins(plugins_option):
         raise Exception("Plugin not found")
 
     return plugin_names
+
+
+def filter_unique_decoded(decoded_strings):
+    unique_values = set()
+    originals = []
+    for decoded in decoded_strings:
+        hashable = (decoded.va, decoded.s, decoded.decoded_at_va, decoded.fva)
+        if hashable not in unique_values:
+            unique_values.add(hashable)
+            originals.append(decoded)
+    return originals
 
 
 def parse_min_length_option(min_length_option):
@@ -549,10 +562,15 @@ def main(argv=None):
     floss_logger.info("Decoding strings...")
     function_index = viv_utils.InstructionFunctionIndex(vw)
     decoded_strings = decode_strings(vw, function_index, decoding_functions_candidates)
+    if options.unique:
+        decoded_strings = filter_unique_decoded(decoded_strings)
     print_decoding_results(decoded_strings, min_length, options.group_functions, quiet=options.quiet)
 
     floss_logger.info("Extracting stackstrings...")
-    print_stack_strings(stackstrings.extract_stackstrings(vw, selected_functions), min_length, quiet=options.quiet)
+    stack_strings = stackstrings.extract_stackstrings(vw, selected_functions)
+    if options.unique:
+        stack_strings = list(set(stack_strings))
+    print_stack_strings(stack_strings, min_length, quiet=options.quiet)
 
     if options.ida_python_file:
         floss_logger.info("Creating IDA script...")
