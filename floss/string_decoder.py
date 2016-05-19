@@ -1,7 +1,5 @@
 import logging
 
-import envi.memory
-
 import strings
 import decoding_manager
 from utils import makeEmulator
@@ -162,7 +160,7 @@ def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
         section_before = mem_before[section_after_start]
         (_, _, _, bytes_before) = section_before
 
-        memory_diff = envi.memory.memdiff(bytes_before, bytes_after)
+        memory_diff = memdiff(bytes_before, bytes_after)
         for offset, length in memory_diff:
             address = section_after_start + offset
 
