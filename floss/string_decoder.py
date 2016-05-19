@@ -42,7 +42,7 @@ def memdiff(bytes1, bytes2):
 
     diffs = []
 
-    # Get offset of first diff
+    # Get position of first diff
     diff_start = memdiff_search(bytes1, bytes2)
     diff_offset = None
     for offset, byte in enumerate(bytes1[diff_start:]):
@@ -65,6 +65,7 @@ def memdiff(bytes1, bytes2):
     # Bytes are different until the end of input, handle leftovers
     if diff_offset is not None:
         diffs.append((diff_offset + diff_start, offset + 1 - diff_offset))
+
     return diffs
 
 
