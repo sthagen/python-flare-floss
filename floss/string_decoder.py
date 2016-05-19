@@ -13,40 +13,56 @@ floss_logger = logging.getLogger("floss")
 
 
 def memdiff_search(a, b, offset=0):
-    '''
-    Binary search to find the first byte that differs between a and b
-    '''
-    if len(a) == 1:
-        half = 1
-    else:
-        half = len(a) / 2
+    # Prevent infinite recursion on inputs with length of one
+    half = (len(a) / 2) or 1
+
+    # Compare first half of the string
     if a[:half] != b[:half]:
+
+        # Have we found the first diff?
         if a[0] != b[0]:
             return offset
+
         return memdiff_search(a[:half], b[:half]) + offset
+
+    # Compare second half of the string
     if a[half:] != b[half:]:
         return memdiff_search(a[half:], b[half:], offset=half) + offset
 
 
 def memdiff(bytes1, bytes2):
+    # Shortcut matching inputs
     if bytes1 == bytes2:
         return []
 
+    # Verify lengths match
     size = len(bytes1)
     if size != len(bytes2):
         raise Exception('memdiff *requires* same size bytes')
 
     diffs = []
+
+    # Get offset of first diff
     diff_start = memdiff_search(bytes1, bytes2)
     diff_offset = None
     for offset, byte in enumerate(bytes1[diff_start:]):
+
         if bytes2[diff_start + offset] != byte:
+            # Store offset if we're not tracking a diff
             if diff_offset is None:
                 diff_offset = offset
             continue
+
+        # Bytes match, check if this is the end of a diff
         if diff_offset is not None:
             diffs.append((diff_offset + diff_start, offset - diff_offset))
             diff_offset = None
+
+            # Shortcut if remaining data is equal
+            if bytes1[diff_start + offset:] == bytes2[diff_start + offset:]:
+                break
+
+    # Bytes are different until the end of input, handle leftovers
     if diff_offset is not None:
         diffs.append((diff_offset + diff_start, offset + 1 - diff_offset))
     return diffs
