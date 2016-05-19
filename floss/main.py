@@ -137,8 +137,8 @@ def make_parser():
                       action="store_true")
     parser.add_option("-q", "--quiet", dest="quiet", action="store_true",
                       help="suppress headers and formatting to print only extracted strings")
-    parser.add_option("-u", "--unique", dest="unique",
-                      help="only print unique lines", action="store_true")
+    parser.add_option("-x", "--expert", dest="expert",
+                      help="show duplicate offset/string combinations", action="store_true")
     return parser
 
 
@@ -562,13 +562,13 @@ def main(argv=None):
     floss_logger.info("Decoding strings...")
     function_index = viv_utils.InstructionFunctionIndex(vw)
     decoded_strings = decode_strings(vw, function_index, decoding_functions_candidates)
-    if options.unique:
+    if not options.expert:
         decoded_strings = filter_unique_decoded(decoded_strings)
     print_decoding_results(decoded_strings, min_length, options.group_functions, quiet=options.quiet)
 
     floss_logger.info("Extracting stackstrings...")
     stack_strings = stackstrings.extract_stackstrings(vw, selected_functions)
-    if options.unique:
+    if not options.expert:
         stack_strings = list(set(stack_strings))
     print_stack_strings(stack_strings, min_length, quiet=options.quiet)
 
