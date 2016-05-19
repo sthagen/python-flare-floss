@@ -12,6 +12,46 @@ from decoding_manager import DecodedString, LocationType
 floss_logger = logging.getLogger("floss")
 
 
+def memdiff_search(a, b, offset=0):
+    '''
+    Binary search to find the first byte that differs between a and b
+    '''
+    if len(a) == 1:
+        half = 1
+    else:
+        half = len(a) / 2
+    if a[:half] != b[:half]:
+        if a[0] != b[0]:
+            return offset
+        return memdiff_search(a[:half], b[:half]) + offset
+    if a[half:] != b[half:]:
+        return memdiff_search(a[half:], b[half:], offset=half) + offset
+
+
+def memdiff(bytes1, bytes2):
+    if bytes1 == bytes2:
+        return []
+
+    size = len(bytes1)
+    if size != len(bytes2):
+        raise Exception('memdiff *requires* same size bytes')
+
+    diffs = []
+    diff_start = memdiff_search(bytes1, bytes2)
+    diff_offset = None
+    for offset, byte in enumerate(bytes1[diff_start:]):
+        if bytes2[diff_start + offset] != byte:
+            if diff_offset is None:
+                diff_offset = offset
+            continue
+        if diff_offset is not None:
+            diffs.append((diff_offset + diff_start, offset - diff_offset))
+            diff_offset = None
+    if diff_offset is not None:
+        diffs.append((diff_offset + diff_start, offset + 1 - diff_offset))
+    return diffs
+
+
 def extract_decoding_contexts(vw, function):
     '''
     Extract the CPU and memory contexts of all calls to the given function.
