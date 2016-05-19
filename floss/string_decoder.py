@@ -17,10 +17,8 @@ def memdiff_search(a, b):
 
     :param a: The original sequence of bytes
     :param b: The sequence of bytes to compare with
-    :param offset: Offset to be added to the return value
     :type a: str
     :type b: str
-    :type offset: int
     :rtype: int offset of the first location a and b differ, None if strings match
     '''
 
