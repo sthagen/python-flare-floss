@@ -1,3 +1,4 @@
+import re
 import logging
 
 import envi.memory
@@ -136,14 +137,16 @@ def extract_strings(b):
     :rtype: Sequence[decoding_manager.DecodedString]
     '''
     ret = []
+    # ignore strings like: pVA, pVAAA, AAAA
+    # which come from vivisect uninitialized taint tracking
+    filter = re.compile("^p?V?A+$")
     for s in strings.extract_ascii_strings(b.s):
-        if s.s == "A" * len(s.s):
-            # ignore strings of all "A", which is likely taint data
+        if filter.match(s.s):
             continue
         ret.append(DecodedString(b.va + s.offset, s.s, b.decoded_at_va,
                                  b.fva, b.characteristics))
     for s in strings.extract_unicode_strings(b.s):
-        if s.s == "A" * len(s.s):
+        if filter.match(s.s):
             continue
         ret.append(DecodedString(b.va + s.offset, s.s, b.decoded_at_va,
                                  b.fva, b.characteristics))
