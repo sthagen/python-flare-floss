@@ -23,6 +23,7 @@ basic_tests = [
     ("aaaa", "abab"),
 ]
 
+
 def test_basics():
     for a, b in basic_tests:
         assert envi.memory.memdiff(a, b) == memdiff(a, b)
