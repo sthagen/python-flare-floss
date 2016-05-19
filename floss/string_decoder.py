@@ -11,6 +11,19 @@ floss_logger = logging.getLogger("floss")
 
 
 def memdiff_search(a, b, offset=0):
+    '''
+    Use binary searching to find the offset of the first difference
+     between two strings.
+
+    :param a: The original sequence of bytes
+    :param b: The sequence of bytes to compare with
+    :param offset: Offset to be added to the return value
+    :type a: str
+    :type b: str
+    :type offset: int
+    :rtype: int offset of the first location a and b differ, None if strings match
+    '''
+
     # Prevent infinite recursion on inputs with length of one
     half = (len(a) / 2) or 1
 
@@ -29,6 +42,16 @@ def memdiff_search(a, b, offset=0):
 
 
 def memdiff(bytes1, bytes2):
+    '''
+    Find all differences between two input strings.
+
+    :param bytes1: The original sequence of bytes
+    :param bytes2: A different sequence of bytes to compare to
+    :type bytes1: str
+    :type bytes2: str
+    :rtype: list of (offset, length) tuples indicating locations bytes1 and
+      bytes 2 differ
+    '''
     # Shortcut matching inputs
     if bytes1 == bytes2:
         return []
