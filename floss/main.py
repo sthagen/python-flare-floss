@@ -530,7 +530,7 @@ def main(argv=None):
         return
 
     floss_logger.info("Generating vivisect workspace")
-    vw = viv_utils.getWorkspace(sample_file_path)
+    vw = viv_utils.getWorkspace(sample_file_path, should_save=False)
 
     selected_functions = select_functions(vw, options.functions)
     floss_logger.debug("Selected the following functions: %s", ", ".join(map(hex, selected_functions)))
