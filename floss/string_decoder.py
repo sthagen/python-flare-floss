@@ -48,7 +48,7 @@ def memdiff(bytes1, bytes2):
     :type bytes1: str
     :type bytes2: str
     :rtype: list of (offset, length) tuples indicating locations bytes1 and
-      bytes 2 differ
+      bytes2 differ
     '''
     # Shortcut matching inputs
     if bytes1 == bytes2:
