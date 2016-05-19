@@ -10,33 +10,33 @@ from decoding_manager import DecodedString, LocationType
 floss_logger = logging.getLogger("floss")
 
 
-def memdiff_search(a, b):
+def memdiff_search(bytes1, bytes2):
     '''
     Use binary searching to find the offset of the first difference
      between two strings.
 
-    :param a: The original sequence of bytes
-    :param b: The sequence of bytes to compare with
-    :type a: str
-    :type b: str
+    :param bytes1: The original sequence of bytes
+    :param bytes2: A sequence of bytes to compare with bytes1
+    :type bytes1: str
+    :type bytes2: str
     :rtype: int offset of the first location a and b differ, None if strings match
     '''
 
     # Prevent infinite recursion on inputs with length of one
-    half = (len(a) / 2) or 1
+    half = (len(bytes1) / 2) or 1
 
     # Compare first half of the string
-    if a[:half] != b[:half]:
+    if bytes1[:half] != bytes2[:half]:
 
         # Have we found the first diff?
-        if a[0] != b[0]:
+        if bytes1[0] != bytes2[0]:
             return 0
 
-        return memdiff_search(a[:half], b[:half])
+        return memdiff_search(bytes1[:half], bytes2[:half])
 
     # Compare second half of the string
-    if a[half:] != b[half:]:
-        return memdiff_search(a[half:], b[half:]) + half
+    if bytes1[half:] != bytes2[half:]:
+        return memdiff_search(bytes1[half:], bytes2[half:]) + half
 
 
 def memdiff(bytes1, bytes2):
