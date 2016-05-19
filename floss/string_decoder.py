@@ -46,7 +46,7 @@ def memdiff(bytes1, bytes2):
     Find all differences between two input strings.
 
     :param bytes1: The original sequence of bytes
-    :param bytes2: A different sequence of bytes to compare to
+    :param bytes2: The sequence of bytes to compare to
     :type bytes1: str
     :type bytes2: str
     :rtype: list of (offset, length) tuples indicating locations bytes1 and
