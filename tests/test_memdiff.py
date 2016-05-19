@@ -3,7 +3,6 @@ import pytest
 import envi.memory
 
 from floss.string_decoder import memdiff
-from floss.string_decoder import memdiff_search
 
 
 
