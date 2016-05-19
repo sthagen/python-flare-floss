@@ -10,7 +10,7 @@ from decoding_manager import DecodedString, LocationType
 floss_logger = logging.getLogger("floss")
 
 
-def memdiff_search(a, b, offset=0):
+def memdiff_search(a, b):
     '''
     Use binary searching to find the offset of the first difference
      between two strings.
@@ -32,13 +32,13 @@ def memdiff_search(a, b, offset=0):
 
         # Have we found the first diff?
         if a[0] != b[0]:
-            return offset
+            return 0
 
-        return memdiff_search(a[:half], b[:half]) + offset
+        return memdiff_search(a[:half], b[:half])
 
     # Compare second half of the string
     if a[half:] != b[half:]:
-        return memdiff_search(a[half:], b[half:], offset=half) + offset
+        return memdiff_search(a[half:], b[half:]) + half
 
 
 def memdiff(bytes1, bytes2):
