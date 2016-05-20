@@ -560,6 +560,9 @@ def main(argv=None):
     else:
         floss_logger.info("Loading existing vivisect workspace")
 
+    if options.expert:
+        options.save_workspace = True
+
     vw = viv_utils.getWorkspace(sample_file_path, should_save=options.save_workspace)
 
     selected_functions = select_functions(vw, options.functions)
