@@ -139,6 +139,8 @@ def make_parser():
                       help="suppress headers and formatting to print only extracted strings")
     parser.add_option("-x", "--expert", dest="expert",
                       help="show duplicate offset/string combinations", action="store_true")
+    parser.add_option("--save-workspace", dest="save_workspace",
+                      help="save vivisect .viv workspace file in current directory", action="store_true")
     return parser
 
 
@@ -543,7 +545,7 @@ def main(argv=None):
         return
 
     floss_logger.info("Generating vivisect workspace")
-    vw = viv_utils.getWorkspace(sample_file_path, should_save=False)
+    vw = viv_utils.getWorkspace(sample_file_path, should_save=options.save_workspace)
 
     selected_functions = select_functions(vw, options.functions)
     floss_logger.debug("Selected the following functions: %s", ", ".join(map(hex, selected_functions)))
