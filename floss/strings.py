@@ -21,6 +21,10 @@ def extract_ascii_strings(buf, n=4):
     :type n: int
     :rtype: Sequence[String]
     '''
+
+    if not buf:
+        return
+
     if (buf[0] in REPEATS) and (buf.count(buf[0]) == len(buf)):
         return
 
@@ -44,6 +48,10 @@ def extract_unicode_strings(buf, n=4):
     :type n: int
     :rtype: Sequence[String]
     '''
+
+    if not buf:
+        return
+
     if (buf[0] in REPEATS) and (buf.count(buf[0]) == len(buf)):
         return
 
