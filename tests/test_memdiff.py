@@ -5,7 +5,6 @@ import envi.memory
 from floss.string_decoder import memdiff
 
 
-
 basic_tests = [
     # Empty strings
     ("", ""),
@@ -51,7 +50,7 @@ complex_tests = [
     # Midpoint diff
     ("A" * 800, ("A" * 399) + "BB" + ("A" * 399)),
     # 7 diffs, each 100 characters apart
-    ("A" * 800, ("A" * 100) + "B" + ("A" * 100) + "B" + ("A" * 100) + "B" + ("A" * 100) + "B" + ("A" * 100) + "B" + ("A" * 100) + "B" + ("A" * 100) + "B" + ("A" * 93)),
+    ("A" * 800, ((("A" * 100) + "B") * 7) + ("A" * 93)),
 ]
 
 
