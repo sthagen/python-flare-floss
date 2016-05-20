@@ -277,6 +277,17 @@ def parse_min_length_option(min_length_option):
     return min_length
 
 
+def is_workspace_file(sample_file_path):
+    """
+    Return if input file is a vivisect workspace, based on file extension
+    :param sample_file_path:
+    :return: True if file extension is .viv, False otherwise
+    """
+    if os.path.splitext(sample_file_path)[1] == ".viv":
+        return True
+    return False
+
+
 def print_identification_results(sample_file_path, decoder_results):
     """
     Print results of string decoding routine identification phase.
@@ -525,26 +536,30 @@ def main(argv=None):
     sample_file_path = parse_sample_file_path(parser, args)
     min_length = parse_min_length_option(options.min_length)
 
-    with open(sample_file_path, "rb") as f:
-        magic = f.read(2)
+    if not is_workspace_file(sample_file_path):
+        with open(sample_file_path, "rb") as f:
+            magic = f.read(2)
 
-    if options.all_strings:
-        floss_logger.info("Extracting static strings...")
-        print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
+        if options.all_strings:
+            floss_logger.info("Extracting static strings...")
+            print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
 
-    if magic not in SUPPORTED_FILE_MAGIC:
-        floss_logger.error("FLOSS currently supports the following formats: PE")
-        if not options.all_strings:
-            floss_logger.error("Recommend passing flag `-a` to extract static strings from any file type.")
-        return
+        if magic not in SUPPORTED_FILE_MAGIC:
+            floss_logger.error("FLOSS currently supports the following formats: PE")
+            if not options.all_strings:
+                floss_logger.error("Recommend passing flag `-a` to extract static strings from any file type.")
+            return
 
-    if os.path.getsize(sample_file_path) > MAX_FILE_SIZE:
-        floss_logger.error("FLOSS cannot emulate files larger than %d bytes" % (MAX_FILE_SIZE))
-        if not options.all_strings:
-            floss_logger.error("Recommend passing flag `-a` to extract static strings from any sized file.")
-        return
+        if os.path.getsize(sample_file_path) > MAX_FILE_SIZE:
+            floss_logger.error("FLOSS cannot emulate files larger than %d bytes" % (MAX_FILE_SIZE))
+            if not options.all_strings:
+                floss_logger.error("Recommend passing flag `-a` to extract static strings from any sized file.")
+            return
 
-    floss_logger.info("Generating vivisect workspace")
+        floss_logger.info("Generating vivisect workspace")
+    else:
+        floss_logger.info("Loading existing vivisect workspace")
+
     vw = viv_utils.getWorkspace(sample_file_path, should_save=options.save_workspace)
 
     selected_functions = select_functions(vw, options.functions)
