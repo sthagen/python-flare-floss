@@ -1,8 +1,6 @@
 import re
 import logging
 
-import envi.memory
-
 import strings
 import decoding_manager
 from utils import makeEmulator
@@ -11,6 +9,84 @@ from decoding_manager import DecodedString, LocationType
 
 
 floss_logger = logging.getLogger("floss")
+
+
+def memdiff_search(bytes1, bytes2):
+    '''
+    Use binary searching to find the offset of the first difference
+     between two strings.
+
+    :param bytes1: The original sequence of bytes
+    :param bytes2: A sequence of bytes to compare with bytes1
+    :type bytes1: str
+    :type bytes2: str
+    :rtype: int offset of the first location a and b differ, None if strings match
+    '''
+
+    # Prevent infinite recursion on inputs with length of one
+    half = (len(bytes1) / 2) or 1
+
+    # Compare first half of the string
+    if bytes1[:half] != bytes2[:half]:
+
+        # Have we found the first diff?
+        if bytes1[0] != bytes2[0]:
+            return 0
+
+        return memdiff_search(bytes1[:half], bytes2[:half])
+
+    # Compare second half of the string
+    if bytes1[half:] != bytes2[half:]:
+        return memdiff_search(bytes1[half:], bytes2[half:]) + half
+
+
+def memdiff(bytes1, bytes2):
+    '''
+    Find all differences between two input strings.
+
+    :param bytes1: The original sequence of bytes
+    :param bytes2: The sequence of bytes to compare to
+    :type bytes1: str
+    :type bytes2: str
+    :rtype: list of (offset, length) tuples indicating locations bytes1 and
+      bytes2 differ
+    '''
+    # Shortcut matching inputs
+    if bytes1 == bytes2:
+        return []
+
+    # Verify lengths match
+    size = len(bytes1)
+    if size != len(bytes2):
+        raise Exception('memdiff *requires* same size bytes')
+
+    diffs = []
+
+    # Get position of first diff
+    diff_start = memdiff_search(bytes1, bytes2)
+    diff_offset = None
+    for offset, byte in enumerate(bytes1[diff_start:]):
+
+        if bytes2[diff_start + offset] != byte:
+            # Store offset if we're not tracking a diff
+            if diff_offset is None:
+                diff_offset = offset
+            continue
+
+        # Bytes match, check if this is the end of a diff
+        if diff_offset is not None:
+            diffs.append((diff_offset + diff_start, offset - diff_offset))
+            diff_offset = None
+
+            # Shortcut if remaining data is equal
+            if bytes1[diff_start + offset:] == bytes2[diff_start + offset:]:
+                break
+
+    # Bytes are different until the end of input, handle leftovers
+    if diff_offset is not None:
+        diffs.append((diff_offset + diff_start, offset + 1 - diff_offset))
+
+    return diffs
 
 
 def extract_decoding_contexts(vw, function):
@@ -106,7 +182,7 @@ def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
         section_before = mem_before[section_after_start]
         (_, _, _, bytes_before) = section_before
 
-        memory_diff = envi.memory.memdiff(bytes_before, bytes_after)
+        memory_diff = memdiff(bytes_before, bytes_after)
         for offset, length in memory_diff:
             address = section_after_start + offset
 
