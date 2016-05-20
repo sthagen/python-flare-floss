@@ -44,8 +44,6 @@ For a detailed description of *using* FLOSS, review the documention
 For a detailed description of *testing* FLOSS, review the documention
  [here](doc/test.md).
 
-Note: When you analyze an executable file, FLOSS creates a vivisect workspace named `<file_basename>.viv` in the file's directory. This workspace file contains vivisect's analysis of the executable.
-
 ## Sample Output
 
 ```
