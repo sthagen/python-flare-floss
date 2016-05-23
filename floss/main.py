@@ -66,9 +66,7 @@ def sanitize_string_for_printing(s):
     :param s: input string
     :return: sanitized string
     """
-    sanitized_string = s.replace('\n', '\\n')
-    sanitized_string = sanitized_string.replace('\r', '\\r')
-    sanitized_string = sanitized_string.replace('\t', '\\t')
+    sanitized_string = s.encode('unicode_escape')
     sanitized_string = "".join(c for c in sanitized_string if c in string.printable)
     return sanitized_string
 
