@@ -548,13 +548,13 @@ def main(argv=None):
             floss_logger.error("FLOSS currently supports the following formats: PE")
             if not options.all_strings:
                 floss_logger.error("Recommend passing flag `-a` to extract static strings from any file type.")
-            return
+            sys.exit(1)
 
         if os.path.getsize(sample_file_path) > MAX_FILE_SIZE:
             floss_logger.error("FLOSS cannot emulate files larger than %d bytes" % (MAX_FILE_SIZE))
             if not options.all_strings:
                 floss_logger.error("Recommend passing flag `-a` to extract static strings from any sized file.")
-            return
+            sys.exit(1)
 
         floss_logger.info("Generating vivisect workspace")
     else:
