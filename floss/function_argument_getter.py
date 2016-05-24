@@ -72,7 +72,7 @@ class FunctionArgumentGetter(viv_utils.LoggingObject):
         """
         run the given function while collecting arguments to a target function
         """
-
+        monitor = None
         try:
             self.d("    emulating: %s, watching %s" % (hex(self.index[fva]), hex(target_fva)))
             monitor = CallMonitor(self.vivisect_workspace, target_fva)
@@ -84,7 +84,8 @@ class FunctionArgumentGetter(viv_utils.LoggingObject):
             contexts = monitor.get_contexts()
 
         finally:
-            self.driver.remove_monitor(monitor)
+            if monitor is not None:
+                self.driver.remove_monitor(monitor)
 
         self.d("      results:")
         for c in contexts:
