@@ -556,9 +556,9 @@ def main(argv=None):
                 floss_logger.error("Recommend passing flag `-a` to extract static strings from any sized file.")
             return
 
-        floss_logger.info("Generating vivisect workspace")
+        floss_logger.info("Generating vivisect workspace...")
     else:
-        floss_logger.info("Loading existing vivisect workspace")
+        floss_logger.info("Loading existing vivisect workspace...")
 
     if options.expert:
         options.save_workspace = True
@@ -576,7 +576,7 @@ def main(argv=None):
 
     floss_logger.info("Identifying decoding functions...")
     decoding_functions_candidates = im.identify_decoding_functions(vw, selected_plugins, selected_functions)
-    if not options.quiet:
+    if options.expert:
         print_identification_results(sample_file_path, decoding_functions_candidates)
 
     floss_logger.info("Decoding strings...")
