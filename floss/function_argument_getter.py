@@ -1,3 +1,4 @@
+import contextlib
 from collections import namedtuple
 
 import envi
