@@ -593,7 +593,11 @@ def main(argv=None):
     if options.expert:
         options.save_workspace = True
 
-    vw = viv_utils.getWorkspace(sample_file_path, should_save=options.save_workspace)
+    try:
+        vw = viv_utils.getWorkspace(sample_file_path, should_save=options.save_workspace)
+    except Exception, e:
+        print("Vivisect failed to load the input file: {0}".format(e.message))
+        sys.exit(1)
 
     selected_functions = select_functions(vw, options.functions)
     floss_logger.debug("Selected the following functions: %s", ", ".join(map(hex, selected_functions)))
