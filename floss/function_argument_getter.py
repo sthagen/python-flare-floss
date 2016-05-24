@@ -85,6 +85,14 @@ class FunctionArgumentGetter(viv_utils.LoggingObject):
         run the given function while collecting arguments to a target function
         """
         monitor = None
+        contexts = []
+
+        try:
+            _ = self.index[fva]
+        except KeyError:
+            self.d("    unknown function")
+            return []
+
         try:
             self.d("    emulating: %s, watching %s" % (hex(self.index[fva]), hex(target_fva)))
             monitor = CallMonitor(self.vivisect_workspace, target_fva)
