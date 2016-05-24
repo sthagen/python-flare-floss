@@ -302,21 +302,21 @@ def print_identification_results(sample_file_path, decoder_results):
         print(tabulate.tabulate(
             [(hex(fva), "%.5f" % (score,)) for fva, score in candidates],
             headers=["address", "score"]))
-    print("")
 
 
-def print_decoding_results(decoded_strings, min_length, group_functions, quiet=False):
+def print_decoding_results(decoded_strings, min_length, group_functions, quiet=False, expert=False):
     """
     Print results of string decoding phase.
     :param decoded_strings: list of decoded strings ([DecodedString])
     :param min_length: minimum string length
     :param group_functions: group output by VA of decoding routines
     :param quiet: print strings only, suppresses headers
+    :param expert: expert mode
     """
     long_strings = filter(lambda ds: len(ds.s) >= min_length, decoded_strings)
 
     if not quiet:
-        print("FLOSS decoded %d strings" % len(long_strings))
+        print("\nFLOSS decoded %d strings" % len(long_strings))
 
     if group_functions:
         fvas = set(map(lambda i: i.fva, long_strings))
@@ -325,19 +325,20 @@ def print_decoding_results(decoded_strings, min_length, group_functions, quiet=F
             len_ds = len(grouped_strings)
             if len_ds > 0:
                 if not quiet:
-                    print("Decoding function at 0x%X (decoded %d strings)" % (fva, len_ds))
-                print_decoded_strings(grouped_strings, quiet=quiet)
+                    print("\nDecoding function at 0x%X (decoded %d strings)" % (fva, len_ds))
+                print_decoded_strings(grouped_strings, quiet=quiet, expert=expert)
     else:
-        print_decoded_strings(long_strings, quiet=quiet)
+        print_decoded_strings(long_strings, quiet=quiet, expert=expert)
 
 
-def print_decoded_strings(decoded_strings, quiet=False):
+def print_decoded_strings(decoded_strings, quiet=False, expert=False):
     """
     Print decoded strings.
     :param decoded_strings: list of decoded strings ([DecodedString])
     :param quiet: print strings only, suppresses headers
+    :param expert: expert mode
     """
-    if quiet:
+    if quiet or not expert:
         for ds in decoded_strings:
             print(sanitize_string_for_printing(ds.s))
     else:
@@ -354,7 +355,6 @@ def print_decoded_strings(decoded_strings, quiet=False):
 
         if len(ss) > 0:
             print(tabulate.tabulate(ss, headers=["Offset", "Called At", "String"]))
-            print("")
 
 
 def create_script_content(sample_file_path, decoded_strings, stack_strings):
@@ -522,27 +522,27 @@ def print_static_strings(path, min_length, quiet=False):
             print("")
 
 
-def print_stack_strings(extracted_strings, min_length, quiet=False):
+def print_stack_strings(extracted_strings, min_length, quiet=False, expert=False):
     """
     Print extracted stackstrings.
     :param extracted_strings: list of decoded strings ([DecodedString])
     :param min_length: minimum string length
     :param quiet: print strings only, suppresses headers
+    :param expert: expert mode
     """
-    if quiet:
-        for ss in extracted_strings:
-            if len(ss.s) >= min_length:
-                print("%s" % (ss.s))
-    else:
-        extracted_strings = list(filter(lambda s: len(s.s) >= min_length, extracted_strings))
-        count = len(extracted_strings)
+    extracted_strings = list(filter(lambda s: len(s.s) >= min_length, extracted_strings))
+    count = len(extracted_strings)
 
-        print("FLOSS extracted %d stack strings" % (count))
-        if count > 0:
-            print(tabulate.tabulate(
-                [(hex(s.fva), hex(s.frame_offset), s.s) for s in extracted_strings],
-                headers=["Function", "Frame Offset", "String"]))
-        print("")
+    if not quiet:
+        print("\nFLOSS extracted %d stackstrings" % (count))
+
+    if not expert:
+        for ss in extracted_strings:
+            print("%s" % (ss.s))
+    elif count > 0:
+        print(tabulate.tabulate(
+            [(hex(s.fva), hex(s.frame_offset), s.s) for s in extracted_strings],
+            headers=["Function", "Frame Offset", "String"]))
 
 
 def main(argv=None):
@@ -586,9 +586,9 @@ def main(argv=None):
                 floss_logger.error("Recommend passing flag `-a` to extract static strings from any sized file.")
             sys.exit(1)
 
-        floss_logger.info("Generating vivisect workspace")
+        floss_logger.info("Generating vivisect workspace...")
     else:
-        floss_logger.info("Loading existing vivisect workspace")
+        floss_logger.info("Loading existing vivisect workspace...")
 
     if options.expert:
         options.save_workspace = True
@@ -610,7 +610,7 @@ def main(argv=None):
 
     floss_logger.info("Identifying decoding functions...")
     decoding_functions_candidates = im.identify_decoding_functions(vw, selected_plugins, selected_functions)
-    if not options.quiet:
+    if options.expert:
         print_identification_results(sample_file_path, decoding_functions_candidates)
 
     floss_logger.info("Decoding strings...")
@@ -618,13 +618,13 @@ def main(argv=None):
     decoded_strings = decode_strings(vw, function_index, decoding_functions_candidates)
     if not options.expert:
         decoded_strings = filter_unique_decoded(decoded_strings)
-    print_decoding_results(decoded_strings, min_length, options.group_functions, quiet=options.quiet)
+    print_decoding_results(decoded_strings, min_length, options.group_functions, quiet=options.quiet, expert=options.expert)
 
     floss_logger.info("Extracting stackstrings...")
     stack_strings = stackstrings.extract_stackstrings(vw, selected_functions)
     if not options.expert:
         stack_strings = list(set(stack_strings))
-    print_stack_strings(stack_strings, min_length, quiet=options.quiet)
+    print_stack_strings(stack_strings, min_length, quiet=options.quiet, expert=options.expert)
 
     if options.ida_python_file:
         floss_logger.info("Creating IDA script...")
@@ -632,7 +632,7 @@ def main(argv=None):
 
     time1 = time()
     if not options.quiet:
-        print("Finished execution after %f seconds" % (time1 - time0))
+        print("\nFinished execution after %f seconds" % (time1 - time0))
 
 
 if __name__ == "__main__":
