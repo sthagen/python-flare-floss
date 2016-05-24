@@ -1,5 +1,6 @@
 from collections import namedtuple
 
+import envi
 import viv_utils
 import viv_utils.emulator_drivers
 
@@ -54,6 +55,17 @@ class FunctionArgumentGetter(viv_utils.LoggingObject):
         caller_function_vas = set([])
         for caller_va in self.vivisect_workspace.getCallers(function_va):
             self.d("    caller: %s" % hex(caller_va))
+
+            try:
+                op = self.vivisect_workspace.parseOpcode(caller_va)
+            except Exception as e:
+                self.d("      not a call instruction: failed to decode instruction: %s", e.message)
+                continue
+
+            if not (op.iflags & envi.IF_CALL):
+                self.d("      not a call instruction: %s", op)
+                continue
+
             try:
                 # the address of the function that contains this instruction
                 caller_function_va = self.index[caller_va]
@@ -64,7 +76,7 @@ class FunctionArgumentGetter(viv_utils.LoggingObject):
                 self.w("unknown caller function: 0x%x", caller_va)
                 continue
 
-            self.d("      function: %s" % hex(caller_function_va))
+            self.d("      function: %s", hex(caller_function_va))
             caller_function_vas.add(caller_function_va)
         return caller_function_vas
 
