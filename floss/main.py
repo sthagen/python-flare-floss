@@ -66,9 +66,8 @@ def sanitize_string_for_printing(s):
     :param s: input string
     :return: sanitized string
     """
-    sanitized_string = s.replace('\n', '\\n')
-    sanitized_string = sanitized_string.replace('\r', '\\r')
-    sanitized_string = sanitized_string.replace('\t', '\\t')
+    sanitized_string = s.encode('unicode_escape')
+    sanitized_string = sanitized_string.replace('\\\\', '\\')  # print single backslashes
     sanitized_string = "".join(c for c in sanitized_string if c in string.printable)
     return sanitized_string
 
@@ -358,11 +357,12 @@ def print_decoded_strings(decoded_strings, quiet=False):
             print("")
 
 
-def create_script_content(sample_file_path, decoded_strings):
+def create_script_content(sample_file_path, decoded_strings, stack_strings):
     """
     Create IDAPython script contents for IDB file annotations.
     :param sample_file_path: input file path
     :param decoded_strings: list of decoded strings ([DecodedString])
+    :param stack_strings: list of stack strings ([StackString])
     :return: content of the IDAPython script
     """
     main_commands = []
@@ -370,20 +370,31 @@ def create_script_content(sample_file_path, decoded_strings):
         if ds.s != "":
             sanitized_string = sanitize_string_for_script(ds.s)
             if ds.characteristics["location_type"] == LocationType.GLOBAL:
-                main_commands.append("AppendComment(%d, \"FLOSS: %s\", True)" % (ds.va, sanitized_string))
                 main_commands.append("print \"FLOSS: string \\\"%s\\\" at global VA 0x%X\"" % (sanitized_string, ds.va))
+                main_commands.append("AppendComment(%d, \"FLOSS: %s\", True)" % (ds.va, sanitized_string))
             else:
-                main_commands.append("AppendComment(%d, \"FLOSS: %s\")" % (ds.decoded_at_va, sanitized_string))
                 main_commands.append("print \"FLOSS: string \\\"%s\\\" decoded at VA 0x%X\"" % (sanitized_string, ds.decoded_at_va))
-    main_commands.append("print \"Imported %d decoded strings from FLOSS\"" % len(decoded_strings))
-    script_content = """from idc import MakeComm, MakeRptCmt
+                main_commands.append("AppendComment(%d, \"FLOSS: %s\")" % (ds.decoded_at_va, sanitized_string))
+    main_commands.append("print \"Imported decoded strings from FLOSS\"")
+
+    for ss in stack_strings:
+        if ss.s != "":
+            sanitized_string = sanitize_string_for_script(ss.s)
+            main_commands.append("AppendLvarComment(%d, %d, \"FLOSS stackstring: %s\", True)" % (ss.fva, ss.frame_offset, sanitized_string))
+    main_commands.append("print \"Imported stackstrings from FLOSS\"")
+
+    script_content = """from idc import RptCmt, Comment, MakeRptCmt, MakeComm, GetFrame, GetFrameLvarSize, GetMemberComment, SetMemberComment, Refresh
 
 
 def AppendComment(ea, s, repeatable=False):
     # see williutils and http://blogs.norman.com/2011/security-research/improving-ida-analysis-of-x64-exception-handling
-    string = Comment(ea)
+    if repeatable:
+        string = RptCmt(ea)
+    else:
+        string = Comment(ea)
+
     if not string:
-        string = s
+        string = s  # no existing comment
     else:
         if s in string:  # ignore duplicates
             return
@@ -394,25 +405,44 @@ def AppendComment(ea, s, repeatable=False):
         MakeComm(ea, string)
 
 
+def AppendLvarComment(fva, frame_offset, s, repeatable=False):
+    stack = GetFrame(fva)
+    if stack:
+        lvar_offset = GetFrameLvarSize(fva) - frame_offset
+        if lvar_offset and lvar_offset > 0:
+            string = GetMemberComment(stack, lvar_offset, repeatable)
+            if not string:
+                string = s
+            else:
+                if s in string:  # ignore duplicates
+                    return
+                string = string + "\\n" + s
+            if SetMemberComment(stack, lvar_offset, string, repeatable):
+                print "FLOSS appended stackstring comment \\\"%%s\\\" at stack frame offset 0x%%X in function 0x%%X" %% (s, frame_offset, fva)
+                return
+    print "Failed to append stackstring comment \\\"%%s\\\" at stack frame offset 0x%%X in function 0x%%X" %% (s, frame_offset, fva)
+
+
 def main():
-    print "Annotating decoded strings for %s"
+    print "Annotating %d strings from FLOSS for %s"
     %s
+    Refresh()
 
 if __name__ == "__main__":
     main()
-
-""" % (sample_file_path, "\n    ".join(main_commands))
+""" % (len(decoded_strings) + len(stack_strings), sample_file_path, "\n    ".join(main_commands))
     return script_content
 
 
-def create_script(sample_file_path, ida_python_file, decoded_strings):
+def create_script(sample_file_path, ida_python_file, decoded_strings, stack_strings):
     """
     Create an IDAPython script to annotate an IDB file with decoded strings.
     :param sample_file_path: input file path
     :param ida_python_file: output file path
     :param decoded_strings: list of decoded strings ([DecodedString])
+    :param stack_strings: list of stack strings ([StackString])
     """
-    script_content = create_script_content(sample_file_path, decoded_strings)
+    script_content = create_script_content(sample_file_path, decoded_strings, stack_strings)
     ida_python_file = os.path.abspath(ida_python_file)
     with open(ida_python_file, 'wb') as f:
         try:
@@ -594,7 +624,7 @@ def main(argv=None):
 
     if options.ida_python_file:
         floss_logger.info("Creating IDA script...")
-        create_script(sample_file_path, options.ida_python_file, decoded_strings)
+        create_script(sample_file_path, options.ida_python_file, decoded_strings, stack_strings)
 
     time1 = time()
     if not options.quiet:
