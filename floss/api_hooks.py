@@ -250,8 +250,45 @@ class MemcpyHook(viv_utils.emulator_drivers.Hook):
             emu.writeMemory(dst, data)
             callconv.execCallReturn(emu, 0x0, len(argv))
             return True
-
         raise viv_utils.emulator_drivers.UnsupportedFunction()
+
+
+class StrlenHook(viv_utils.emulator_drivers.Hook):
+    """
+    Hook and handle calls to strlen
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(StrlenHook, self).__init__(*args, **kwargs)
+
+    def hook(self, callname, driver, callconv, api, argv):
+        if callname == "msvcrt.strlen":
+            emu = driver
+            string_va = argv[0]
+            s = self.readStringAtRva(emu, string_va, 256)
+            callconv.execCallReturn(emu, len(s), len(argv))
+            return True
+        raise viv_utils.emulator_drivers.UnsupportedFunction()
+
+
+    def readStringAtRva(self, emu, rva, maxsize=None):
+        """
+        Borrowed from vivisect/PE/__init__.py
+        :param emu: emulator
+        :param rva: virtual address of string
+        :param maxsize: maxsize of string
+        :return: the read string
+        """
+        ret = ''
+        while True:
+            if maxsize and maxsize <= len(ret):
+                break
+            x = emu.readMemory(rva, 1)
+            if x == '\x00' or x == None:
+                break
+            ret += x
+            rva += 1
+        return ret
 
 
 class ExitProcessHook(viv_utils.emulator_drivers.Hook):
@@ -274,6 +311,7 @@ DEFAULT_HOOKS = [
     MallocHeap(),
     ExitProcessHook(),
     MemcpyHook(),
+    StrlenHook(),
 ]
 
 
