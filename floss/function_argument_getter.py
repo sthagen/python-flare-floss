@@ -1,3 +1,4 @@
+import contextlib
 from collections import namedtuple
 
 import envi
@@ -29,6 +30,15 @@ class CallMonitor(viv_utils.emulator_drivers.Monitor):
 
     def prehook(self, emu, op, starteip):
         self.d("%s: %s", hex(starteip), op)
+
+
+@contextlib.contextmanager
+def installed_monitor(driver, monitor):
+    try:
+        driver.add_monitor(monitor)
+        yield
+    finally:
+        driver.remove_monitor(monitor)
 
 
 class FunctionArgumentGetter(viv_utils.LoggingObject):
@@ -84,28 +94,18 @@ class FunctionArgumentGetter(viv_utils.LoggingObject):
         """
         run the given function while collecting arguments to a target function
         """
-        monitor = None
-        contexts = []
-
         try:
             _ = self.index[fva]
         except KeyError:
             self.d("    unknown function")
             return []
 
-        try:
-            self.d("    emulating: %s, watching %s" % (hex(self.index[fva]), hex(target_fva)))
-            monitor = CallMonitor(self.vivisect_workspace, target_fva)
-            self.driver.add_monitor(monitor)
-
+        self.d("    emulating: %s, watching %s" % (hex(self.index[fva]), hex(target_fva)))
+        monitor = CallMonitor(self.vivisect_workspace, target_fva)
+        with installed_monitor(self.driver, monitor):
             with api_hooks.defaultHooks(self.driver):
                 self.driver.runFunction(self.index[fva], maxhit=1, maxrep=0x100, func_only=True)
-
-            contexts = monitor.get_contexts()
-
-        finally:
-            if monitor is not None:
-                self.driver.remove_monitor(monitor)
+        contexts = monitor.get_contexts()
 
         self.d("      results:")
         for c in contexts:
