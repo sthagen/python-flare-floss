@@ -548,6 +548,7 @@ def print_stack_strings(extracted_strings, min_length, quiet=False, expert=False
 def main(argv=None):
     """
     :param argv: optional command line arguments, like sys.argv[1:]
+    :return: 0 on success, non-zero on failure
     """
     logging.basicConfig(level=logging.WARNING)
 
@@ -561,7 +562,7 @@ def main(argv=None):
 
     if options.list_plugins:
         print_plugin_list()
-        sys.exit(0)
+        return 0
 
     sample_file_path = parse_sample_file_path(parser, args)
     min_length = parse_min_length_option(options.min_length)
@@ -578,13 +579,13 @@ def main(argv=None):
             floss_logger.error("FLOSS currently supports the following formats: PE")
             if not options.all_strings:
                 floss_logger.error("Recommend passing flag `-a` to extract static strings from any file type.")
-            sys.exit(1)
+            return 1
 
         if os.path.getsize(sample_file_path) > MAX_FILE_SIZE:
             floss_logger.error("FLOSS cannot emulate files larger than %d bytes" % (MAX_FILE_SIZE))
             if not options.all_strings:
                 floss_logger.error("Recommend passing flag `-a` to extract static strings from any sized file.")
-            sys.exit(1)
+            return 1
 
         floss_logger.info("Generating vivisect workspace...")
     else:
@@ -597,7 +598,7 @@ def main(argv=None):
         vw = viv_utils.getWorkspace(sample_file_path, should_save=options.save_workspace)
     except Exception, e:
         floss_logger.error("Vivisect failed to load the input file: {0}".format(e.message), exc_info=options.verbose)
-        sys.exit(1)
+        return 1
 
     selected_functions = select_functions(vw, options.functions)
     floss_logger.debug("Selected the following functions: %s", ", ".join(map(hex, selected_functions)))
@@ -634,6 +635,8 @@ def main(argv=None):
     if not options.quiet:
         print("\nFinished execution after %f seconds" % (time1 - time0))
 
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
