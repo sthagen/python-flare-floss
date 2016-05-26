@@ -186,11 +186,6 @@ def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
         for offset, length in memory_diff:
             address = section_after_start + offset
 
-            if stack_start <= address <= sp:
-                # every stack address that exceeds the stack pointer can be
-                # ignored because it is local to child stack frame
-                continue
-
             diff_bytes = bytes_after[offset:offset + length]
             if not (stack_start <= address < stack_end):
                 # address is in global memory
