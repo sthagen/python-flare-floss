@@ -377,10 +377,12 @@ def create_script_content(sample_file_path, decoded_strings, stack_strings):
                 main_commands.append("AppendComment(%d, \"FLOSS: %s\")" % (ds.decoded_at_va, sanitized_string))
     main_commands.append("print \"Imported decoded strings from FLOSS\"")
 
+    ss_len = 0
     for ss in stack_strings:
         if ss.s != "":
             sanitized_string = sanitize_string_for_script(ss.s)
             main_commands.append("AppendLvarComment(%d, %d, \"FLOSS stackstring: %s\", True)" % (ss.fva, ss.frame_offset, sanitized_string))
+            ss_len += 1
     main_commands.append("print \"Imported stackstrings from FLOSS\"")
 
     script_content = """from idc import RptCmt, Comment, MakeRptCmt, MakeComm, GetFrame, GetFrameLvarSize, GetMemberComment, SetMemberComment, Refresh
@@ -430,7 +432,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-""" % (len(decoded_strings) + len(stack_strings), sample_file_path, "\n    ".join(main_commands))
+""" % (len(decoded_strings) + ss_len, sample_file_path, "\n    ".join(main_commands))
     return script_content
 
 
