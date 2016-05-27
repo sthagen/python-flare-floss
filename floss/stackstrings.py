@@ -1,3 +1,5 @@
+import re
+
 from collections import namedtuple
 
 import viv_utils
@@ -128,10 +130,12 @@ def extract_stackstrings(vw, selected_functions):
     '''
     for fva in selected_functions:
         seen = set([])
+        filter = re.compile("^p?V?A+$")
         for ctx in extract_call_contexts(vw, fva):
             for s in strings.extract_ascii_strings(ctx.stack_memory):
-                if s.s == "A" * len(s.s):
-                    # ignore vivisect taint strings
+                if filter.match(s.s):
+                    # ignore strings like: pVA, pVAAA, AAAA
+                    # which come from vivisect uninitialized taint tracking
                     continue
                 if s.s not in seen:
                     frame_offset = (ctx.init_sp - ctx.sp) - s.offset - getPointerSize(vw)
