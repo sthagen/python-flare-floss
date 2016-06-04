@@ -556,7 +556,7 @@ def main(argv=None):
 
     parser = make_parser()
     if argv is not None:
-        options, args = parser.parse_args(argv)
+        options, args = parser.parse_args(argv[1:])
     else:
         options, args = parser.parse_args()
 
