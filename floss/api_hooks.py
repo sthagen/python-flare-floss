@@ -283,7 +283,7 @@ class StrlenHook(viv_utils.emulator_drivers.Hook):
             if maxsize and maxsize <= len(ret):
                 break
             x = emu.readMemory(rva, 1)
-            if x == '\x00' or x == None:
+            if x == '\x00' or x is None:
                 break
             ret += x
             rva += 1
