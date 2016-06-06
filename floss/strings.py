@@ -10,6 +10,12 @@ REPEATS = ["A", "\x00", "\xfe", "\xff"]
 
 String = namedtuple("String", ["s", "offset"])
 
+def buf_filled_with(buf, c):
+    for i in range(len(buf)):
+        if buf[i] != c:
+            return False
+
+    return True
 
 def extract_ascii_strings(buf, n=4):
     '''
@@ -25,7 +31,7 @@ def extract_ascii_strings(buf, n=4):
     if not buf:
         return
 
-    if (buf[0] in REPEATS) and (buf.count(buf[0]) == len(buf)):
+    if (buf[0] in REPEATS) and buf_filled_with(buf, buf[0]):
         return
 
     r = None
@@ -52,7 +58,7 @@ def extract_unicode_strings(buf, n=4):
     if not buf:
         return
 
-    if (buf[0] in REPEATS) and (buf.count(buf[0]) == len(buf)):
+    if (buf[0] in REPEATS) and buf_filled_with(buf, buf[0]):
         return
 
     if n == 4:
