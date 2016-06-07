@@ -178,6 +178,7 @@ def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
             delta_bytes.append(DecodedString(section_after_start, bytes_after,
                                              decoded_at_va, source_fva, characteristics))
             continue
+
         section_before = mem_before[section_after_start]
         (_, _, (_, before_len, _, _), bytes_before) = section_before
 
