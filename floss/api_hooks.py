@@ -208,10 +208,13 @@ class AllocateHeap(RtlAllocateHeapHook):
            callname == "kernel32.GlobalAlloc" or \
            callname == "kernel32.VirtualAlloc":
             size = argv[1]
-            va = self._allocate_mem(driver, size)
-            callconv.execCallReturn(driver, va, len(argv))
-            return True
-        raise viv_utils.emulator_drivers.UnsupportedFunction()
+        elif callname == "kernel32.VirtualAllocEx":
+            size = argv[2]
+        else:
+            raise viv_utils.emulator_drivers.UnsupportedFunction()
+        va = self._allocate_mem(driver, size)
+        callconv.execCallReturn(driver, va, len(argv))
+        return True
 
 
 class MallocHeap(RtlAllocateHeapHook):
