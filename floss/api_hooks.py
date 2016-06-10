@@ -207,10 +207,9 @@ class AllocateHeap(RtlAllocateHeapHook):
         if callname == "kernel32.LocalAlloc" or \
            callname == "kernel32.GlobalAlloc" or \
            callname == "kernel32.VirtualAlloc":
-            emu = driver
-            size = argv[0]
-            va = self._allocate_mem(emu, size)
-            callconv.execCallReturn(emu, va, len(argv))
+            size = argv[1]
+            va = self._allocate_mem(driver, size)
+            callconv.execCallReturn(driver, va, len(argv))
             return True
         raise viv_utils.emulator_drivers.UnsupportedFunction()
 
@@ -226,10 +225,9 @@ class MallocHeap(RtlAllocateHeapHook):
     def hook(self, callname, driver, callconv, api, argv):
         if callname == "msvcrt.malloc" or \
            callname == "msvcrt.calloc":
-            emu = driver
             size = argv[0]
-            va = self._allocate_mem(emu, size)
-            callconv.execCallReturn(emu, va, len(argv))
+            va = self._allocate_mem(driver, size)
+            callconv.execCallReturn(driver, va, len(argv))
             return True
         raise viv_utils.emulator_drivers.UnsupportedFunction()
 
