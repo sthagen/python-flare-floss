@@ -4,7 +4,6 @@ from __future__ import print_function
 import os
 import sys
 import mmap
-import string
 import logging
 from time import time
 from optparse import OptionParser, OptionGroup
@@ -24,16 +23,16 @@ import plugins.function_meta_data_plugin
 from interfaces import DecodingRoutineIdentifier
 from decoding_manager import LocationType
 from base64 import b64encode
+from formatters import BasicFormatter
+from formatters.idapython import IdaFormatter
 
 floss_logger = logging.getLogger("floss")
 
+SUPPORTED_FILE_MAGIC = set(["MZ"])
 
 KILOBYTE = 1024
 MEGABYTE = 1024 * KILOBYTE
 MAX_FILE_SIZE = 16 * MEGABYTE
-
-SUPPORTED_FILE_MAGIC = set(["MZ"])
-
 MIN_STRING_LENGTH_DEFAULT = 4
 
 
@@ -58,30 +57,6 @@ def decode_strings(vw, function_index, decoding_functions_candidates):
                     for decoded_string in string_decoder.extract_strings(delta_bytes):
                         decoded_strings.append(decoded_string)
     return decoded_strings
-
-
-def sanitize_string_for_printing(s):
-    """
-    Return sanitized string for printing.
-    :param s: input string
-    :return: sanitized string
-    """
-    sanitized_string = s.encode('unicode_escape')
-    sanitized_string = sanitized_string.replace('\\\\', '\\')  # print single backslashes
-    sanitized_string = "".join(c for c in sanitized_string if c in string.printable)
-    return sanitized_string
-
-
-def sanitize_string_for_script(s):
-    """
-    Return sanitized string that is added to IDAPython script content.
-    :param s: input string
-    :return: sanitized string
-    """
-    sanitized_string = sanitize_string_for_printing(s)
-    sanitized_string = sanitized_string.replace('\\', '\\\\')
-    sanitized_string = sanitized_string.replace('\"', '\\\"')
-    return sanitized_string
 
 
 def print_plugin_list():
@@ -293,17 +268,6 @@ def select_plugins(plugins_option):
     return plugin_names
 
 
-def filter_unique_decoded(decoded_strings):
-    unique_values = set()
-    originals = []
-    for decoded in decoded_strings:
-        hashable = (decoded.va, decoded.s, decoded.decoded_at_va, decoded.fva)
-        if hashable not in unique_values:
-            unique_values.add(hashable)
-            originals.append(decoded)
-    return originals
-
-
 def parse_min_length_option(min_length_option):
     """
     Return parsed -n command line option or default length.
@@ -340,137 +304,6 @@ def print_identification_results(sample_file_path, decoder_results):
             headers=["address", "score"]))
 
 
-def print_decoding_results(decoded_strings, min_length, group_functions, quiet=False, expert=False):
-    """
-    Print results of string decoding phase.
-    :param decoded_strings: list of decoded strings ([DecodedString])
-    :param min_length: minimum string length
-    :param group_functions: group output by VA of decoding routines
-    :param quiet: print strings only, suppresses headers
-    :param expert: expert mode
-    """
-    long_strings = filter(lambda ds: len(ds.s) >= min_length, decoded_strings)
-
-    if not quiet:
-        print("\nFLOSS decoded %d strings" % len(long_strings))
-
-    if group_functions:
-        fvas = set(map(lambda i: i.fva, long_strings))
-        for fva in fvas:
-            grouped_strings = filter(lambda ds: ds.fva == fva, long_strings)
-            len_ds = len(grouped_strings)
-            if len_ds > 0:
-                if not quiet:
-                    print("\nDecoding function at 0x%X (decoded %d strings)" % (fva, len_ds))
-                print_decoded_strings(grouped_strings, quiet=quiet, expert=expert)
-    else:
-        print_decoded_strings(long_strings, quiet=quiet, expert=expert)
-
-
-def print_decoded_strings(decoded_strings, quiet=False, expert=False):
-    """
-    Print decoded strings.
-    :param decoded_strings: list of decoded strings ([DecodedString])
-    :param quiet: print strings only, suppresses headers
-    :param expert: expert mode
-    """
-    if quiet or not expert:
-        for ds in decoded_strings:
-            print(sanitize_string_for_printing(ds.s))
-    else:
-        ss = []
-        for ds in decoded_strings:
-            s = sanitize_string_for_printing(ds.s)
-            if ds.characteristics["location_type"] == LocationType.STACK:
-                offset_string = "[STACK]"
-            elif ds.characteristics["location_type"] == LocationType.HEAP:
-                offset_string = "[HEAP]"
-            else:
-                offset_string = hex(ds.va or 0)
-            ss.append((offset_string, hex(ds.decoded_at_va), s))
-
-        if len(ss) > 0:
-            print(tabulate.tabulate(ss, headers=["Offset", "Called At", "String"]))
-
-
-def create_ida_script_content(sample_file_path, decoded_strings, stack_strings):
-    """
-    Create IDAPython script contents for IDB file annotations.
-    :param sample_file_path: input file path
-    :param decoded_strings: list of decoded strings ([DecodedString])
-    :param stack_strings: list of stack strings ([StackString])
-    :return: content of the IDAPython script
-    """
-    main_commands = []
-    for ds in decoded_strings:
-        if ds.s != "":
-            sanitized_string = sanitize_string_for_script(ds.s)
-            if ds.characteristics["location_type"] == LocationType.GLOBAL:
-                main_commands.append("print \"FLOSS: string \\\"%s\\\" at global VA 0x%X\"" % (sanitized_string, ds.va))
-                main_commands.append("AppendComment(%d, \"FLOSS: %s\", True)" % (ds.va, sanitized_string))
-            else:
-                main_commands.append("print \"FLOSS: string \\\"%s\\\" decoded at VA 0x%X\"" % (sanitized_string, ds.decoded_at_va))
-                main_commands.append("AppendComment(%d, \"FLOSS: %s\")" % (ds.decoded_at_va, sanitized_string))
-    main_commands.append("print \"Imported decoded strings from FLOSS\"")
-
-    ss_len = 0
-    for ss in stack_strings:
-        if ss.s != "":
-            sanitized_string = sanitize_string_for_script(ss.s)
-            main_commands.append("AppendLvarComment(%d, %d, \"FLOSS stackstring: %s\", True)" % (ss.fva, ss.frame_offset, sanitized_string))
-            ss_len += 1
-    main_commands.append("print \"Imported stackstrings from FLOSS\"")
-
-    script_content = """from idc import RptCmt, Comment, MakeRptCmt, MakeComm, GetFrame, GetFrameLvarSize, GetMemberComment, SetMemberComment, Refresh
-
-
-def AppendComment(ea, s, repeatable=False):
-    # see williutils and http://blogs.norman.com/2011/security-research/improving-ida-analysis-of-x64-exception-handling
-    if repeatable:
-        string = RptCmt(ea)
-    else:
-        string = Comment(ea)
-
-    if not string:
-        string = s  # no existing comment
-    else:
-        if s in string:  # ignore duplicates
-            return
-        string = string + "\\n" + s
-    if repeatable:
-        MakeRptCmt(ea, string)
-    else:
-        MakeComm(ea, string)
-
-
-def AppendLvarComment(fva, frame_offset, s, repeatable=False):
-    stack = GetFrame(fva)
-    if stack:
-        lvar_offset = GetFrameLvarSize(fva) - frame_offset
-        if lvar_offset and lvar_offset > 0:
-            string = GetMemberComment(stack, lvar_offset, repeatable)
-            if not string:
-                string = s
-            else:
-                if s in string:  # ignore duplicates
-                    return
-                string = string + "\\n" + s
-            if SetMemberComment(stack, lvar_offset, string, repeatable):
-                print "FLOSS appended stackstring comment \\\"%%s\\\" at stack frame offset 0x%%X in function 0x%%X" %% (s, frame_offset, fva)
-                return
-    print "Failed to append stackstring comment \\\"%%s\\\" at stack frame offset 0x%%X in function 0x%%X" %% (s, frame_offset, fva)
-
-
-def main():
-    print "Annotating %d strings from FLOSS for %s"
-    %s
-    Refresh()
-
-if __name__ == "__main__":
-    main()
-""" % (len(decoded_strings) + ss_len, sample_file_path, "\n    ".join(main_commands))
-    return script_content
-
 def create_r2_script_content(sample_file_path, decoded_strings, stack_strings):
     """
     Create r2script contents for r2 session annotations.
@@ -499,23 +332,6 @@ def create_r2_script_content(sample_file_path, decoded_strings, stack_strings):
 
     return "\n".join(main_commands)
 
-def create_ida_script(sample_file_path, ida_python_file, decoded_strings, stack_strings):
-    """
-    Create an IDAPython script to annotate an IDB file with decoded strings.
-    :param sample_file_path: input file path
-    :param ida_python_file: output file path
-    :param decoded_strings: list of decoded strings ([DecodedString])
-    :param stack_strings: list of stack strings ([StackString])
-    """
-    script_content = create_ida_script_content(sample_file_path, decoded_strings, stack_strings)
-    ida_python_file = os.path.abspath(ida_python_file)
-    with open(ida_python_file, 'wb') as f:
-        try:
-            f.write(script_content)
-            print("Wrote IDAPython script file to %s\n" % ida_python_file)
-        except Exception as e:
-            raise e
-    # TODO return, catch exception in main()
 
 def create_r2_script(sample_file_path, r2_script_file, decoded_strings, stack_strings):
     """
@@ -534,6 +350,7 @@ def create_r2_script(sample_file_path, r2_script_file, decoded_strings, stack_st
         except Exception as e:
             raise e
     # TODO return, catch exception in main()
+
 
 def print_static_strings(path, min_length, quiet=False):
     """
@@ -604,29 +421,6 @@ def print_static_strings(path, min_length, quiet=False):
             print("")
 
 
-def print_stack_strings(extracted_strings, min_length, quiet=False, expert=False):
-    """
-    Print extracted stackstrings.
-    :param extracted_strings: list of decoded strings ([DecodedString])
-    :param min_length: minimum string length
-    :param quiet: print strings only, suppresses headers
-    :param expert: expert mode
-    """
-    extracted_strings = list(filter(lambda s: len(s.s) >= min_length, extracted_strings))
-    count = len(extracted_strings)
-
-    if not quiet:
-        print("\nFLOSS extracted %d stackstrings" % (count))
-
-    if not expert:
-        for ss in extracted_strings:
-            print("%s" % (ss.s))
-    elif count > 0:
-        print(tabulate.tabulate(
-            [(hex(s.fva), hex(s.frame_offset), s.s) for s in extracted_strings],
-            headers=["Function", "Frame Offset", "String"]))
-
-
 def main(argv=None):
     """
     :param argv: optional command line arguments, like sys.argv[1:]
@@ -646,35 +440,51 @@ def main(argv=None):
         print_plugin_list()
         return 0
 
+    # set default internal options
+    options.print_identification_results = False
+    options.unique_decoded_strings = True
+    options.show_string_offsets = False
+
+        # set options for expert profile
+    if options.expert:
+        options.save_workspace = True
+        options.print_identification_results = True
+        options.unique_decoded_strings = False
+        options.quiet = False
+        options.show_string_offsets = True
+
     sample_file_path = parse_sample_file_path(parser, args)
     min_length = parse_min_length_option(options.min_length)
+
+    formatter = BasicFormatter()
+    available_formatters = [
+                            IdaFormatter(),
+]
+    for f in available_formatters:
+        if f.get_name() == options.output_mode:
+            formatter = f
+            break
+    formatter.configure_args(sample_file_path, min_length, options)
 
     if not is_workspace_file(sample_file_path):
         with open(sample_file_path, "rb") as f:
             magic = f.read(2)
 
-        if options.all_strings:
+        if not options.no_static_strings:
             floss_logger.info("Extracting static strings...")
-            print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
+            print_static_strings(sample_file_path, min_length, options.quiet)
 
         if magic not in SUPPORTED_FILE_MAGIC:
             floss_logger.error("FLOSS currently supports the following formats: PE")
-            if not options.all_strings:
-                floss_logger.error("Recommend passing flag `-a` to extract static strings from any file type.")
             return 1
 
         if os.path.getsize(sample_file_path) > MAX_FILE_SIZE:
             floss_logger.error("FLOSS cannot emulate files larger than %d bytes" % (MAX_FILE_SIZE))
-            if not options.all_strings:
-                floss_logger.error("Recommend passing flag `-a` to extract static strings from any sized file.")
             return 1
 
         floss_logger.info("Generating vivisect workspace...")
     else:
         floss_logger.info("Loading existing vivisect workspace...")
-
-    if options.expert:
-        options.save_workspace = True
 
     try:
         vw = viv_utils.getWorkspace(sample_file_path, should_save=options.save_workspace)
@@ -691,31 +501,30 @@ def main(argv=None):
 
     time0 = time()
 
-    floss_logger.info("Identifying decoding functions...")
-    decoding_functions_candidates = im.identify_decoding_functions(vw, selected_plugins, selected_functions)
-    if options.expert:
-        print_identification_results(sample_file_path, decoding_functions_candidates)
+    decoded_strings = []
+    if not options.no_decoded_strings:
+        floss_logger.info("Identifying decoding functions...")
+        decoding_functions_candidates = im.identify_decoding_functions(vw, selected_plugins, selected_functions)
+        if options.print_identification_results:
+            print_identification_results(sample_file_path, decoding_functions_candidates)
 
-    floss_logger.info("Decoding strings...")
-    function_index = viv_utils.InstructionFunctionIndex(vw)
-    decoded_strings = decode_strings(vw, function_index, decoding_functions_candidates)
-    if not options.expert:
-        decoded_strings = filter_unique_decoded(decoded_strings)
-    print_decoding_results(decoded_strings, min_length, options.group_functions, quiet=options.quiet, expert=options.expert)
+        floss_logger.info("Decoding strings...")
+        function_index = viv_utils.InstructionFunctionIndex(vw)
+        decoded_strings = decode_strings(vw, function_index, decoding_functions_candidates)
 
-    floss_logger.info("Extracting stackstrings...")
-    stack_strings = stackstrings.extract_stackstrings(vw, selected_functions)
-    if not options.expert:
-        stack_strings = list(set(stack_strings))
-    print_stack_strings(stack_strings, min_length, quiet=options.quiet, expert=options.expert)
+    stack_strings = ()
+    if not options.no_stack_strings:
+        floss_logger.info("Extracting stackstrings...")
+        stack_strings = stackstrings.extract_stackstrings(vw, selected_functions)
 
-    if options.ida_python_file:
-        floss_logger.info("Creating IDA script...")
-        create_ida_script(sample_file_path, options.ida_python_file, decoded_strings, stack_strings)
+    fs = formatter.format(decoded_strings, stack_strings)
 
-    if options.radare2_script_file:
-        floss_logger.info("Creating r2script...")
-        create_r2_script(sample_file_path, options.radare2_script_file, decoded_strings, stack_strings)
+    print("---------------------------------------------")
+    print(fs)
+
+    # if options.radare2_script_file:
+    #     floss_logger.info("Creating r2script...")
+    #     create_r2_script(sample_file_path, options.radare2_script_file, decoded_strings, stack_strings)
 
     time1 = time()
     if not options.quiet:
