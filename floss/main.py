@@ -7,7 +7,7 @@ import mmap
 import string
 import logging
 from time import time
-from optparse import OptionParser
+from optparse import OptionParser, OptionGroup
 
 import tabulate
 import plugnplay
@@ -112,36 +112,70 @@ def get_all_plugins():
 def make_parser():
     usage_message = "%prog [options] FILEPATH"
 
-    parser = OptionParser(usage=usage_message, version="%prog {:s}\nhttps://github.com/fireeye/flare-floss/".format(version.__version__))
-    parser.add_option("-a", "--all-strings", dest="all_strings", action="store_true",
-                      help="also extract static ASCII and UTF-16 strings from the file")
-    parser.add_option("-v", "--verbose", dest="verbose",
-                      help="show verbose messages and warnings", action="store_true")
-    parser.add_option("-d", "--debug", dest="debug",
-                      help="show all trace messages", action="store_true")
+    OptionParser.format_epilog = lambda self, formatter: self.epilog  # overwrite default epilog formatter
+    parser = OptionParser(usage=usage_message,
+                          version="%prog {:s}\nhttps://github.com/fireeye/flare-floss/".format(version.__version__),
+                          epilog="""
+Examples:
+ floss malware.exe
+ floss --no-static-strings malware.exe
+
+""")  # TODO
+    parser.add_option("-o", "--output-mode", dest="output_mode", choices="ida,r2,json".split(","),
+                      help="- ida:  IDAPython script to annotate decoded strings and stackstrings in an IDB file"
+                           "                       "  # fix help format
+                           "- r2:   radare2 script to annotate decoded strings and stackstrings in a .r2 file"
+                           "                            "
+                           "- json: JSON file")
+
+    parser.add_option("-n", dest="min_length",
+                      help="minimum string length (default is %d)" % MIN_STRING_LENGTH_DEFAULT)
+
     parser.add_option("-f", "--functions", dest="functions",
                       help="only analyze the specified functions (comma-separated)",
                       type="string")
-    parser.add_option("-g", "--group", dest="group_functions",
+
+    parser.add_option("--save-workspace", dest="save_workspace",
+                      help="save vivisect .viv workspace file in analyzed file's directory", action="store_true")
+
+    extraction_group = OptionGroup(parser, "Extraction options", "Specify which string types FLOSS shows from a file, "
+                                                                 "by default all types are shown")
+    extraction_group.add_option("--no-static-strings", dest="no_static_strings", action="store_true",
+                      help="do not show static ASCII and UTF-16 strings")
+    extraction_group.add_option("--no-decoded-strings", dest="no_decoded_strings", action="store_true",
+                      help="do not show decoded strings")
+    extraction_group.add_option("--no-stack-strings", dest="no_stack_strings", action="store_true",
+                      help="do not show stackstrings")
+    parser.add_option_group(extraction_group)
+
+    format_group = OptionGroup(parser, "Format Options")
+    format_group.add_option("-g", "--group", dest="group_functions",
                       help="group output by virtual address of decoding functions",
                       action="store_true")
-    parser.add_option("-i", "--ida", dest="ida_python_file",
-                      help="create an IDAPython script to annotate the decoded strings in an IDB file")
-    parser.add_option("-r", "--radare", dest="radare2_script_file",
-                          help="create a radare2 script to annotate the decoded strings in an .r2 file")
-    parser.add_option("-n", "--minimum-length", dest="min_length",
-                      help="minimum string length (default is %d)" % MIN_STRING_LENGTH_DEFAULT)
-    parser.add_option("-p", "--plugins", dest="plugins",
+    format_group.add_option("-q", "--quiet", dest="quiet", action="store_true",
+                  help="suppress headers and formatting to print only extracted strings")
+    parser.add_option_group(format_group)
+
+    logging_group = OptionGroup(parser, "Logging Options")
+    logging_group.add_option("-v", "--verbose", dest="verbose",
+                      help="show verbose messages and warnings", action="store_true")
+    logging_group.add_option("-d", "--debug", dest="debug",
+                      help="show all trace messages", action="store_true")
+    parser.add_option_group(logging_group)
+
+    identification_group = OptionGroup(parser, "Identification Options")
+    identification_group.add_option("-p", "--plugins", dest="plugins",
                       help="apply the specified identification plugins only (comma-separated)")
-    parser.add_option("-l", "--list-plugins", dest="list_plugins",
+    identification_group.add_option("-l", "--list-plugins", dest="list_plugins",
                       help="list all available identification plugins and exit",
                       action="store_true")
-    parser.add_option("-q", "--quiet", dest="quiet", action="store_true",
-                      help="suppress headers and formatting to print only extracted strings")
-    parser.add_option("-x", "--expert", dest="expert",
-                      help="show duplicate offset/string combinations", action="store_true")
-    parser.add_option("--save-workspace", dest="save_workspace",
-                      help="save vivisect .viv workspace file in current directory", action="store_true")
+    parser.add_option_group(identification_group)
+
+    profile_group = OptionGroup(parser, "FLOSS Profiles")
+    profile_group.add_option("-x", "--expert", dest="expert",
+                      help="show duplicate offset/string combinations", action="store_true")  # TODO
+    parser.add_option_group(profile_group)
+
     return parser
 
 
@@ -180,7 +214,7 @@ def set_logging_level(should_debug=False, should_verbose=False):
         logging.getLogger("floss.plugins.arithmetic_plugin.ShiftPlugin").setLevel(logging.ERROR)
 
 
-def parse_functions_option(functions_option):
+def parse_functions_option(functions_option):  # TODO check for decimals and non-existent functions
     """
     Return parsed -f command line option or None.
     """
