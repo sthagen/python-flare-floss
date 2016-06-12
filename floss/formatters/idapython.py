@@ -1,12 +1,7 @@
-import os
 import logging
 
 from floss.formatters import BasicFormatter
 from floss.decoding_manager import LocationType
-
-KILOBYTE = 1024
-MEGABYTE = 1024 * KILOBYTE
-MAX_FILE_SIZE = 16 * MEGABYTE
 
 floss_logger = logging.getLogger("floss")
 
@@ -14,10 +9,7 @@ floss_logger = logging.getLogger("floss")
 class IdaFormatter(BasicFormatter):
     __name__ = "ida"
 
-    # def __init__(self, *args, **kwargs):
-    #     super(BasicFormatter, self).__init__(*args, **kwargs)
-
-    def format(self, static_strings, decoded_strings, stack_strings):
+    def format(self, decoded_strings, stack_strings):
         floss_logger.info("Creating IDA script...")
         return self.create_ida_script_content(decoded_strings, stack_strings)
 
@@ -29,24 +21,27 @@ class IdaFormatter(BasicFormatter):
         :return: content of the IDAPython script
         """
         main_commands = []
-        for ds in decoded_strings:
-            if ds.s != "":
-                sanitized_string = self.sanitize_string_for_script(ds.s)
-                if ds.characteristics["location_type"] == LocationType.GLOBAL:
-                    main_commands.append("print \"FLOSS: string \\\"%s\\\" at global VA 0x%X\"" % (sanitized_string, ds.va))
-                    main_commands.append("AppendComment(%d, \"FLOSS: %s\", True)" % (ds.va, sanitized_string))
-                else:
-                    main_commands.append("print \"FLOSS: string \\\"%s\\\" decoded at VA 0x%X\"" % (sanitized_string, ds.decoded_at_va))
-                    main_commands.append("AppendComment(%d, \"FLOSS: %s\")" % (ds.decoded_at_va, sanitized_string))
-        main_commands.append("print \"Imported decoded strings from FLOSS\"")
 
-        ss_len = 0
-        for ss in stack_strings:
-            if ss.s != "":
-                sanitized_string = self.sanitize_string_for_script(ss.s)
-                main_commands.append("AppendLvarComment(%d, %d, \"FLOSS stackstring: %s\", True)" % (ss.fva, ss.frame_offset, sanitized_string))
-                ss_len += 1
-        main_commands.append("print \"Imported stackstrings from FLOSS\"")
+        if self.show_decoded_strings:
+            for ds in decoded_strings:
+                if ds.s != "":
+                    sanitized_string = self.sanitize_string_for_script(ds.s)
+                    if ds.characteristics["location_type"] == LocationType.GLOBAL:
+                        main_commands.append("print \"FLOSS: string \\\"%s\\\" at global VA 0x%X\"" % (sanitized_string, ds.va))
+                        main_commands.append("AppendComment(%d, \"FLOSS: %s\", True)" % (ds.va, sanitized_string))
+                    else:
+                        main_commands.append("print \"FLOSS: string \\\"%s\\\" decoded at VA 0x%X\"" % (sanitized_string, ds.decoded_at_va))
+                        main_commands.append("AppendComment(%d, \"FLOSS: %s\")" % (ds.decoded_at_va, sanitized_string))
+            main_commands.append("print \"Imported decoded strings from FLOSS\"")
+
+        if self.show_stack_strings:
+            ss_len = 0
+            for ss in stack_strings:
+                if ss.s != "":
+                    sanitized_string = self.sanitize_string_for_script(ss.s)
+                    main_commands.append("AppendLvarComment(%d, %d, \"FLOSS stackstring: %s\", True)" % (ss.fva, ss.frame_offset, sanitized_string))
+                    ss_len += 1
+            main_commands.append("print \"Imported stackstrings from FLOSS\"")
 
         script_content = """from idc import RptCmt, Comment, MakeRptCmt, MakeComm, GetFrame, GetFrameLvarSize, GetMemberComment, SetMemberComment, Refresh
 

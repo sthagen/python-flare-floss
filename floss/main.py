@@ -276,6 +276,18 @@ def parse_min_length_option(min_length_option):
     return min_length
 
 
+def get_formatter(options):
+    formatter = BasicFormatter()
+    available_formatters = [
+        IdaFormatter(),
+    ]
+    for f in available_formatters:
+        if f.get_name() == options.output_mode:
+            formatter = f
+            break
+    return formatter
+
+
 def is_workspace_file(sample_file_path):
     """
     Return if input file is a vivisect workspace, based on file extension
@@ -421,6 +433,32 @@ def print_static_strings(path, min_length, quiet=False):
             print("")
 
 
+def set_default_options(options):
+    """
+    Set default internal options
+    :param options:
+    """
+    options.print_identification_results = False
+    options.unique_decoded_strings = True
+    options.show_string_offsets = False
+    options.show_static_strings = not options.no_static_strings
+    options.show_decoded_strings = not options.no_decoded_strings
+    options.show_stack_strings = not options.no_stack_strings
+
+
+def set_expert_profile_options(options):
+    """
+    Set options for expert profile
+    :param options:
+    :return:
+    """
+    options.save_workspace = True
+    options.print_identification_results = True
+    options.unique_decoded_strings = False
+    options.quiet = False
+    options.show_string_offsets = True
+
+
 def main(argv=None):
     """
     :param argv: optional command line arguments, like sys.argv[1:]
@@ -440,37 +478,21 @@ def main(argv=None):
         print_plugin_list()
         return 0
 
-    # set default internal options
-    options.print_identification_results = False
-    options.unique_decoded_strings = True
-    options.show_string_offsets = False
-
-        # set options for expert profile
-    if options.expert:
-        options.save_workspace = True
-        options.print_identification_results = True
-        options.unique_decoded_strings = False
-        options.quiet = False
-        options.show_string_offsets = True
-
     sample_file_path = parse_sample_file_path(parser, args)
     min_length = parse_min_length_option(options.min_length)
 
-    formatter = BasicFormatter()
-    available_formatters = [
-                            IdaFormatter(),
-]
-    for f in available_formatters:
-        if f.get_name() == options.output_mode:
-            formatter = f
-            break
+    set_default_options(options)
+    if options.expert:
+        set_expert_profile_options(options)
+
+    formatter = get_formatter(options)
     formatter.configure_args(sample_file_path, min_length, options)
 
     if not is_workspace_file(sample_file_path):
         with open(sample_file_path, "rb") as f:
             magic = f.read(2)
 
-        if not options.no_static_strings:
+        if options.show_static_strings:
             floss_logger.info("Extracting static strings...")
             print_static_strings(sample_file_path, min_length, options.quiet)
 
@@ -502,7 +524,7 @@ def main(argv=None):
     time0 = time()
 
     decoded_strings = []
-    if not options.no_decoded_strings:
+    if options.show_decoded_strings:
         floss_logger.info("Identifying decoding functions...")
         decoding_functions_candidates = im.identify_decoding_functions(vw, selected_plugins, selected_functions)
         if options.print_identification_results:
@@ -513,18 +535,13 @@ def main(argv=None):
         decoded_strings = decode_strings(vw, function_index, decoding_functions_candidates)
 
     stack_strings = ()
-    if not options.no_stack_strings:
+    if options.show_stack_strings:
         floss_logger.info("Extracting stackstrings...")
         stack_strings = stackstrings.extract_stackstrings(vw, selected_functions)
 
-    fs = formatter.format(decoded_strings, stack_strings)
+    print(formatter.format(decoded_strings, stack_strings))
 
-    print("---------------------------------------------")
-    print(fs)
-
-    # if options.radare2_script_file:
-    #     floss_logger.info("Creating r2script...")
-    #     create_r2_script(sample_file_path, options.radare2_script_file, decoded_strings, stack_strings)
+    # TODO formatters/r2.py
 
     time1 = time()
     if not options.quiet:
