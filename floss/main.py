@@ -462,6 +462,12 @@ def create_r2_script_content(sample_file_path, decoded_strings, stack_strings):
                     main_commands.append("af @ %d" % (ds.fva))
                     main_commands.append("afn floss_%x @ %d" % (ds.fva, ds.fva))
                     fvas.append(ds.fva)
+    ss_len = 0
+    for ss in stack_strings:
+        if ss.s != "":
+            sanitized_string = b64encode("\"FLOSS: %s\"" % ss.s)
+            main_commands.append("Ca -0x%x base64:%s @ %d" % (ss.frame_offset, sanitized_string, ss.fva))
+            ss_len += 1
 
     return "\n".join(main_commands)
 
