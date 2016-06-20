@@ -631,6 +631,10 @@ def main(argv=None):
             floss_logger.info("Extracting static strings...")
             print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
 
+        if options.no_decoded_strings and options.no_stack_strings:
+            # we are done
+            return 0
+
         if magic not in SUPPORTED_FILE_MAGIC:
             floss_logger.error("FLOSS currently supports the following formats for string decoding and stackstrings: PE")
             return 1
