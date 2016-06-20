@@ -446,13 +446,22 @@ def create_r2_script_content(sample_file_path, decoded_strings, stack_strings):
     :return: content of the r2script
     """
     main_commands = []
+    fvas = []
     for ds in decoded_strings:
         if ds.s != "":
-            sanitized_string = b64encode("\"FLOSS: %s\"" % ds.s)
+            sanitized_string = b64encode("\"FLOSS: %s (floss_%x)\"" % (ds.s, ds.fva))
             if ds.characteristics["location_type"] == LocationType.GLOBAL:
                 main_commands.append("CCu base64:%s @ %d" % (sanitized_string, ds.va))
+                if ds.fva not in fvas:
+                    main_commands.append("af @ %d" % (ds.fva))
+                    main_commands.append("afn floss_%x @ %d" % (ds.fva, ds.fva))
+                    fvas.append(ds.fva)
             else:
                 main_commands.append("CCu base64:%s @ %d" % (sanitized_string, ds.decoded_at_va))
+                if ds.fva not in fvas:
+                    main_commands.append("af @ %d" % (ds.fva))
+                    main_commands.append("afn floss_%x @ %d" % (ds.fva, ds.fva))
+                    fvas.append(ds.fva)
 
     return "\n".join(main_commands)
 
