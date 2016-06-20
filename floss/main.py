@@ -648,15 +648,16 @@ def main(argv=None):
         with open(sample_file_path, "rb") as f:
             magic = f.read(2)
 
-        floss_logger.info("Extracting static strings...")
-        print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
+        if not options.no_static_strings:
+            floss_logger.info("Extracting static strings...")
+            print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
 
         if magic not in SUPPORTED_FILE_MAGIC:
-            floss_logger.error("FLOSS currently supports the following formats: PE")
+            floss_logger.error("FLOSS currently supports the following formats for string decoding and stackstrings: PE")
             return 1
 
         if os.path.getsize(sample_file_path) > MAX_FILE_SIZE:
-            floss_logger.error("FLOSS cannot emulate files larger than %d bytes" % (MAX_FILE_SIZE))
+            floss_logger.error("FLOSS cannot extract obfuscated strings from files larger than %d bytes" % (MAX_FILE_SIZE))
             return 1
 
         floss_logger.info("Generating vivisect workspace...")
@@ -681,23 +682,29 @@ def main(argv=None):
 
     time0 = time()
 
-    floss_logger.info("Identifying decoding functions...")
-    decoding_functions_candidates = im.identify_decoding_functions(vw, selected_plugins, selected_functions)
-    if options.expert:
-        print_identification_results(sample_file_path, decoding_functions_candidates)
+    if not options.no_decoded_strings:
+        floss_logger.info("Identifying decoding functions...")
+        decoding_functions_candidates = im.identify_decoding_functions(vw, selected_plugins, selected_functions)
+        if options.expert:
+            print_identification_results(sample_file_path, decoding_functions_candidates)
 
-    floss_logger.info("Decoding strings...")
-    function_index = viv_utils.InstructionFunctionIndex(vw)
-    decoded_strings = decode_strings(vw, function_index, decoding_functions_candidates)
-    if not options.expert:
-        decoded_strings = filter_unique_decoded(decoded_strings)
-    print_decoding_results(decoded_strings, min_length, options.group_functions, quiet=options.quiet, expert=options.expert)
+        floss_logger.info("Decoding strings...")
+        function_index = viv_utils.InstructionFunctionIndex(vw)
+        decoded_strings = decode_strings(vw, function_index, decoding_functions_candidates)
+        if not options.expert:
+            decoded_strings = filter_unique_decoded(decoded_strings)
+        print_decoding_results(decoded_strings, min_length, options.group_functions, quiet=options.quiet, expert=options.expert)
+    else:
+        decoded_strings = []
 
-    floss_logger.info("Extracting stackstrings...")
-    stack_strings = stackstrings.extract_stackstrings(vw, selected_functions)
-    if not options.expert:
-        stack_strings = list(set(stack_strings))
-    print_stack_strings(stack_strings, min_length, quiet=options.quiet, expert=options.expert)
+    if not options.no_stack_strings:
+        floss_logger.info("Extracting stackstrings...")
+        stack_strings = stackstrings.extract_stackstrings(vw, selected_functions)
+        if not options.expert:
+            stack_strings = list(set(stack_strings))
+        print_stack_strings(stack_strings, min_length, quiet=options.quiet, expert=options.expert)
+    else:
+        stack_strings = []
 
     if options.ida_python_file:
         floss_logger.info("Creating IDA script...")
