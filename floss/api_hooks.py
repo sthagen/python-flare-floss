@@ -239,6 +239,7 @@ class MemcpyHook(viv_utils.emulator_drivers.Hook):
     '''
     Hook and handle calls to memcpy.
     '''
+    MAX_COPY_SIZE = 1024 * 1024 * 32  # don't attempt to copy more than 32MB, or something is wrong
 
     def __init__(self, *args, **kwargs):
         super(MemcpyHook, self).__init__(*args, **kwargs)
@@ -247,6 +248,9 @@ class MemcpyHook(viv_utils.emulator_drivers.Hook):
         if callname == "msvcrt.memcpy":
             emu = driver
             dst, src, count = argv
+            if count > self.MAX_COPY_SIZE:
+                self.d('unusually large memcpy, truncating to 32MB: 0x%x', count)
+                count = self.MAX_COPY_SIZE
             data = emu.readMemory(src, count)
             emu.writeMemory(dst, data)
             callconv.execCallReturn(emu, 0x0, len(argv))
