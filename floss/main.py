@@ -164,7 +164,8 @@ def make_parser():
 
     profile_group = OptionGroup(parser, "FLOSS Profiles")
     profile_group.add_option("-x", "--expert", dest="expert",
-                      help="show duplicate offset/string combinations", action="store_true")  # TODO
+                      help="show duplicate offset/string combinations, save workspace, group function output",
+                             action="store_true")
     parser.add_option_group(profile_group)
 
     return parser
@@ -649,8 +650,11 @@ def main(argv=None):
     else:
         floss_logger.info("Loading existing vivisect workspace...")
 
+    # expert profile settings
     if options.expert:
         options.save_workspace = True
+        options.group_functions = True
+        options.quiet = False
 
     try:
         vw = viv_utils.getWorkspace(sample_file_path, should_save=options.save_workspace)
