@@ -7,7 +7,7 @@ import mmap
 import string
 import logging
 from time import time
-from optparse import OptionParser
+from optparse import OptionParser, OptionGroup
 
 import tabulate
 import plugnplay
@@ -113,35 +113,61 @@ def make_parser():
     usage_message = "%prog [options] FILEPATH"
 
     parser = OptionParser(usage=usage_message, version="%prog {:s}\nhttps://github.com/fireeye/flare-floss/".format(version.__version__))
-    parser.add_option("-a", "--all-strings", dest="all_strings", action="store_true",
-                      help="also extract static ASCII and UTF-16 strings from the file")
-    parser.add_option("-v", "--verbose", dest="verbose",
-                      help="show verbose messages and warnings", action="store_true")
-    parser.add_option("-d", "--debug", dest="debug",
-                      help="show all trace messages", action="store_true")
+
+    parser.add_option("-n", "--minimum-length", dest="min_length",
+                      help="minimum string length (default is %d)" % MIN_STRING_LENGTH_DEFAULT)
     parser.add_option("-f", "--functions", dest="functions",
                       help="only analyze the specified functions (comma-separated)",
                       type="string")
-    parser.add_option("-g", "--group", dest="group_functions",
-                      help="group output by virtual address of decoding functions",
-                      action="store_true")
-    parser.add_option("-i", "--ida", dest="ida_python_file",
-                      help="create an IDAPython script to annotate the decoded strings in an IDB file")
-    parser.add_option("-r", "--radare", dest="radare2_script_file",
-                          help="create a radare2 script to annotate the decoded strings in an .r2 file")
-    parser.add_option("-n", "--minimum-length", dest="min_length",
-                      help="minimum string length (default is %d)" % MIN_STRING_LENGTH_DEFAULT)
-    parser.add_option("-p", "--plugins", dest="plugins",
-                      help="apply the specified identification plugins only (comma-separated)")
-    parser.add_option("-l", "--list-plugins", dest="list_plugins",
-                      help="list all available identification plugins and exit",
-                      action="store_true")
-    parser.add_option("-q", "--quiet", dest="quiet", action="store_true",
-                      help="suppress headers and formatting to print only extracted strings")
-    parser.add_option("-x", "--expert", dest="expert",
-                      help="show duplicate offset/string combinations", action="store_true")
     parser.add_option("--save-workspace", dest="save_workspace",
                       help="save vivisect .viv workspace file in current directory", action="store_true")
+
+    extraction_group = OptionGroup(parser, "Extraction options", "Specify which string types FLOSS shows from a file, "
+                                                                 "by default all types are shown")
+    extraction_group.add_option("--no-static-strings", dest="no_static_strings", action="store_true",
+                      help="do not show static ASCII and UTF-16 strings")
+    extraction_group.add_option("--no-decoded-strings", dest="no_decoded_strings", action="store_true",
+                      help="do not show decoded strings")
+    extraction_group.add_option("--no-stack-strings", dest="no_stack_strings", action="store_true",
+                      help="do not show stackstrings")
+    parser.add_option_group(extraction_group)
+
+    format_group = OptionGroup(parser, "Format Options")
+    format_group.add_option("-g", "--group", dest="group_functions",
+                      help="group output by virtual address of decoding functions",
+                      action="store_true")
+    format_group.add_option("-q", "--quiet", dest="quiet", action="store_true",
+                  help="suppress headers and formatting to print only extracted strings")
+    parser.add_option_group(format_group)
+
+    logging_group = OptionGroup(parser, "Logging Options")
+    logging_group.add_option("-v", "--verbose", dest="verbose",
+                      help="show verbose messages and warnings", action="store_true")
+    logging_group.add_option("-d", "--debug", dest="debug",
+                      help="show all trace messages", action="store_true")
+    parser.add_option_group(logging_group)
+
+    output_group = OptionGroup(parser, "Script output options")
+    output_group.add_option("-i", "--ida", dest="ida_python_file",
+                      help="create an IDAPython script to annotate the decoded strings in an IDB file")
+    output_group.add_option("-r", "--radare", dest="radare2_script_file",
+                          help="create a radare2 script to annotate the decoded strings in an .r2 file")
+    parser.add_option_group(output_group)
+
+    identification_group = OptionGroup(parser, "Identification Options")
+    identification_group.add_option("-p", "--plugins", dest="plugins",
+                      help="apply the specified identification plugins only (comma-separated)")
+    identification_group.add_option("-l", "--list-plugins", dest="list_plugins",
+                      help="list all available identification plugins and exit",
+                      action="store_true")
+    parser.add_option_group(identification_group)
+
+    profile_group = OptionGroup(parser, "FLOSS Profiles")
+    profile_group.add_option("-x", "--expert", dest="expert",
+                      help="show duplicate offset/string combinations, save workspace, group function output",
+                             action="store_true")
+    parser.add_option_group(profile_group)
+
     return parser
 
 
@@ -517,63 +543,42 @@ def print_static_strings(path, min_length, quiet=False):
     with open(path, "rb") as f:
         b = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
 
-        if quiet:
-            for s in strings.extract_ascii_strings(b, n=min_length):
-                print("%s" % (s.s))
-            for s in strings.extract_unicode_strings(b, n=min_length):
-                print("%s" % (s.s))
-
-        elif os.path.getsize(path) > MAX_FILE_SIZE:
+        if os.path.getsize(path) > MAX_FILE_SIZE:
             # for large files, there might be a huge number of strings,
             # so don't worry about forming everything into a perfect table
-            print("Static ASCII strings")
-            print("Offset   String")
-            print("------   ------")
-            has_string = False
+            if not quiet:
+                print("FLOSS static ASCII strings")
             for s in strings.extract_ascii_strings(b, n=min_length):
-                print("%s %s" % (hex(s.offset), s.s))
-                has_string = True
-            if not has_string:
-                print("none.")
-            print("")
+                print("%s" % s.s)
+            if not quiet:
+                print("")
 
-            print("Static Unicode strings")
-            print("Offset   String")
-            print("------   ------")
-            has_string = False
+            if not quiet:
+                print("FLOSS static Unicode strings")
             for s in strings.extract_unicode_strings(b, n=min_length):
-                print("%s %s" % (hex(s.offset), s.s))
-                has_string = True
-            if not has_string:
-                print("none.")
-            print("")
+                print("%s" % s.s)
+            if not quiet:
+                print("")
 
             if os.path.getsize(path) > sys.maxint:
-                floss_logger.warning("File too large, strings listings may be trucated.")
+                floss_logger.warning("File too large, strings listings may be truncated.")
                 floss_logger.warning("FLOSS cannot handle files larger than 4GB on 32bit systems.")
 
         else:
             # for reasonably sized files, we can read all the strings at once
-            # and format them nicely in a table.
-            ascii_strings = list(strings.extract_ascii_strings(b, n=min_length))
-            print("Static ASCII strings")
-            if len(ascii_strings) == 0:
-                print("none.")
-            else:
-                print(tabulate.tabulate(
-                    [(hex(s.offset), s.s) for s in ascii_strings],
-                    headers=["Offset", "String"]))
-            print("")
+            if not quiet:
+                print("FLOSS static ASCII strings")
+            for s in strings.extract_ascii_strings(b, n=min_length):
+                print("%s" % (s.s))
+            if not quiet:
+                print("")
 
-            uni_strings = list(strings.extract_unicode_strings(b, n=min_length))
-            print("Static UTF-16 strings")
-            if len(uni_strings) == 0:
-                print("none.")
-            else:
-                print(tabulate.tabulate(
-                    [(hex(s.offset), s.s) for s in uni_strings],
-                    headers=["Offset", "String"]))
-            print("")
+            if not quiet:
+                print("FLOSS static UTF-16 strings")
+            for s in strings.extract_unicode_strings(b, n=min_length):
+                print("%s" % (s.s))
+            if not quiet:
+                print("")
 
 
 def print_stack_strings(extracted_strings, min_length, quiet=False, expert=False):
@@ -625,28 +630,31 @@ def main(argv=None):
         with open(sample_file_path, "rb") as f:
             magic = f.read(2)
 
-        if options.all_strings:
+        if not options.no_static_strings:
             floss_logger.info("Extracting static strings...")
             print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
 
+        if options.no_decoded_strings and options.no_stack_strings:
+            # we are done
+            return 0
+
         if magic not in SUPPORTED_FILE_MAGIC:
-            floss_logger.error("FLOSS currently supports the following formats: PE")
-            if not options.all_strings:
-                floss_logger.error("Recommend passing flag `-a` to extract static strings from any file type.")
+            floss_logger.error("FLOSS currently supports the following formats for string decoding and stackstrings: PE")
             return 1
 
         if os.path.getsize(sample_file_path) > MAX_FILE_SIZE:
-            floss_logger.error("FLOSS cannot emulate files larger than %d bytes" % (MAX_FILE_SIZE))
-            if not options.all_strings:
-                floss_logger.error("Recommend passing flag `-a` to extract static strings from any sized file.")
+            floss_logger.error("FLOSS cannot extract obfuscated strings from files larger than %d bytes" % (MAX_FILE_SIZE))
             return 1
 
         floss_logger.info("Generating vivisect workspace...")
     else:
         floss_logger.info("Loading existing vivisect workspace...")
 
+    # expert profile settings
     if options.expert:
         options.save_workspace = True
+        options.group_functions = True
+        options.quiet = False
 
     try:
         vw = viv_utils.getWorkspace(sample_file_path, should_save=options.save_workspace)
@@ -663,23 +671,29 @@ def main(argv=None):
 
     time0 = time()
 
-    floss_logger.info("Identifying decoding functions...")
-    decoding_functions_candidates = im.identify_decoding_functions(vw, selected_plugins, selected_functions)
-    if options.expert:
-        print_identification_results(sample_file_path, decoding_functions_candidates)
+    if not options.no_decoded_strings:
+        floss_logger.info("Identifying decoding functions...")
+        decoding_functions_candidates = im.identify_decoding_functions(vw, selected_plugins, selected_functions)
+        if options.expert:
+            print_identification_results(sample_file_path, decoding_functions_candidates)
 
-    floss_logger.info("Decoding strings...")
-    function_index = viv_utils.InstructionFunctionIndex(vw)
-    decoded_strings = decode_strings(vw, function_index, decoding_functions_candidates)
-    if not options.expert:
-        decoded_strings = filter_unique_decoded(decoded_strings)
-    print_decoding_results(decoded_strings, min_length, options.group_functions, quiet=options.quiet, expert=options.expert)
+        floss_logger.info("Decoding strings...")
+        function_index = viv_utils.InstructionFunctionIndex(vw)
+        decoded_strings = decode_strings(vw, function_index, decoding_functions_candidates)
+        if not options.expert:
+            decoded_strings = filter_unique_decoded(decoded_strings)
+        print_decoding_results(decoded_strings, min_length, options.group_functions, quiet=options.quiet, expert=options.expert)
+    else:
+        decoded_strings = []
 
-    floss_logger.info("Extracting stackstrings...")
-    stack_strings = stackstrings.extract_stackstrings(vw, selected_functions)
-    if not options.expert:
-        stack_strings = list(set(stack_strings))
-    print_stack_strings(stack_strings, min_length, quiet=options.quiet, expert=options.expert)
+    if not options.no_stack_strings:
+        floss_logger.info("Extracting stackstrings...")
+        stack_strings = stackstrings.extract_stackstrings(vw, selected_functions)
+        if not options.expert:
+            stack_strings = list(set(stack_strings))
+        print_stack_strings(stack_strings, min_length, quiet=options.quiet, expert=options.expert)
+    else:
+        stack_strings = []
 
     if options.ida_python_file:
         floss_logger.info("Creating IDA script...")
