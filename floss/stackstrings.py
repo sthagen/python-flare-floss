@@ -1,4 +1,5 @@
 import re
+import logging
 
 from collections import namedtuple
 
@@ -9,6 +10,10 @@ import viv_utils.emulator_drivers
 
 import strings
 from utils import makeEmulator
+
+
+logger = logging.getLogger(__name__)
+MAX_STACK_SIZE = 0x10000
 
 
 CallContext = namedtuple("CallContext",
@@ -43,6 +48,10 @@ class CallContextMonitor(viv_utils.emulator_drivers.Monitor):
         stack_top = emu.getStackCounter()
         stack_bottom = self._init_sp
         stack_size = stack_bottom - stack_top
+        if stack_size > MAX_STACK_SIZE:
+            logger.debug('stack size too big: 0x%x', stack_size)
+            return
+
         stack_buf = emu.readMemory(stack_top, stack_size)
         self.ctxs.append(CallContext(op.va, stack_top, stack_bottom, stack_buf))
 
@@ -128,10 +137,13 @@ def extract_stackstrings(vw, selected_functions):
     :param vw: The vivisect workspace from which to extract stackstrings.
     :rtype: Generator[StackString]
     '''
+    logger.debug('extracting stackstrings from %d functions', len(selected_functions))
     for fva in selected_functions:
+        logger.debug('extracting stackstrings from function: 0x%x', fva)
         seen = set([])
         filter = re.compile("^p?V?A+$")
         for ctx in extract_call_contexts(vw, fva):
+            logger.debug('extracting stackstrings at checkpoint: 0x%x stacksize: 0x%x', ctx.pc, ctx.init_sp - ctx.sp)
             for s in strings.extract_ascii_strings(ctx.stack_memory):
                 if filter.match(s.s):
                     # ignore strings like: pVA, pVAAA, AAAA
