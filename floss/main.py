@@ -147,10 +147,12 @@ def make_parser():
                       help="show all trace messages", action="store_true")
     parser.add_option_group(logging_group)
 
-    parser.add_option("-i", "--ida", dest="ida_python_file",
+    output_group = OptionGroup(parser, "Script output options")
+    output_group.add_option("-i", "--ida", dest="ida_python_file",
                       help="create an IDAPython script to annotate the decoded strings in an IDB file")
-    parser.add_option("-r", "--radare", dest="radare2_script_file",
+    output_group.add_option("-r", "--radare", dest="radare2_script_file",
                           help="create a radare2 script to annotate the decoded strings in an .r2 file")
+    parser.add_option_group(output_group)
 
     identification_group = OptionGroup(parser, "Identification Options")
     identification_group.add_option("-p", "--plugins", dest="plugins",
