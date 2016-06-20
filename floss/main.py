@@ -625,20 +625,15 @@ def main(argv=None):
         with open(sample_file_path, "rb") as f:
             magic = f.read(2)
 
-        if options.all_strings:
-            floss_logger.info("Extracting static strings...")
-            print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
+        floss_logger.info("Extracting static strings...")
+        print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
 
         if magic not in SUPPORTED_FILE_MAGIC:
             floss_logger.error("FLOSS currently supports the following formats: PE")
-            if not options.all_strings:
-                floss_logger.error("Recommend passing flag `-a` to extract static strings from any file type.")
             return 1
 
         if os.path.getsize(sample_file_path) > MAX_FILE_SIZE:
             floss_logger.error("FLOSS cannot emulate files larger than %d bytes" % (MAX_FILE_SIZE))
-            if not options.all_strings:
-                floss_logger.error("Recommend passing flag `-a` to extract static strings from any sized file.")
             return 1
 
         floss_logger.info("Generating vivisect workspace...")
