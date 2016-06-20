@@ -540,63 +540,42 @@ def print_static_strings(path, min_length, quiet=False):
     with open(path, "rb") as f:
         b = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
 
-        if quiet:
-            for s in strings.extract_ascii_strings(b, n=min_length):
-                print("%s" % (s.s))
-            for s in strings.extract_unicode_strings(b, n=min_length):
-                print("%s" % (s.s))
-
-        elif os.path.getsize(path) > MAX_FILE_SIZE:
+        if os.path.getsize(path) > MAX_FILE_SIZE:
             # for large files, there might be a huge number of strings,
             # so don't worry about forming everything into a perfect table
-            print("Static ASCII strings")
-            print("Offset   String")
-            print("------   ------")
-            has_string = False
+            if not quiet:
+                print("FLOSS static ASCII strings")
             for s in strings.extract_ascii_strings(b, n=min_length):
-                print("%s %s" % (hex(s.offset), s.s))
-                has_string = True
-            if not has_string:
-                print("none.")
-            print("")
+                print("%s" % s.s)
+            if not quiet:
+                print("")
 
-            print("Static Unicode strings")
-            print("Offset   String")
-            print("------   ------")
-            has_string = False
+            if not quiet:
+                print("FLOSS static Unicode strings")
             for s in strings.extract_unicode_strings(b, n=min_length):
-                print("%s %s" % (hex(s.offset), s.s))
-                has_string = True
-            if not has_string:
-                print("none.")
-            print("")
+                print("%s" % s.s)
+            if not quiet:
+                print("")
 
             if os.path.getsize(path) > sys.maxint:
-                floss_logger.warning("File too large, strings listings may be trucated.")
+                floss_logger.warning("File too large, strings listings may be truncated.")
                 floss_logger.warning("FLOSS cannot handle files larger than 4GB on 32bit systems.")
 
         else:
             # for reasonably sized files, we can read all the strings at once
-            # and format them nicely in a table.
-            ascii_strings = list(strings.extract_ascii_strings(b, n=min_length))
-            print("Static ASCII strings")
-            if len(ascii_strings) == 0:
-                print("none.")
-            else:
-                print(tabulate.tabulate(
-                    [(hex(s.offset), s.s) for s in ascii_strings],
-                    headers=["Offset", "String"]))
-            print("")
+            if not quiet:
+                print("FLOSS static ASCII strings")
+            for s in strings.extract_ascii_strings(b, n=min_length):
+                print("%s" % (s.s))
+            if not quiet:
+                print("")
 
-            uni_strings = list(strings.extract_unicode_strings(b, n=min_length))
-            print("Static UTF-16 strings")
-            if len(uni_strings) == 0:
-                print("none.")
-            else:
-                print(tabulate.tabulate(
-                    [(hex(s.offset), s.s) for s in uni_strings],
-                    headers=["Offset", "String"]))
-            print("")
+            if not quiet:
+                print("FLOSS static UTF-16 strings")
+            for s in strings.extract_unicode_strings(b, n=min_length):
+                print("%s" % (s.s))
+            if not quiet:
+                print("")
 
 
 def print_stack_strings(extracted_strings, min_length, quiet=False, expert=False):
