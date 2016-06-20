@@ -10,6 +10,7 @@ import api_hooks
 
 
 floss_logger = logging.getLogger("floss")
+MAX_MAPS_SIZE = 1024 * 1024 * 100  # 100MB max memory allocated in an emulator instance
 
 # A DecodedString stores the decoded string and meta data about it:
 # va: va of string in memory, s: decoded string, decoded_at_va: VA where decoding routine is called,
@@ -43,12 +44,27 @@ Snapshot = namedtuple("Snapshot",
                        ])
 
 
+def get_map_size(emu):
+    size = 0
+    for mapva, mapsize, mperm, mfname in emu.getMemoryMaps():
+        mapsize += size
+    return size
+
+
+
+class MapsTooLargeError(Exception):
+    pass
+
+
 def make_snapshot(emu):
     '''
     Create a snapshot of the current CPU and memory.
 
     :rtype: Snapshot
     '''
+    if get_map_size(emu) > MAX_MAPS_SIZE:
+        logger.debug('emulator mapped too much memory: 0x%x', get_map_size(emu))
+        raise MapsTooLargeError()
     return Snapshot(emu.getMemorySnap(), emu.getStackCounter(), emu.getProgramCounter())
 
 
@@ -75,7 +91,11 @@ class DeltaCollectorHook(viv_utils.emulator_drivers.Hook):
 
     def hook(self, callname, driver, callconv, api, argv):
         if is_import(driver._emu, driver._emu.getProgramCounter()):
-            self.deltas.append(Delta(self._pre_snap, make_snapshot(driver._emu)))
+            try:
+                self.deltas.append(Delta(self._pre_snap, make_snapshot(driver._emu)))
+            except MapsTooLargeError:
+                logger.debug('despite call to import %s, maps too large, not extracting strings', callname)
+                pass
 
 
 def emulate_function(emu, function_index, fva, return_address, max_instruction_count):
@@ -105,7 +125,12 @@ def emulate_function(emu, function_index, fva, return_address, max_instruction_c
      This helps avoid unexpected infinite loops.
     :rtype: Sequence[Delta]
     '''
-    pre_snap = make_snapshot(emu)
+    try:
+        pre_snap = make_snapshot(emu)
+    except MapsTooLargeError:
+        logger.warn('initial snapshot mapped too much memory, can\'t extract strings')
+        return []
+
     delta_collector = DeltaCollectorHook(pre_snap)
 
     try:
@@ -137,5 +162,11 @@ def emulate_function(emu, function_index, fva, return_address, max_instruction_c
     floss_logger.debug("Ended emulation at 0x%08X", emu.getProgramCounter())
 
     deltas = delta_collector.deltas
-    deltas.append(Delta(pre_snap, make_snapshot(emu)))
+
+    try:
+        deltas.append(Delta(pre_snap, make_snapshot(emu)))
+    except MapsTooLargeError:
+        logger.debug('failed to create final snapshot, emulator mapped too much memory, skipping')
+        pass
+
     return deltas
