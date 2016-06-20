@@ -6,16 +6,19 @@ ASCII_BYTE = " !\"#\$%&\'\(\)\*\+,-\./0123456789:;<=>\?@ABCDEFGHIJKLMNOPQRSTUVWX
 ASCII_RE_4 = re.compile("([%s]{%d,})" % (ASCII_BYTE, 4))
 UNICODE_RE_4 = re.compile(b"((?:[%s]\x00){%d,})" % (ASCII_BYTE, 4))
 REPEATS = ["A", "\x00", "\xfe", "\xff"]
-
+SLICE_SIZE = 4096
 
 String = namedtuple("String", ["s", "offset"])
 
-def buf_filled_with(buf, c):
-    for i in range(len(buf)):
-        if buf[i] != c:
-            return False
 
+def buf_filled_with(buf, character):
+    dupe_chunk = character * SLICE_SIZE
+    for offset in xrange(0, len(buf), SLICE_SIZE):
+        new_chunk = buf[offset: offset + SLICE_SIZE]
+        if dupe_chunk[:len(new_chunk)] != new_chunk:
+            return False
     return True
+
 
 def extract_ascii_strings(buf, n=4):
     '''
