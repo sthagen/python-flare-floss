@@ -19,30 +19,32 @@ Here's a summary of the command line flags and options you
 
 ### Extract obfuscated strings (default mode)
 
-The default mode for FLOSS is to extract obfuscated strings
- with minimum length four from an executable file and print
- the formatted results.
-This mode does not extract the static strings; see `-a` fo
- extracting all strings.
+The default mode for FLOSS is to extract the following string types from an executable file:
+- static ASCII and UTF16LE strings
+- obfuscated strings
+- stackstrings
+
+By default FLOSS uses a minimum string length of four.
+
 
     floss.exe malware.bin
 
 
-### Extract static strings (`-a`)
+### Disable string type extraction (`--no-<STRING-TYPE>-strings`)
 
-You can also extract the static strings from a binary file
- using the flags `-a` or `--all-strings`.
-In this mode, FLOSS will print _both_ static and decoded
- strings.
 When FLOSS searches for static strings, it looks for
  human-readable ASCII and UTF-16 strings across the
  entire binary contents of the file.
 This means you may be able to replace `strings.exe` with
- FLOSS in your analysis workflow
+ FLOSS in your analysis workflow. However, you may disable
+ the extraction of static strings via the `--no-static-strings` switch.
 
-    floss.exe -a malware.bin
-    floss.exe --all-strings malware.bin
+    floss.exe --no-static-strings malware.bin
 
+Analogous, you can disable the extraction of obfuscated strings or stackstrings.
+
+    floss.exe --no-decoded-strings malware.bin
+    floss.exe --no-stack-strings malware.bin
 
 ### Quiet mode (`-q`)
 
@@ -53,10 +55,8 @@ These flags are appropriate if you will pipe the results of FLOSS
  want to avoid matches on the section headers.
 In quiet mode, each recovered string is printed on its
  own line.
-The "type" of the string (static, decoded, stackstring, etc.)
+The "type" of the string (static, decoded, or stackstring)
  is not included.
-FLOSS does not print the list of decoding functions and
- their scores in quiet mode.
 
      floss.exe -q malware.bin
      floss.exe --quiet malware.bin
@@ -115,18 +115,24 @@ Specify functions by using their hex-encoded virtual address.
     floss.exe --functions=0x401000,0x402000 malware.bin
 
 
-### Generate IDA script (`-i`)
+### Generate annotation scripts (`-i` and `-r`)
 
 FLOSS can generate an IDA Pro Python script that will
  annotate the idb database of the malware sample with
  its decoded strings.
 The script appends comments to the virtual addresses
  of the encoded data so its easy to interpet.
-Provide the option `-i` or `--ida` instruct FLOSS to
+Provide the option `-i` or `--ida` to instruct FLOSS to
  write the script to the specified file.
 
     floss.exe -i myscript.py malware.bin
     floss.exe --ida=myscript.py malware.bin
+
+To create an annotation script for radare2, use the `-r`
+or `--radare` switch.
+
+    floss.exe -r myr2script malware.bin
+    floss.exe --radare=myr2script malware.bin
 
 
 ### Verbose and debug modes (`-v`/`-d`)
@@ -164,15 +170,16 @@ Manipulating the plugin list may be useful during the development
 
     floss.exe -l
     Available identification plugins:
-     - XORSimplePlugin (v1.0)
-     - FunctionIsLibraryPlugin (v1.0)
-     - FunctionCrossReferencesToPlugin (v1.0)
-     - FunctionArgumentCountPlugin (v1.0)
-     - FunctionIsThunkPlugin (v1.0)
-     - FunctionBlockCountPlugin (v1.0)
-     - FunctionInstructionCountPlugin (v1.0)
-     - FunctionSizePlugin (v1.0)
-     - FunctionRecursivePlugin (v1.0)
+    - XORPlugin (v1.0)
+    - ShiftPlugin (v1.0)
+    - FunctionIsLibraryPlugin (v1.0)
+    - FunctionCrossReferencesToPlugin (v1.0)
+    - FunctionArgumentCountPlugin (v1.0)
+    - FunctionIsThunkPlugin (v1.0)
+    - FunctionBlockCountPlugin (v1.0)
+    - FunctionInstructionCountPlugin (v1.0)
+    - FunctionSizePlugin (v1.0)
+    - FunctionRecursivePlugin (v1.0)
 
-    floss.exe -p XORSimplePlugin,FunctionIsLibraryPlugin malware.bin
-    floss.exe --plugins=XORSimplePlugin,FunctionIsLibraryPlugin malware.bin
+    floss.exe -p XORPlugin,ShiftPlugin malware.bin
+    floss.exe --plugins=XORPlugin,ShiftPlugin malware.bin
