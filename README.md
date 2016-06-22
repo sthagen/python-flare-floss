@@ -47,100 +47,68 @@ For a detailed description of *testing* FLOSS, review the documention
 ## Sample Output
 
 ```
-$ ~/env/bin/floss -a malware.bin
-
-Static ASCII strings
-Offset       String
-----------   -------------------------------------
-0x0000004D   !This program cannot be run in DOS mode.
-0x00000083   _YY
-0x000000D0   RichYY
-0x000000F0   MdfQ
-0x000001E0   .text
-0x00000207   `.rdata
-0x0000022F   @.data
-0x00000258   .idata
-0x00000280   .didat
-0x000002A8   .reloc
-0x000005B6   U  F
-0x000005F1   ?;}
-0x000006D4   A@;E
-0x000006E4   _^[
-0x000008E0   HttHt-H
-0x0000099A   '9U
-0x00007020   WS2_32.dll
-0x00007C4E   FreeLibrary
-0x00007C5C   GetProcAddress
-0x00007C6E   LoadLibraryA
-0x00007C7E   GetModuleHandleA
-0x00007C92   GetVersionExA
-0x00007CA2   MultiByteToWideChar
-0x00007CB8   WideCharToMultiByte
-0x00007CCE   Sleep
-0x00007CD6   GetLastError
-0x00007CE6   DeleteFileA
-0x00007CF4   WriteFile
+$ floss malware.bin
+FLOSS static ASCII strings
+!This program cannot be run in DOS mode.
+_YY
+RichYY
+MdfQ
+.text
+`.rdata
+@.data
+.idata
+.didat
+.reloc
+U  F
+?;}
+A@;E
+_^[
+HttHt-H
+'9U
+WS2_32.dll
+FreeLibrary
+GetProcAddress
+LoadLibraryA
+GetModuleHandleA
+GetVersionExA
+MultiByteToWideChar
+WideCharToMultiByte
+Sleep
+GetLastError
+DeleteFileA
+WriteFile
 [..snip...]
 
-Static UTF-16 strings
-Offset       String
-----------   -------------------------------------
-0x00007614   ,%d
+FLOSS static UTF-16 strings
+,%d
 
-Most likely decoding functions in: malware.bin
-address:    score:
-----------  -------
-0x0040102D 0.71000
-0x0040101E 0.23000
-0x00401046 0.23000
-0x00401005 0.21000
-0x0040100F 0.21000
-0x00401014 0.21000
-0x00401023 0.21000
-0x004069BF 0.21000
-0x00401041 0.21000
-0x00406736 0.21000
-
-FLOSS decoded 10 strings
-Offset       Called At    String
-----------   ----------   -------------------------------------
-0xBFB3B4E8   0x0040595F   WinSta0\Default
-0xBFB3B4A0   0x0040472E   Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings
-0xBFB3B4A0   0x0040472E   Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings
-0xBFB3B4EC   0x0040472E   ProxyEnable
-0xBFB3B4A0   0x0040472E   Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings
-0xBFB3B4E0   0x0040472E   ProxyServer
-0xBFB3B4EC   0x0040472E   ProxyEnable
-0xBFB3B4A0   0x0040472E   Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings
-0xBFB3B4E0   0x0040472E   ProxyServer
-0xBFB3B4EC   0x0040472E   ProxyEnable
-[..snip...]
+FLOSS decoded 4 strings
+WinSta0\Default
+Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings
+ProxyEnable
+ProxyServer
 
 FLOSS extracted 81 stack strings
-Function:   Frame offset  String:
-----------  ------------  -------
-0x00401005  0x001c    WinSta0\Default
-0x0040100f  0x0010    WinSta0\Default
-0x0040100f  0x007f    pVAD
-0x0040100f  0x0034    '%s' executed.
-0x0040100f  0x0038    ERR '%s' error[%d].
-0x00401014  0x005c    Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings
-0x00401014  0x0010    ProxyEnable
-0x00401014  0x001c    ProxyServer
-0x00401019  0x000c    wininet.dll
-0x00401019  0x001c    InternetOpenA
-0x00401019  0x0107    0\A4
-0x00401019  0x00c8    InternetSetOptionA
-0x00401019  0x0064    InternetConnectA
-0x00401019  0x00f7    pVAInternetQueryOptionA
-0x0040100a  0x0080    Mozilla/4.0 (compatible; MSIE 7.0; Win32)
-0x0040100a  0x004c    -ERR
-0x0040100a  0x0020    FILE(%s) wrote(%d).
-0x0040100a  0x0038    Invalid ojbect.
-0x0040100a  0x0040    SetFilepoint error[%d].
-0x0040100a  0x003c    b64_ntop error[%d].
-0x0040100a  0x0024    GetFileSize error[%d].
-0x0040100a  0x0024    Creates file error[%d].
-0x00401041  0x0047    pVAKCeID5Y/96QTJc1pzi0ZhEBqVG83OnXaL+oxsRdymHS4bFgl7UrWfP2v=wtjNukM
+WinSta0\Default
+'%s' executed.
+ERR '%s' error[%d].
+Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings
+ProxyEnable
+ProxyServer
+wininet.dll
+InternetOpenA
+0\A4
+InternetSetOptionA
+InternetConnectA
+InternetQueryOptionA
+Mozilla/4.0 (compatible; MSIE 7.0; Win32)
+-ERR
+FILE(%s) wrote(%d).
+Invalid ojbect.
+SetFilepoint error[%d].
+b64_ntop error[%d].
+GetFileSize error[%d].
+Creates file error[%d].
+KCeID5Y/96QTJc1pzi0ZhEBqVG83OnXaL+oxsRdymHS4bFgl7UrWfP2v=wtjNukM
 [..snip...]
 ```
