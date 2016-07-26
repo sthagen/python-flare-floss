@@ -163,13 +163,13 @@ class RtlAllocateHeapHook(viv_utils.emulator_drivers.Hook):
     '''
     Hook calls to RtlAllocateHeap, allocate memory in a "heap"
      section, and return pointers to this memory.
-    The base heap address is 0x69690000.
+    The base heap address is 0x96960000.
     The max allocation size is 10 MB.
     '''
 
     def __init__(self, *args, **kwargs):
         super(RtlAllocateHeapHook, self).__init__(*args, **kwargs)
-        self._heap_addr = 0x69690000
+        self._heap_addr = 0x96960000
 
     MAX_ALLOCATION_SIZE = 10 * 1024 * 1024
 
