@@ -630,7 +630,7 @@ def main(argv=None):
         with open(sample_file_path, "rb") as f:
             magic = f.read(2)
 
-        if not options.no_static_strings:
+        if not options.no_static_strings and not options.functions:
             floss_logger.info("Extracting static strings...")
             print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
 
