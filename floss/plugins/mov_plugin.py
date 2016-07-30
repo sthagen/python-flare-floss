@@ -17,12 +17,9 @@ class MovPlugin(plugin_object.GeneralPlugin):
         # walk over every instruction
         for fva in function_vas:
             f = viv_utils.Function(vivisect_workspace, fva)
-            for n_bb in xrange(0, len(f.basic_blocks)):
-                bb = f.basic_blocks[n_bb]
+            for bb in f.basic_blocks:
                 try:
-                    instructions = bb.instructions
-                    for n_instr in xrange(0, len(bb.instructions)):
-                        i = instructions[n_instr]
+                    for i in bb.instructions:
                         # TODO other identification features: rep movs?, movs from memory to register, e.g. movsx eax, byte ptr [ecx+eax]
                         # identify register dereferenced writes to memory, e.g. mov [eax], cl
                         if i.mnem == "mov":
