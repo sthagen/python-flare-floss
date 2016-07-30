@@ -21,6 +21,7 @@ import plugins.arithmetic_plugin
 import identification_manager as im
 import plugins.library_function_plugin
 import plugins.function_meta_data_plugin
+import plugins.mov_plugin
 from interfaces import DecodingRoutineIdentifier
 from decoding_manager import LocationType
 from base64 import b64encode
@@ -106,6 +107,7 @@ def get_all_plugins():
         ps.append(plugins.library_function_plugin.FunctionIsLibraryPlugin())
         ps.append(plugins.arithmetic_plugin.XORPlugin())
         ps.append(plugins.arithmetic_plugin.ShiftPlugin())
+        ps.append(plugins.mov_plugin.MOVPlugin())
     return ps
 
 

@@ -27,6 +27,5 @@ Build instructions (Cross compile for Windows on Linux): |
     i686-w64-mingw32-clang test-decode-substitution-cipher.c -o bin/test-decode-substitution-cipher.exe
 
 Xfail:
-    - all
     - Linux-32bit
 
