@@ -17,7 +17,7 @@ install:
     - ps: Set-Content "floss\\version.py" ( "__version__ = '{0}'" -f ( git describe --tags --always ) )
     - "%PYTHON%\\Scripts\\pip install -e ."
     - "%PYTHON%\\Scripts\\pyinstaller floss.spec"
-    - "move dist\\floss.exe dist\\floss.exe"
+    - "move dist\\floss.exe dist\\floss%ARCH%.exe"
 
 build: off
 
@@ -31,6 +31,6 @@ deploy:
     secret_access_key:
       secure: nP7uNhSUZZwamVfsS80Z+gBbMjSvAvYG/avK6pTKtH78jBcKeyfKFZSTM+siO6os
     bucket: build-artifacts.floss.flare.fireeye.com
-    folder: appveyor/%ARCH%
+    folder: appveyor
     #artifact:
     set_public: false
