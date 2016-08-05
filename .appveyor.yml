@@ -4,7 +4,9 @@ clone_depth: 2
 environment:
     matrix:
         - PYTHON: "C:\\Python27"
+          ARCH: "32"
         - PYTHON: "C:\\Python27-x64"
+          ARCH: "64"
 
 init:
 
@@ -15,6 +17,7 @@ install:
     - ps: Set-Content "floss\\version.py" ( "__version__ = '{0}'" -f ( git describe --tags --always ) )
     - "%PYTHON%\\Scripts\\pip install -e ."
     - "%PYTHON%\\Scripts\\pyinstaller floss.spec"
+    - "move dist\\floss.exe dist\\floss.exe"
 
 build: off
 
@@ -28,6 +31,6 @@ deploy:
     secret_access_key:
       secure: nP7uNhSUZZwamVfsS80Z+gBbMjSvAvYG/avK6pTKtH78jBcKeyfKFZSTM+siO6os
     bucket: build-artifacts.floss.flare.fireeye.com
-    folder: appveyor\\%PYTHON_ARCH%
+    folder: appveyor\\%ARCH
     #artifact:
     set_public: false
