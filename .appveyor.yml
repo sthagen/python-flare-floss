@@ -19,7 +19,7 @@ install:
 build: off
 
 artifacts:
-    - path: "dist\\%PYTHON_ARCH%\\floss.exe"
+    - path: "dist\\floss.exe"
 
 deploy:
   - provider: S3
@@ -28,6 +28,6 @@ deploy:
     secret_access_key:
       secure: nP7uNhSUZZwamVfsS80Z+gBbMjSvAvYG/avK6pTKtH78jBcKeyfKFZSTM+siO6os
     bucket: build-artifacts.floss.flare.fireeye.com
-    folder: appveyor
+    folder: "appveyor\\%PYTHON_ARCH%"
     #artifact:
     set_public: false
