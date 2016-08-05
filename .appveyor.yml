@@ -23,6 +23,9 @@ build: off
 
 artifacts:
     - path: "dist\\floss.exe"
+    - path: "dist\\floss%ARCH%.exe"
+    - path: "dist\\floss32.exe"
+    - path: "dist\\floss64.exe"
 
 deploy:
   - provider: S3
