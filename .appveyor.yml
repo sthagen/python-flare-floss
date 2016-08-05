@@ -19,7 +19,7 @@ install:
 build: off
 
 artifacts:
-    - path: "dist\\floss.exe"
+    - path: "dist\\%PYTHON_ARCH%\\floss.exe"
 
 deploy:
   - provider: S3
