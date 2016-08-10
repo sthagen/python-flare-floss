@@ -107,7 +107,7 @@ def get_all_plugins():
         ps.append(plugins.library_function_plugin.FunctionIsLibraryPlugin())
         ps.append(plugins.arithmetic_plugin.XORPlugin())
         ps.append(plugins.arithmetic_plugin.ShiftPlugin())
-        ps.append(plugins.mov_plugin.MovPlugin())
+        ps.append(plugins.mov_plugin.MOVPlugin())
     return ps
 
 
