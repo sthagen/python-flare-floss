@@ -132,8 +132,10 @@ class FLOSSTest(pytest.Item):
         if isinstance(excinfo.value, FLOSSStringsNotExtracted):
             expected = excinfo.value.expected
             got = excinfo.value.got
+            missing = map(str, expected - got)
             return "\n".join([
                 "FLOSS extraction failed:",
                 "   expected: %s" % str(expected),
                 "   got: %s" % str(got),
+                "   missing expected strings:\n\t%s" % "\n\t".join(missing),
             ])
