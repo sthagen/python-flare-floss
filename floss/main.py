@@ -154,7 +154,7 @@ def make_parser():
     output_group.add_option("-i", "--ida", dest="ida_python_file",
                       help="create an IDAPython script to annotate the decoded strings in an IDB file")
     output_group.add_option("--x64dbg", dest="x64dbg_database_file",
-                      help="create a x64Dbg database/json file to annotate the decoded strings in x64Dbg")
+                      help="create a x64dbg database/json file to annotate the decoded strings in x64dbg")
     output_group.add_option("-r", "--radare", dest="radare2_script_file",
                           help="create a radare2 script to annotate the decoded strings in an .r2 file")
     parser.add_option_group(output_group)
@@ -391,7 +391,7 @@ def print_decoded_strings(decoded_strings, quiet=False, expert=False):
 
 def create_x64dbg_database_content(sample_file_path, imagebase, decoded_strings):
     """
-    Create x64Dbg database/json file contents for file annotations.
+    Create x64dbg database/json file contents for file annotations.
     :param sample_file_path: input file path
     :param imagebase: input files image base to allow calculation of rva
     :param decoded_strings: list of decoded strings ([DecodedString])
@@ -543,7 +543,7 @@ def create_r2_script_content(sample_file_path, decoded_strings, stack_strings):
 
 def create_x64dbg_database(sample_file_path, x64dbg_database_file, imagebase, decoded_strings):
     """
-    Create an x64Dbg database to annotate an executable with decoded strings.
+    Create an x64dbg database to annotate an executable with decoded strings.
     :param sample_file_path: input file path
     :param x64dbg_database_file: output file path
     :param imagebase: imagebase for target file
@@ -554,7 +554,7 @@ def create_x64dbg_database(sample_file_path, x64dbg_database_file, imagebase, de
     with open(x64dbg_database_file, 'wb') as f:
         try:
             f.write(script_content)
-            print("Wrote x64Dbg database to %s\n" % x64dbg_database_file)
+            print("Wrote x64dbg database to %s\n" % x64dbg_database_file)
         except Exception as e:
             raise e
     
@@ -758,7 +758,7 @@ def main(argv=None):
     
     if options.x64dbg_database_file:
         imagebase = vw.filemeta.values()[0]['imagebase']
-        floss_logger.info("Creating x64Dbg database...")
+        floss_logger.info("Creating x64dbg database...")
         create_x64dbg_database(sample_file_path, options.x64dbg_database_file, imagebase, decoded_strings)
     
     if options.ida_python_file:
