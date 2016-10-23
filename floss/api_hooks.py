@@ -267,7 +267,7 @@ class StrlenHook(viv_utils.emulator_drivers.Hook):
         super(StrlenHook, self).__init__(*args, **kwargs)
 
     def hook(self, callname, driver, callconv, api, argv):
-        if callname == "msvcrt.strlen":
+        if callname and callname.lower() in ["msvcrt.strlen", "kernel32.lstrlena"]:
             emu = driver
             string_va = argv[0]
             s = self.readStringAtRva(emu, string_va, 256)
