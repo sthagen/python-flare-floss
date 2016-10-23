@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 ONE_MB = 1024 * 1024
 STACK_MEM_NAME = "[stack]"
 
@@ -6,7 +8,7 @@ def makeEmulator(vw):
     """
     create an emulator using consistent settings.
     """
-    emu = vw.getEmulator(logwrite=True)
+    emu = vw.getEmulator(logwrite=True, taintbyte='\x90')
     removeStackMemory(emu)
     emu.initStackMemory(stacksize=int(0.5 * ONE_MB))
     emu.setStackCounter(emu.getStackCounter() - int(0.25 * ONE_MB))
@@ -26,3 +28,47 @@ def removeStackMemory(emu):
             emu.stack_map_base = None
             return
     raise Exception  # STACK_MEM_NAME not in memory map
+
+
+def get_vivisect_meta_info(vw, selected_functions=None):
+    info = OrderedDict()
+    functions = vw.getFunctions()
+    info["Total number of functions"] = len(functions)
+    # arch, segments, codeblocks, metadata,
+    # filemeta, entry point,
+    print vw.getEntryPoints()
+    # print vw.getFileMeta()
+    print vw.getFiles()
+    print vw.getDiscoveredInfo()
+    print vw.getStats()
+
+    print vw.getMeta("Architecture")
+    print vw.getMeta("Platform")
+    print vw.getMeta("ExeName")
+    print vw.getMeta("Format")
+    print vw.getMeta("StorageName")
+
+    basename = vw.getFileByVa(vw.getEntryPoints()[0])
+    if basename is not None:
+        baseva = vw.getFileMeta(basename, 'imagebase')
+        print hex(baseva)
+        print vw.getFileMeta(basename, 'Version')
+
+    ["#functions", "size", "md5sum", ]
+    if selected_functions:
+        meta = []
+        xreflist = []
+        # TODO tabulate
+        for fva in selected_functions:
+            xrefs_to = len(vw.getXrefsTo(fva))
+            num_args = len(vw.getFunctionArgs(fva))
+            function_meta = vw.getFunctionMetaDict(fva)
+            instr_count = function_meta["InstructionCount"]
+            block_count = function_meta["BlockCount"]
+            size = function_meta["Size"]
+
+            meta.append(("0x%x" % fva, xrefs_to, num_args, size, block_count, instr_count))
+        import tabulate
+
+        info["Candidate Function Meta Info"] = "\n%s" % tabulate.tabulate(meta, headers=["fva", "#xrefs", "#args", "size", "#blocks", "#instructions"])
+    return info

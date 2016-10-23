@@ -25,6 +25,8 @@ from interfaces import DecodingRoutineIdentifier
 from decoding_manager import LocationType
 from base64 import b64encode
 
+from utils import get_vivisect_meta_info
+
 floss_logger = logging.getLogger("floss")
 
 
@@ -116,6 +118,8 @@ def make_parser():
 
     parser.add_option("-n", "--minimum-length", dest="min_length",
                       help="minimum string length (default is %d)" % MIN_STRING_LENGTH_DEFAULT)
+    parser.add_option("-m", "--show-metainformation", dest="show_metainfo",
+                      help="display vivisect workspace meta information", action="store_true")
     parser.add_option("-f", "--functions", dest="functions",
                       help="only analyze the specified functions (comma-separated)",
                       type="string")
@@ -669,6 +673,11 @@ def main(argv=None):
     floss_logger.debug("Selected the following plugins: %s", ", ".join(map(str, selected_plugin_names)))
     selected_plugins = filter(lambda p: str(p) in selected_plugin_names, get_all_plugins())
 
+    # if options.show_metainfo:
+    #     for k, v in get_vivisect_meta_info(vw).iteritems():
+    #         print("%s: %s" % (k, v))
+    #     return 0
+
     time0 = time()
 
     if not options.no_decoded_strings:
@@ -676,6 +685,12 @@ def main(argv=None):
         decoding_functions_candidates = im.identify_decoding_functions(vw, selected_plugins, selected_functions)
         if options.expert:
             print_identification_results(sample_file_path, decoding_functions_candidates)
+
+        if options.show_metainfo:
+            top10 = [fva for fva, _ in decoding_functions_candidates.get_top_candidate_functions(10)]
+            for k, v in get_vivisect_meta_info(vw, top10).iteritems():
+                print("%s: %s" % (k, v))
+            return 0
 
         floss_logger.info("Decoding strings...")
         function_index = viv_utils.InstructionFunctionIndex(vw)
