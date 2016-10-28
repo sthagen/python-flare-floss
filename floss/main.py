@@ -6,6 +6,7 @@ import sys
 import mmap
 import string
 import logging
+import json
 from time import time
 from optparse import OptionParser, OptionGroup
 
@@ -21,6 +22,7 @@ import plugins.arithmetic_plugin
 import identification_manager as im
 import plugins.library_function_plugin
 import plugins.function_meta_data_plugin
+import plugins.mov_plugin
 from interfaces import DecodingRoutineIdentifier
 from decoding_manager import LocationType
 from utils import get_shellcode_workspace
@@ -109,6 +111,7 @@ def get_all_plugins():
         ps.append(plugins.library_function_plugin.FunctionIsLibraryPlugin())
         ps.append(plugins.arithmetic_plugin.XORPlugin())
         ps.append(plugins.arithmetic_plugin.ShiftPlugin())
+        ps.append(plugins.mov_plugin.MovPlugin())
     return ps
 
 
@@ -161,6 +164,8 @@ def make_parser():
     output_group = OptionGroup(parser, "Script output options")
     output_group.add_option("-i", "--ida", dest="ida_python_file",
                       help="create an IDAPython script to annotate the decoded strings in an IDB file")
+    output_group.add_option("--x64dbg", dest="x64dbg_database_file",
+                      help="create a x64dbg database/json file to annotate the decoded strings in x64dbg")
     output_group.add_option("-r", "--radare", dest="radare2_script_file",
                           help="create a radare2 script to annotate the decoded strings in an .r2 file")
     parser.add_option_group(output_group)
@@ -395,6 +400,45 @@ def print_decoded_strings(decoded_strings, quiet=False, expert=False):
         if len(ss) > 0:
             print(tabulate.tabulate(ss, headers=["Offset", "Called At", "String"]))
 
+def create_x64dbg_database_content(sample_file_path, imagebase, decoded_strings):
+    """
+    Create x64dbg database/json file contents for file annotations.
+    :param sample_file_path: input file path
+    :param imagebase: input files image base to allow calculation of rva
+    :param decoded_strings: list of decoded strings ([DecodedString])
+    :return: json needed to annotate a binary in x64dbg 
+    """
+    export = {
+        "comments": []
+    }
+    module = os.path.basename(sample_file_path)
+    processed = {}
+    for ds in decoded_strings:
+        if ds.s != "":
+            sanitized_string = sanitize_string_for_script(ds.s)
+            if ds.characteristics["location_type"] == LocationType.GLOBAL:
+                rva = hex(ds.va - imagebase)
+                try:
+                    processed[rva] += "\t" + sanitized_string
+                except:
+                    processed[rva] = "FLOSS: " + sanitized_string
+            else:
+                rva = hex(ds.decoded_at_va - imagebase)
+                try:
+                    processed[rva] += "\t" + sanitized_string
+                except:
+                    processed[rva] = "FLOSS: " + sanitized_string
+
+    for i in processed.keys():
+        comment = {
+            "text": processed[i],
+            "manual": False,
+            "module": module,
+            "address": i
+        }
+        export["comments"].append(comment)
+
+    return json.dumps(export,indent=1)
 
 def create_ida_script_content(sample_file_path, decoded_strings, stack_strings):
     """
@@ -508,6 +552,23 @@ def create_r2_script_content(sample_file_path, decoded_strings, stack_strings):
 
     return "\n".join(main_commands)
 
+def create_x64dbg_database(sample_file_path, x64dbg_database_file, imagebase, decoded_strings):
+    """
+    Create an x64dbg database to annotate an executable with decoded strings.
+    :param sample_file_path: input file path
+    :param x64dbg_database_file: output file path
+    :param imagebase: imagebase for target file
+    :param decoded_strings: list of decoded strings ([DecodedString])
+    """
+    script_content = create_x64dbg_database_content(sample_file_path, imagebase, decoded_strings)
+    x64dbg_python_file = os.path.abspath(x64dbg_database_file)
+    with open(x64dbg_database_file, 'wb') as f:
+        try:
+            f.write(script_content)
+            print("Wrote x64dbg database to %s\n" % x64dbg_database_file)
+        except Exception as e:
+            raise e
+    
 def create_ida_script(sample_file_path, ida_python_file, decoded_strings, stack_strings):
     """
     Create an IDAPython script to annotate an IDB file with decoded strings.
@@ -726,7 +787,12 @@ def main(argv=None):
         print_stack_strings(stack_strings, min_length, quiet=options.quiet, expert=options.expert)
     else:
         stack_strings = []
-
+    
+    if options.x64dbg_database_file:
+        imagebase = vw.filemeta.values()[0]['imagebase']
+        floss_logger.info("Creating x64dbg database...")
+        create_x64dbg_database(sample_file_path, options.x64dbg_database_file, imagebase, decoded_strings)
+    
     if options.ida_python_file:
         floss_logger.info("Creating IDA script...")
         create_ida_script(sample_file_path, options.ida_python_file, decoded_strings, stack_strings)

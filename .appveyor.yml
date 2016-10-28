@@ -4,7 +4,9 @@ clone_depth: 2
 environment:
     matrix:
         - PYTHON: "C:\\Python27"
+          ARCH: "32"
         - PYTHON: "C:\\Python27-x64"
+          ARCH: "64"
 
 init:
 
@@ -15,11 +17,15 @@ install:
     - ps: Set-Content "floss\\version.py" ( "__version__ = '{0}'" -f ( git describe --tags --always ) )
     - "%PYTHON%\\Scripts\\pip install -e ."
     - "%PYTHON%\\Scripts\\pyinstaller floss.spec"
+    - "move dist\\floss.exe dist\\floss%ARCH%.exe"
 
 build: off
 
 artifacts:
     - path: "dist\\floss.exe"
+    - path: "dist\\floss%ARCH%.exe"
+    - path: "dist\\floss32.exe"
+    - path: "dist\\floss64.exe"
 
 deploy:
   - provider: S3

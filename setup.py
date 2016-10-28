@@ -34,9 +34,9 @@ setup(
     url='https://www.github.com/fireeye/flare-floss',
     packages=[
         'floss',
+        'floss.plugins',
     ],
     package_dir={'floss': 'floss'},
-    package_data={'floss': ['plugins/*.py']},
     entry_points={
         "console_scripts": [
             "floss=floss.main:main",
