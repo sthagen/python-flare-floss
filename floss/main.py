@@ -711,10 +711,12 @@ def main(argv=None):
             shellcode_base = DEFAULT_SHELLCODE_BASE
 
         try:
-            floss_logger.info("Generating vivisect workspace for shellcode %s, base: 0x%x, entry point: 0x%x...",
-                              sample_file_path, shellcode_base, shellcode_entry_point)
-            vw = get_shellcode_workspace(sample_file_path, shellcode_base, shellcode_entry_point,
-                                         should_save=options.save_workspace)
+            floss_logger.info("Generating vivisect workspace for shellcode, base: 0x%x, entry point: 0x%x...", shellcode_base,
+                              shellcode_entry_point)
+            with open(sample_file_path, "rb") as f:
+                shellcode_data = f.read()
+            vw = viv_utils.getShellcodeWorkspace(shellcode_data, "i386", shellcode_base, shellcode_entry_point,
+                                                 options.save_workspace, sample_file_path)
         except Exception, e:
             floss_logger.error("Vivisect failed to load the input file: {0}".format(e.message),
                                exc_info=options.verbose)
@@ -733,7 +735,8 @@ def main(argv=None):
                 return 0
 
             if magic not in SUPPORTED_FILE_MAGIC:
-                floss_logger.error("FLOSS currently supports the following formats for string decoding and stackstrings: PE")
+                floss_logger.error("FLOSS currently supports the following formats for string decoding and stackstrings: PE\n"
+                                   "You can analyze shellcode using the -s switch. See the help (-h) for more information.")
                 return 1
 
             if os.path.getsize(sample_file_path) > MAX_FILE_SIZE:
