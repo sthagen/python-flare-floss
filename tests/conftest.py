@@ -44,6 +44,18 @@ class YamlFile(pytest.File):
         test_dir = os.path.dirname(str(self.fspath))
         for platform, archs in spec["Output Files"].items():
             for arch, filename in archs.items():
+                # TODO specify max runtime via command line option
+                MAX_RUNTIME = 30.0
+                try:
+                    runtime_raw = spec["FLOSS running time"]
+                    runtime = float(runtime_raw.split(" ")[0])
+                    if runtime > MAX_RUNTIME:
+                        # skip this test
+                        continue
+                except KeyError:
+                    pass
+                except ValueError:
+                    pass
                 filepath = os.path.join(test_dir, filename)
                 if os.path.exists(filepath):
                     yield FLOSSTest(self, platform, arch, filename, spec)
