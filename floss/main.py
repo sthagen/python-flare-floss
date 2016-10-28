@@ -128,13 +128,14 @@ def make_parser():
     parser.add_option("--save-workspace", dest="save_workspace",
                       help="save vivisect .viv workspace file in current directory", action="store_true")
 
-    shellcode_group = OptionGroup(parser, "Shellcode options", "Analyze BLOB containing shellcode options")
+    shellcode_group = OptionGroup(parser, "Shellcode options", "Analyze BLOB containing shellcode")
     shellcode_group.add_option("-s", "--shellcode", dest="analyze_shellcode", help="analyze shellcode",
                       action="store_true")
     shellcode_group.add_option("-e", "--shellcode_ep", dest="shellcode_entry_point",
                       help="shellcode entry point", type="string")
     shellcode_group.add_option("-b", "--shellcode_base", dest="shellcode_base",
                       help="shellcode base offset", type="string")
+    parser.add_option_group(shellcode_group)
 
     extraction_group = OptionGroup(parser, "Extraction options", "Specify which string types FLOSS shows from a file, "
                                                                  "by default all types are shown")
