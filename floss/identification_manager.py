@@ -13,13 +13,14 @@ class IdentificationManager(viv_utils.LoggingObject):
     # negative values mark functions as not-decoding routines
     PLUGIN_WEIGHTS = {"XORPlugin": 0.5,
                       "ShiftPlugin": 0.5,
+                      "MovPlugin": 0.3,
                       "FunctionCrossReferencesToPlugin": 0.2,
                       "FunctionArgumentCountPlugin": 0.2,
-                      "FunctionIsThunkPlugin": -1.0,
                       "FunctionBlockCountPlugin": 0.025,
                       "FunctionInstructionCountPlugin": 0.025,
                       "FunctionSizePlugin": 0.025,
                       "FunctionRecursivePlugin": 0.025,
+                      "FunctionIsThunkPlugin": -1.0,
                       "FunctionIsLibraryPlugin": -1.0, }
 
     def __init__(self, vw):
