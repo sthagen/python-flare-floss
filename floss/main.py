@@ -25,7 +25,6 @@ import plugins.function_meta_data_plugin
 import plugins.mov_plugin
 from interfaces import DecodingRoutineIdentifier
 from decoding_manager import LocationType
-from utils import get_shellcode_workspace
 from base64 import b64encode
 
 floss_logger = logging.getLogger("floss")
@@ -38,8 +37,6 @@ MAX_FILE_SIZE = 16 * MEGABYTE
 SUPPORTED_FILE_MAGIC = set(["MZ"])
 
 MIN_STRING_LENGTH_DEFAULT = 4
-
-DEFAULT_SHELLCODE_BASE = 0x01000000
 
 
 def hex(i):
