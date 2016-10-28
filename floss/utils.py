@@ -1,3 +1,4 @@
+import tabulate
 from collections import OrderedDict
 
 ONE_MB = 1024 * 1024
@@ -30,35 +31,26 @@ def removeStackMemory(emu):
     raise Exception  # STACK_MEM_NAME not in memory map
 
 
-def get_vivisect_meta_info(vw, selected_functions=None):
+def get_vivisect_meta_info(vw, selected_functions):
     info = OrderedDict()
-    functions = vw.getFunctions()
-    info["Total number of functions"] = len(functions)
-    # arch, segments, codeblocks, metadata,
-    # filemeta, entry point,
-    print vw.getEntryPoints()
-    # print vw.getFileMeta()
-    print vw.getFiles()
-    print vw.getDiscoveredInfo()
-    print vw.getStats()
-
-    print vw.getMeta("Architecture")
-    print vw.getMeta("Platform")
-    print vw.getMeta("ExeName")
-    print vw.getMeta("Format")
-    print vw.getMeta("StorageName")
-
-    basename = vw.getFileByVa(vw.getEntryPoints()[0])
-    if basename is not None:
-        baseva = vw.getFileMeta(basename, 'imagebase')
-        print hex(baseva)
-        print vw.getFileMeta(basename, 'Version')
-
-    ["#functions", "size", "md5sum", ]
+    entry_points = vw.getEntryPoints()
+    basename = vw.getFileByVa(entry_points[0])
+    if basename:
+        info["Version"] = vw.getFileMeta(basename, 'Version')
+        info["MD5 Sum"] = vw.getFileMeta(basename, 'md5sum')
+    info["Format"] = vw.getMeta("Format")
+    info["Architecture"] = vw.getMeta("Architecture")
+    info["Platform"] = vw.getMeta("Platform")
+    disc, undisc = vw.getDiscoveredInfo()
+    info["Percentage of discovered executable surface area"] = "%.1f%% (%s / %s)" % (disc * 100.0 / (disc + undisc), disc, disc + undisc)
+    if basename:
+        info["Base VA"] = hex(vw.getFileMeta(basename, 'imagebase'))
+    info["Entry point(s)"] = ", ".join(map(hex, entry_points))
+    info["Number of imports"] = len(vw.getImports())
+    info["Number of exports"] = len(vw.getExports())
+    info["Number of functions"] = len(vw.getFunctions())
     if selected_functions:
         meta = []
-        xreflist = []
-        # TODO tabulate
         for fva in selected_functions:
             xrefs_to = len(vw.getXrefsTo(fva))
             num_args = len(vw.getFunctionArgs(fva))
@@ -66,9 +58,10 @@ def get_vivisect_meta_info(vw, selected_functions=None):
             instr_count = function_meta["InstructionCount"]
             block_count = function_meta["BlockCount"]
             size = function_meta["Size"]
-
-            meta.append(("0x%x" % fva, xrefs_to, num_args, size, block_count, instr_count))
-        import tabulate
-
-        info["Candidate Function Meta Info"] = "\n%s" % tabulate.tabulate(meta, headers=["fva", "#xrefs", "#args", "size", "#blocks", "#instructions"])
+            meta.append((hex(fva), xrefs_to, num_args, size, block_count, instr_count))
+        info["Selected functions' info"] = "\n%s" % tabulate.tabulate(meta, headers=["fva", "#xrefs", "#args", "size", "#blocks", "#instructions"])
     return info
+
+
+def hex(i):
+    return "0x%X" % (i)

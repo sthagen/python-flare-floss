@@ -669,6 +669,16 @@ def print_stack_strings(extracted_strings, min_length, quiet=False, expert=False
             headers=["Function", "Frame Offset", "String"]))
 
 
+def print_file_meta_info(vw, selected_functions):
+    print("\nFile information"
+          "\n----------------")
+    try:
+        for k, v in get_vivisect_meta_info(vw, selected_functions).iteritems():
+            print("%s: %s" % (k, v))
+    except Exception, e:
+        floss_logger.error("Failed to print meta information: {0}".format(e.message))
+
+
 def main(argv=None):
     """
     :param argv: optional command line arguments, like sys.argv[1:]
@@ -734,10 +744,11 @@ def main(argv=None):
     floss_logger.debug("Selected the following plugins: %s", ", ".join(map(str, selected_plugin_names)))
     selected_plugins = filter(lambda p: str(p) in selected_plugin_names, get_all_plugins())
 
-    # if options.show_metainfo:
-    #     for k, v in get_vivisect_meta_info(vw).iteritems():
-    #         print("%s: %s" % (k, v))
-    #     return 0
+    if options.show_metainfo:
+        meta_functions = None
+        if options.functions:
+            meta_functions = selected_functions
+        print_file_meta_info(vw, meta_functions)
 
     time0 = time()
 
@@ -746,12 +757,6 @@ def main(argv=None):
         decoding_functions_candidates = im.identify_decoding_functions(vw, selected_plugins, selected_functions)
         if options.expert:
             print_identification_results(sample_file_path, decoding_functions_candidates)
-
-        if options.show_metainfo:
-            top10 = [fva for fva, _ in decoding_functions_candidates.get_top_candidate_functions(10)]
-            for k, v in get_vivisect_meta_info(vw, top10).iteritems():
-                print("%s: %s" % (k, v))
-            return 0
 
         floss_logger.info("Decoding strings...")
         function_index = viv_utils.InstructionFunctionIndex(vw)
