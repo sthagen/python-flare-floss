@@ -696,16 +696,20 @@ def main(argv=None):
     sample_file_path = parse_sample_file_path(parser, args)
     min_length = parse_min_length_option(options.min_length)
 
+    # expert profile settings
+    if options.expert:
+        options.save_workspace = True
+        options.group_functions = True
+        options.quiet = False
+
     if options.analyze_shellcode:
+        shellcode_entry_point = 0
         if options.shellcode_entry_point:
             shellcode_entry_point = int(options.shellcode_entry_point, 0x10)
-        else:
-            shellcode_entry_point = 0
 
+        shellcode_base = 0
         if options.shellcode_base:
             shellcode_base = int(options.shellcode_base, 0x10)
-        else:
-            shellcode_base = DEFAULT_SHELLCODE_BASE
 
         try:
             floss_logger.info("Generating vivisect workspace for shellcode, base: 0x%x, entry point: 0x%x...", shellcode_base,
@@ -743,12 +747,6 @@ def main(argv=None):
             floss_logger.info("Generating vivisect workspace...")
         else:
             floss_logger.info("Loading existing vivisect workspace...")
-
-        # expert profile settings
-        if options.expert:
-            options.save_workspace = True
-            options.group_functions = True
-            options.quiet = False
 
         try:
             vw = viv_utils.getWorkspace(sample_file_path, should_save=options.save_workspace)
