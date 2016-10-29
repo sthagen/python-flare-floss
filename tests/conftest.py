@@ -4,17 +4,16 @@ import pytest
 
 import viv_utils
 
-import footer
+import footer  # TODO remove
 import floss.main as floss_main
 import floss.identification_manager as im
 import floss.stackstrings as stackstrings
 
 
-def extract_strings(sample_path):
+def extract_strings(vw):
     """
-    Deobfuscate strings from sample_path
+    Deobfuscate strings from vivisect workspace
     """
-    vw = viv_utils.getWorkspace(sample_path)
     function_index = viv_utils.InstructionFunctionIndex(vw)
     decoding_functions_candidates = identify_decoding_functions(vw)
     decoded_strings = floss_main.decode_strings(vw, function_index, decoding_functions_candidates)
@@ -98,7 +97,15 @@ class FLOSSTest(pytest.Item):
         if not expected_strings:
             return
 
-        found_strings = set(extract_strings(test_path))
+        test_shellcode = self.spec.get("Test shellcode")
+        if test_shellcode:
+            with open(test_path, "rb") as f:
+                shellcode_data = f.read()
+            vw = viv_utils.getShellcodeWorkspace(shellcode_data)  # TODO provide arch from test.yml
+            found_strings = set(extract_strings(vw))
+        else:
+            vw = viv_utils.getWorkspace(test_path)
+            found_strings = set(extract_strings(vw))
 
         if not (expected_strings <= found_strings):
             raise FLOSSStringsNotExtracted(expected_strings, found_strings)
