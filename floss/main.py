@@ -702,6 +702,15 @@ def main(argv=None):
         options.group_functions = True
         options.quiet = False
 
+    if not is_workspace_file(sample_file_path):
+        if not options.no_static_strings and not options.functions:
+            floss_logger.info("Extracting static strings...")
+            print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
+
+        if options.no_decoded_strings and options.no_stack_strings:
+            # we are done
+            return 0
+
     if options.analyze_shellcode:
         shellcode_entry_point = 0
         if options.shellcode_entry_point:
@@ -726,14 +735,6 @@ def main(argv=None):
         if not is_workspace_file(sample_file_path):
             with open(sample_file_path, "rb") as f:
                 magic = f.read(2)
-
-            if not options.no_static_strings and not options.functions:
-                floss_logger.info("Extracting static strings...")
-                print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
-
-            if options.no_decoded_strings and options.no_stack_strings:
-                # we are done
-                return 0
 
             if magic not in SUPPORTED_FILE_MAGIC:
                 floss_logger.error("FLOSS currently supports the following formats for string decoding and stackstrings: PE\n"
