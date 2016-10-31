@@ -26,3 +26,4 @@ def removeStackMemory(emu):
             emu.stack_map_base = None
             return
     raise Exception  # STACK_MEM_NAME not in memory map
+
