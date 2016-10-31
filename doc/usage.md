@@ -24,7 +24,7 @@ The default mode for FLOSS is to extract the following string types from an exec
 - obfuscated strings
 - stackstrings
 
-See the section on [Shellcode analysis](#shellcode) below on how to analyze binary files
+See the section on [Shellcode analysis](#shellcode) below on how to analyze raw binary files
 containing shellcode.
 
 By default FLOSS uses a minimum string length of four.
@@ -201,7 +201,7 @@ Manipulating the plugin list may be useful during the development
 ## <a name="shellcode"></a>Shellcode analysis options
 
 Malicious shellcode often times contains obfuscated strings and/or stackstrings.
-FLOSS can analyze binary files containing shellcode via the `-s` switch. All
+FLOSS can analyze raw binary files containing shellcode via the `-s` switch. All
 options mentioned above can also be applied when analyzing shellcode.
 
     floss.exe -s malware.bin

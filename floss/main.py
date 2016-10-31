@@ -125,8 +125,8 @@ def make_parser():
     parser.add_option("--save-workspace", dest="save_workspace",
                       help="save vivisect .viv workspace file in current directory", action="store_true")
 
-    shellcode_group = OptionGroup(parser, "Shellcode options", "Analyze BLOB containing shellcode")
-    shellcode_group.add_option("-s", "--shellcode", dest="analyze_shellcode", help="analyze shellcode",
+    shellcode_group = OptionGroup(parser, "Shellcode options", "Analyze raw binary file containing shellcode")
+    shellcode_group.add_option("-s", "--shellcode", dest="is_shellcode", help="analyze shellcode",
                       action="store_true")
     shellcode_group.add_option("-e", "--shellcode_ep", dest="shellcode_entry_point",
                       help="shellcode entry point", type="string")
@@ -711,7 +711,7 @@ def main(argv=None):
             # we are done
             return 0
 
-    if options.analyze_shellcode:
+    if options.is_shellcode:
         shellcode_entry_point = 0
         if options.shellcode_entry_point:
             shellcode_entry_point = int(options.shellcode_entry_point, 0x10)
