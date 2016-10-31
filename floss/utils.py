@@ -9,7 +9,7 @@ def makeEmulator(vw):
     """
     create an emulator using consistent settings.
     """
-    emu = vw.getEmulator(logwrite=True, taintbyte='\x90')
+    emu = vw.getEmulator(logwrite=True)
     removeStackMemory(emu)
     emu.initStackMemory(stacksize=int(0.5 * ONE_MB))
     emu.setStackCounter(emu.getStackCounter() - int(0.25 * ONE_MB))
