@@ -115,7 +115,14 @@ Specify functions by using their hex-encoded virtual address.
     floss.exe --functions=0x401000,0x402000 malware.bin
 
 
-### Generate annotation scripts (`-i` and `-r`)
+### Save vivisect workspace (`--save-workspace`)
+
+Save the vivisect .viv workspace file to the current directory. Run
+FLOSS on a .viv workspace file to save the time it takes to generate
+the workspace.
+
+
+### Generate annotation scripts (`-i`, `-r`, and `--x64dbg`)
 
 FLOSS can generate an IDA Pro Python script that will
  annotate the idb database of the malware sample with
@@ -134,6 +141,10 @@ or `--radare` switch.
     floss.exe -r myr2script malware.bin
     floss.exe --radare=myr2script malware.bin
 
+To create a x64dbg database/json file to annotate the decoded strings
+in x64dbg, use the `--x64dbg` switch.
+
+    floss.exe --x64dbg=myx64dbgdatabase malware.bin
 
 ### Verbose and debug modes (`-v`/`-d`)
 
