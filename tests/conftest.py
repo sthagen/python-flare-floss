@@ -4,7 +4,6 @@ import pytest
 
 import viv_utils
 
-import footer  # TODO remove
 import floss.main as floss_main
 import floss.identification_manager as im
 import floss.stackstrings as stackstrings
@@ -89,11 +88,7 @@ class FLOSSTest(pytest.Item):
         self.filename = filename
 
     def _test_strings(self, test_path):
-        if footer.has_footer(test_path):
-            expected_strings = set(footer.read_footer(test_path)["all"])
-        else:
-            expected_strings = set(self.spec["Decoded strings"])
-
+        expected_strings = set(self.spec["Decoded strings"])
         if not expected_strings:
             return
 
@@ -111,13 +106,10 @@ class FLOSSTest(pytest.Item):
             raise FLOSSStringsNotExtracted(expected_strings, found_strings)
 
     def _test_detection(self, test_path):
-        if footer.has_footer(test_path):
-            expected_functions = set(footer.read_footer(test_path).keys()) - set("all")
-        else:
-            try:
-                expected_functions = set(self.spec["Decoding routines"][self.platform][self.arch])
-            except KeyError:
-                expected_functions = set([])
+        try:
+            expected_functions = set(self.spec["Decoding routines"][self.platform][self.arch])
+        except KeyError:
+            expected_functions = set([])
 
         if not expected_functions:
             return
