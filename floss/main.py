@@ -129,6 +129,15 @@ def make_parser():
     parser.add_option("--save-workspace", dest="save_workspace",
                       help="save vivisect .viv workspace file in current directory", action="store_true")
 
+    shellcode_group = OptionGroup(parser, "Shellcode options", "Analyze raw binary file containing shellcode")
+    shellcode_group.add_option("-s", "--shellcode", dest="is_shellcode", help="analyze shellcode",
+                      action="store_true")
+    shellcode_group.add_option("-e", "--shellcode_ep", dest="shellcode_entry_point",
+                      help="shellcode entry point", type="string")
+    shellcode_group.add_option("-b", "--shellcode_base", dest="shellcode_base",
+                      help="shellcode base offset", type="string")
+    parser.add_option_group(shellcode_group)
+
     extraction_group = OptionGroup(parser, "Extraction options", "Specify which string types FLOSS shows from a file, "
                                                                  "by default all types are shown")
     extraction_group.add_option("--no-static-strings", dest="no_static_strings", action="store_true",
@@ -701,10 +710,13 @@ def main(argv=None):
     sample_file_path = parse_sample_file_path(parser, args)
     min_length = parse_min_length_option(options.min_length)
 
-    if not is_workspace_file(sample_file_path):
-        with open(sample_file_path, "rb") as f:
-            magic = f.read(2)
+    # expert profile settings
+    if options.expert:
+        options.save_workspace = True
+        options.group_functions = True
+        options.quiet = False
 
+    if not is_workspace_file(sample_file_path):
         if not options.no_static_strings and not options.functions:
             floss_logger.info("Extracting static strings...")
             print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
@@ -713,29 +725,49 @@ def main(argv=None):
             # we are done
             return 0
 
-        if magic not in SUPPORTED_FILE_MAGIC:
-            floss_logger.error("FLOSS currently supports the following formats for string decoding and stackstrings: PE")
-            return 1
+    if options.is_shellcode:
+        shellcode_entry_point = 0
+        if options.shellcode_entry_point:
+            shellcode_entry_point = int(options.shellcode_entry_point, 0x10)
 
-        if os.path.getsize(sample_file_path) > MAX_FILE_SIZE:
-            floss_logger.error("FLOSS cannot extract obfuscated strings from files larger than %d bytes" % (MAX_FILE_SIZE))
-            return 1
+        shellcode_base = 0
+        if options.shellcode_base:
+            shellcode_base = int(options.shellcode_base, 0x10)
 
-        floss_logger.info("Generating vivisect workspace...")
+        try:
+            floss_logger.info("Generating vivisect workspace for shellcode, base: 0x%x, entry point: 0x%x...", shellcode_base,
+                              shellcode_entry_point)
+            with open(sample_file_path, "rb") as f:
+                shellcode_data = f.read()
+            vw = viv_utils.getShellcodeWorkspace(shellcode_data, "i386", shellcode_base, shellcode_entry_point,
+                                                 options.save_workspace, sample_file_path)
+        except Exception, e:
+            floss_logger.error("Vivisect failed to load the input file: {0}".format(e.message),
+                               exc_info=options.verbose)
+            return 1
     else:
-        floss_logger.info("Loading existing vivisect workspace...")
+        if not is_workspace_file(sample_file_path):
+            with open(sample_file_path, "rb") as f:
+                magic = f.read(2)
 
-    # expert profile settings
-    if options.expert:
-        options.save_workspace = True
-        options.group_functions = True
-        options.quiet = False
+            if magic not in SUPPORTED_FILE_MAGIC:
+                floss_logger.error("FLOSS currently supports the following formats for string decoding and stackstrings: PE\n"
+                                   "You can analyze shellcode using the -s switch. See the help (-h) for more information.")
+                return 1
 
-    try:
-        vw = viv_utils.getWorkspace(sample_file_path, should_save=options.save_workspace)
-    except Exception, e:
-        floss_logger.error("Vivisect failed to load the input file: {0}".format(e.message), exc_info=options.verbose)
-        return 1
+            if os.path.getsize(sample_file_path) > MAX_FILE_SIZE:
+                floss_logger.error("FLOSS cannot extract obfuscated strings from files larger than %d bytes" % (MAX_FILE_SIZE))
+                return 1
+
+            floss_logger.info("Generating vivisect workspace...")
+        else:
+            floss_logger.info("Loading existing vivisect workspace...")
+
+        try:
+            vw = viv_utils.getWorkspace(sample_file_path, should_save=options.save_workspace)
+        except Exception, e:
+            floss_logger.error("Vivisect failed to load the input file: {0}".format(e.message), exc_info=options.verbose)
+            return 1
 
     selected_functions = select_functions(vw, options.functions)
     floss_logger.debug("Selected the following functions: %s", ", ".join(map(hex, selected_functions)))
