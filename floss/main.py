@@ -121,13 +121,13 @@ def make_parser():
 
     parser.add_option("-n", "--minimum-length", dest="min_length",
                       help="minimum string length (default is %d)" % MIN_STRING_LENGTH_DEFAULT)
-    parser.add_option("-m", "--show-metainformation", dest="show_metainfo",
-                      help="display vivisect workspace meta information", action="store_true")
     parser.add_option("-f", "--functions", dest="functions",
                       help="only analyze the specified functions (comma-separated)",
                       type="string")
     parser.add_option("--save-workspace", dest="save_workspace",
                       help="save vivisect .viv workspace file in current directory", action="store_true")
+    parser.add_option("-m", "--show-metainfo", dest="should_show_metainfo",
+                      help="display vivisect workspace meta information", action="store_true")
 
     shellcode_group = OptionGroup(parser, "Shellcode options", "Analyze raw binary file containing shellcode")
     shellcode_group.add_option("-s", "--shellcode", dest="is_shellcode", help="analyze shellcode",
@@ -776,7 +776,7 @@ def main(argv=None):
     floss_logger.debug("Selected the following plugins: %s", ", ".join(map(str, selected_plugin_names)))
     selected_plugins = filter(lambda p: str(p) in selected_plugin_names, get_all_plugins())
 
-    if options.show_metainfo:
+    if options.should_show_metainfo:
         meta_functions = None
         if options.functions:
             meta_functions = selected_functions
