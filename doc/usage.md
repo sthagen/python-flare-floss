@@ -17,15 +17,17 @@ Here's a summary of the command line flags and options you
  can provide to FLOSS to modify its behavior.
 
 
-### Extract obfuscated strings (default mode)
+### Extract static, obfuscated, and stack strings (default mode)
 
 The default mode for FLOSS is to extract the following string types from an executable file:
 - static ASCII and UTF16LE strings
 - obfuscated strings
 - stackstrings
 
-By default FLOSS uses a minimum string length of four.
+See the section on [Shellcode analysis](#shellcode) below on how to analyze binary files
+containing shellcode.
 
+By default FLOSS uses a minimum string length of four.
 
     floss.exe malware.bin
 
@@ -45,6 +47,7 @@ Analogous, you can disable the extraction of obfuscated strings or stackstrings.
 
     floss.exe --no-decoded-strings malware.bin
     floss.exe --no-stack-strings malware.bin
+
 
 ### Quiet mode (`-q`)
 
@@ -72,7 +75,6 @@ Supplying a larger minimum length reduces the chances
  of identifying random data that appears to be ASCII;
  however, FLOSS may then pass over short legitimate
  human-readable strings
-
 
     floss.exe -n 10 malware.bin
     floss.exe --minimum-length=10 malware.bin
@@ -146,6 +148,7 @@ in x64dbg, use the `--x64dbg` switch.
 
     floss.exe --x64dbg=myx64dbgdatabase malware.bin
 
+
 ### Verbose and debug modes (`-v`/`-d`)
 
 If FLOSS seems to encounter any issues, try re-running the program
@@ -157,7 +160,6 @@ This provides additional context if FLOSS encounters an
  exception or appears to be running slowly.
 The verbose mode enables a moderate amount of logging output,
  while the debug mode enables a large amount of logging output.
-
 
      floss.exe -v malware.bin
      floss.exe --verbose malware.bin
@@ -194,3 +196,23 @@ Manipulating the plugin list may be useful during the development
 
     floss.exe -p XORPlugin,ShiftPlugin malware.bin
     floss.exe --plugins=XORPlugin,ShiftPlugin malware.bin
+
+
+## <a name="shellcode"></a>Shellcode analysis options
+
+Malicious shellcode often times contains obfuscated strings and/or stackstrings.
+FLOSS can analyze binary files containing shellcode via the `-s` switch. All
+options mentioned above can also be applied when analyzing shellcode.
+
+    floss.exe -s malware.bin
+
+If you want to specify a base address for the shellcode, use the the `-b` or
+`--shellcode_base` switch.
+
+    floss.exe -s malware.bin -b 0x1000000
+
+You can specify an entry point for the shellcode with the `-e` or `--shellcode_ep`
+option. Although vivisect does a good job identifying code, providing an entry point
+might improve code analysis.
+
+    floss.exe -s malware.bin -b 0x1000000 -e 0x100
