@@ -329,6 +329,21 @@ def is_workspace_file(sample_file_path):
     return False
 
 
+def is_supported_file_type(sample_file_path):
+    """
+    Return if FLOSS supports the input file type, based on header bytes
+    :param sample_file_path:
+    :return: True if file type is supported, False otherwise
+    """
+    with open(sample_file_path, "rb") as f:
+        magic = f.read(2)
+
+    if magic in SUPPORTED_FILE_MAGIC:
+        return True
+    else:
+        return False
+
+
 def print_identification_results(sample_file_path, decoder_results):
     """
     Print results of string decoding routine identification phase.
@@ -711,7 +726,10 @@ def main(argv=None):
             # we are done
             return 0
 
+    is_supported_file = is_supported_file_type(sample_file_path)
     if options.is_shellcode:
+        if is_supported_file:
+            floss_logger.warning("Analyzing supported file type as shellcode. This will likely yield weaker analysis.")
         shellcode_entry_point = 0
         if options.shellcode_entry_point:
             shellcode_entry_point = int(options.shellcode_entry_point, 0x10)
@@ -733,10 +751,7 @@ def main(argv=None):
             return 1
     else:
         if not is_workspace_file(sample_file_path):
-            with open(sample_file_path, "rb") as f:
-                magic = f.read(2)
-
-            if magic not in SUPPORTED_FILE_MAGIC:
+            if not is_supported_file:
                 floss_logger.error("FLOSS currently supports the following formats for string decoding and stackstrings: PE\n"
                                    "You can analyze shellcode using the -s switch. See the help (-h) for more information.")
                 return 1
