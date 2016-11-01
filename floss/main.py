@@ -679,13 +679,12 @@ def print_stack_strings(extracted_strings, min_length, quiet=False, expert=False
 
 
 def print_file_meta_info(vw, selected_functions):
-    print("\nFile information"
-          "\n----------------")
+    print("\nVivisect workspace analysis information")
     try:
         for k, v in get_vivisect_meta_info(vw, selected_functions).iteritems():
-            print("%s: %s" % (k, v))
+            print("%s: %s" % (k, v or "N/A"))  # display N/A if value is None
     except Exception, e:
-        floss_logger.error("Failed to print meta information: {0}".format(e.message))
+        floss_logger.error("Failed to print analysis information: {0}".format(e.message))
 
 
 def main(argv=None):
@@ -721,7 +720,7 @@ def main(argv=None):
             floss_logger.info("Extracting static strings...")
             print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
 
-        if options.no_decoded_strings and options.no_stack_strings:
+        if options.no_decoded_strings and options.no_stack_strings and not options.should_show_metainfo:
             # we are done
             return 0
 
