@@ -27,6 +27,8 @@ from interfaces import DecodingRoutineIdentifier
 from decoding_manager import LocationType
 from base64 import b64encode
 
+from utils import get_vivisect_meta_info
+
 floss_logger = logging.getLogger("floss")
 
 
@@ -124,6 +126,8 @@ def make_parser():
                       type="string")
     parser.add_option("--save-workspace", dest="save_workspace",
                       help="save vivisect .viv workspace file in current directory", action="store_true")
+    parser.add_option("-m", "--show-metainfo", dest="should_show_metainfo",
+                      help="display vivisect workspace meta information", action="store_true")
 
     shellcode_group = OptionGroup(parser, "Shellcode options", "Analyze raw binary file containing shellcode")
     shellcode_group.add_option("-s", "--shellcode", dest="is_shellcode", help="analyze shellcode",
@@ -689,6 +693,15 @@ def print_stack_strings(extracted_strings, min_length, quiet=False, expert=False
             headers=["Function", "Frame Offset", "String"]))
 
 
+def print_file_meta_info(vw, selected_functions):
+    print("\nVivisect workspace analysis information")
+    try:
+        for k, v in get_vivisect_meta_info(vw, selected_functions).iteritems():
+            print("%s: %s" % (k, v or "N/A"))  # display N/A if value is None
+    except Exception, e:
+        floss_logger.error("Failed to print analysis information: {0}".format(e.message))
+
+
 def main(argv=None):
     """
     :param argv: optional command line arguments, like sys.argv[1:]
@@ -722,7 +735,7 @@ def main(argv=None):
             floss_logger.info("Extracting static strings...")
             print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
 
-        if options.no_decoded_strings and options.no_stack_strings:
+        if options.no_decoded_strings and options.no_stack_strings and not options.should_show_metainfo:
             # we are done
             return 0
 
@@ -776,6 +789,12 @@ def main(argv=None):
     selected_plugin_names = select_plugins(options.plugins)
     floss_logger.debug("Selected the following plugins: %s", ", ".join(map(str, selected_plugin_names)))
     selected_plugins = filter(lambda p: str(p) in selected_plugin_names, get_all_plugins())
+
+    if options.should_show_metainfo:
+        meta_functions = None
+        if options.functions:
+            meta_functions = selected_functions
+        print_file_meta_info(vw, meta_functions)
 
     time0 = time()
 
