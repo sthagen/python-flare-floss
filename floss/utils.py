@@ -34,17 +34,26 @@ def removeStackMemory(emu):
 def get_vivisect_meta_info(vw, selected_functions):
     info = OrderedDict()
     entry_points = vw.getEntryPoints()
-    basename = vw.getFileByVa(entry_points[0])
+    basename = None
+    if entry_points:
+        basename = vw.getFileByVa(entry_points[0])
     if basename:
-        info["Version"] = vw.getFileMeta(basename, 'Version')
-        info["MD5 Sum"] = vw.getFileMeta(basename, 'md5sum')
+        version = vw.getFileMeta(basename, 'Version')
+        md5sum = vw.getFileMeta(basename, 'md5sum')
+        baseva = hex(vw.getFileMeta(basename, 'imagebase'))
+    else:
+        version = "N/A"
+        md5sum = "N/A"
+        baseva = "N/A"
+
+    info["Version"] = version
+    info["MD5 Sum"] = md5sum
     info["Format"] = vw.getMeta("Format")
     info["Architecture"] = vw.getMeta("Architecture")
     info["Platform"] = vw.getMeta("Platform")
     disc, undisc = vw.getDiscoveredInfo()
     info["Percentage of discovered executable surface area"] = "%.1f%% (%s / %s)" % (disc * 100.0 / (disc + undisc), disc, disc + undisc)
-    if basename:
-        info["Base VA"] = hex(vw.getFileMeta(basename, 'imagebase'))
+    info["Base VA"] = baseva
     info["Entry point(s)"] = ", ".join(map(hex, entry_points))
     info["Number of imports"] = len(vw.getImports())
     info["Number of exports"] = len(vw.getExports())
