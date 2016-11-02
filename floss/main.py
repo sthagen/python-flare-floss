@@ -699,7 +699,7 @@ def print_file_meta_info(vw, selected_functions):
         for k, v in get_vivisect_meta_info(vw, selected_functions).iteritems():
             print("%s: %s" % (k, v or "N/A"))  # display N/A if value is None
     except Exception, e:
-        floss_logger.error("Failed to print analysis information: {0}".format(e.message))
+        floss_logger.error("Failed to print vivisect analysis information: {0}".format(e.message))
 
 
 def main(argv=None):
@@ -776,6 +776,9 @@ def main(argv=None):
             floss_logger.info("Generating vivisect workspace...")
         else:
             floss_logger.info("Loading existing vivisect workspace...")
+
+        if options.shellcode_base or options.shellcode_entry_point:
+            floss_logger.warning("Entry point and base offset only apply in conjunction with the -s switch when analyzing raw binary files.")
 
         try:
             vw = viv_utils.getWorkspace(sample_file_path, should_save=options.save_workspace)
