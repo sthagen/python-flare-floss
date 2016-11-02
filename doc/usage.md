@@ -124,6 +124,16 @@ FLOSS on a .viv workspace file to save the time it takes to generate
 the workspace.
 
 
+### Display vivisect workspace meta information (`-m`)
+
+You can display basic meta information about the generated vivisect
+workspace using the `-m` or `--show-metainfo` option. The information
+includes details such as architecture, discovered executable surface area,
+and number of discovered functions. In conjunction with the `-f` or
+`--functions` option FLOSS will display meta information about the selected
+functions.
+
+
 ### Generate annotation scripts (`-i`, `-r`, and `--x64dbg`)
 
 FLOSS can generate an IDA Pro Python script that will
