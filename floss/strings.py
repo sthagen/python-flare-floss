@@ -1,3 +1,5 @@
+# Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
+
 import re
 from collections import namedtuple
 
