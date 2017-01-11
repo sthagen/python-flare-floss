@@ -1,3 +1,5 @@
+# Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
+
 import operator
 
 import viv_utils

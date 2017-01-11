@@ -1,3 +1,5 @@
+# Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
+
 import pytest
 
 import envi.memory

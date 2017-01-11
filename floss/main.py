@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
+# Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
+
 from __future__ import print_function
 import os
 import sys
