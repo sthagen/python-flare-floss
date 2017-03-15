@@ -239,7 +239,7 @@ class MallocHeap(RtlAllocateHeapHook):
 
 class MemcpyHook(viv_utils.emulator_drivers.Hook):
     '''
-    Hook and handle calls to memcpy.
+    Hook and handle calls to memcpy and memmove.
     '''
     MAX_COPY_SIZE = 1024 * 1024 * 32  # don't attempt to copy more than 32MB, or something is wrong
 
@@ -247,7 +247,8 @@ class MemcpyHook(viv_utils.emulator_drivers.Hook):
         super(MemcpyHook, self).__init__(*args, **kwargs)
 
     def hook(self, callname, driver, callconv, api, argv):
-        if callname == "msvcrt.memcpy":
+        if callname == "msvcrt.memcpy" or \
+           callname == "msvcrt.memmove":
             emu = driver
             dst, src, count = argv
             if count > self.MAX_COPY_SIZE:

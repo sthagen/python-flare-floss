@@ -30,6 +30,7 @@ from base64 import b64encode
 
 from utils import get_vivisect_meta_info
 
+
 floss_logger = logging.getLogger("floss")
 
 
