@@ -53,7 +53,6 @@ def get_map_size(emu):
     return size
 
 
-
 class MapsTooLargeError(Exception):
     pass
 
@@ -65,7 +64,7 @@ def make_snapshot(emu):
     :rtype: Snapshot
     '''
     if get_map_size(emu) > MAX_MAPS_SIZE:
-        logger.debug('emulator mapped too much memory: 0x%x', get_map_size(emu))
+        floss_logger.debug('emulator mapped too much memory: 0x%x', get_map_size(emu))
         raise MapsTooLargeError()
     return Snapshot(emu.getMemorySnap(), emu.getStackCounter(), emu.getProgramCounter())
 
@@ -96,7 +95,7 @@ class DeltaCollectorHook(viv_utils.emulator_drivers.Hook):
             try:
                 self.deltas.append(Delta(self._pre_snap, make_snapshot(driver._emu)))
             except MapsTooLargeError:
-                logger.debug('despite call to import %s, maps too large, not extracting strings', callname)
+                floss_logger.debug('despite call to import %s, maps too large, not extracting strings', callname)
                 pass
 
 
@@ -130,7 +129,7 @@ def emulate_function(emu, function_index, fva, return_address, max_instruction_c
     try:
         pre_snap = make_snapshot(emu)
     except MapsTooLargeError:
-        logger.warn('initial snapshot mapped too much memory, can\'t extract strings')
+        floss_logger.warn('initial snapshot mapped too much memory, can\'t extract strings')
         return []
 
     delta_collector = DeltaCollectorHook(pre_snap)
@@ -156,7 +155,7 @@ def emulate_function(emu, function_index, fva, return_address, max_instruction_c
     except envi.BreakpointHit:
         floss_logger.debug("vivisect encountered an unexpected emulation breakpoint. will continue processing.",
                            exc_info=True)
-    except viv_utils.emulator_drivers.StopEmulation as e:
+    except viv_utils.emulator_drivers.StopEmulation:
         pass
     except Exception:
         floss_logger.debug("vivisect encountered an unexpected exception. will continue processing.",
@@ -168,7 +167,7 @@ def emulate_function(emu, function_index, fva, return_address, max_instruction_c
     try:
         deltas.append(Delta(pre_snap, make_snapshot(emu)))
     except MapsTooLargeError:
-        logger.debug('failed to create final snapshot, emulator mapped too much memory, skipping')
+        floss_logger.debug('failed to create final snapshot, emulator mapped too much memory, skipping')
         pass
 
     return deltas
