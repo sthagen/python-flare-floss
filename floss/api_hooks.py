@@ -1,5 +1,6 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
+import hexdump
 import contextlib
 
 import envi
