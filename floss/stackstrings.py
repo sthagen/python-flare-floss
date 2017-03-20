@@ -57,10 +57,10 @@ class CallContextMonitor(viv_utils.emulator_drivers.Monitor):
         stack_buf = emu.readMemory(stack_top, stack_size)
         self.ctxs.append(CallContext(op.va, stack_top, stack_bottom, stack_buf))
 
-    # def prehook(self, emu, op, startpc):
+    def prehook(self, emu, op, startpc):
         # try to extract stackstring whenever deref operand is moved
-        # if op.mnem == "mov" and isinstance(op.getOperands()[1], envi.archs.i386.disasm.i386SibOper):
-        #     self.apicall(emu, op, startpc, None, None)
+        if op.mnem == "mov" and isinstance(op.getOperands()[1], envi.archs.i386.disasm.i386SibOper):
+            self.apicall(emu, op, startpc, None, None)
 
 
 def extract_call_contexts(vw, fva):
