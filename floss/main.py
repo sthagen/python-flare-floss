@@ -1,17 +1,18 @@
 #!/usr/bin/env python
 # encoding: utf-8
+# Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
+
 from __future__ import print_function
 import os
 import sys
 import mmap
+import json
 import string
 import logging
-import json
 from time import time
 from optparse import OptionParser, OptionGroup
 
 import tabulate
-import plugnplay
 import viv_utils
 
 import version
@@ -28,6 +29,7 @@ from decoding_manager import LocationType
 from base64 import b64encode
 
 from utils import get_vivisect_meta_info
+
 
 floss_logger = logging.getLogger("floss")
 
@@ -117,7 +119,8 @@ def get_all_plugins():
 def make_parser():
     usage_message = "%prog [options] FILEPATH"
 
-    parser = OptionParser(usage=usage_message, version="%prog {:s}\nhttps://github.com/fireeye/flare-floss/".format(version.__version__))
+    parser = OptionParser(usage=usage_message,
+                          version="%prog {:s}\nhttps://github.com/fireeye/flare-floss/".format(version.__version__))
 
     parser.add_option("-n", "--minimum-length", dest="min_length",
                       help="minimum string length (default is %d)" % MIN_STRING_LENGTH_DEFAULT)
@@ -131,58 +134,58 @@ def make_parser():
 
     shellcode_group = OptionGroup(parser, "Shellcode options", "Analyze raw binary file containing shellcode")
     shellcode_group.add_option("-s", "--shellcode", dest="is_shellcode", help="analyze shellcode",
-                      action="store_true")
+                               action="store_true")
     shellcode_group.add_option("-e", "--shellcode_ep", dest="shellcode_entry_point",
-                      help="shellcode entry point", type="string")
+                               help="shellcode entry point", type="string")
     shellcode_group.add_option("-b", "--shellcode_base", dest="shellcode_base",
-                      help="shellcode base offset", type="string")
+                               help="shellcode base offset", type="string")
     parser.add_option_group(shellcode_group)
 
     extraction_group = OptionGroup(parser, "Extraction options", "Specify which string types FLOSS shows from a file, "
                                                                  "by default all types are shown")
     extraction_group.add_option("--no-static-strings", dest="no_static_strings", action="store_true",
-                      help="do not show static ASCII and UTF-16 strings")
+                                help="do not show static ASCII and UTF-16 strings")
     extraction_group.add_option("--no-decoded-strings", dest="no_decoded_strings", action="store_true",
-                      help="do not show decoded strings")
+                                help="do not show decoded strings")
     extraction_group.add_option("--no-stack-strings", dest="no_stack_strings", action="store_true",
-                      help="do not show stackstrings")
+                                help="do not show stackstrings")
     parser.add_option_group(extraction_group)
 
     format_group = OptionGroup(parser, "Format Options")
     format_group.add_option("-g", "--group", dest="group_functions",
-                      help="group output by virtual address of decoding functions",
-                      action="store_true")
+                            help="group output by virtual address of decoding functions",
+                            action="store_true")
     format_group.add_option("-q", "--quiet", dest="quiet", action="store_true",
-                  help="suppress headers and formatting to print only extracted strings")
+                            help="suppress headers and formatting to print only extracted strings")
     parser.add_option_group(format_group)
 
     logging_group = OptionGroup(parser, "Logging Options")
     logging_group.add_option("-v", "--verbose", dest="verbose",
-                      help="show verbose messages and warnings", action="store_true")
+                             help="show verbose messages and warnings", action="store_true")
     logging_group.add_option("-d", "--debug", dest="debug",
-                      help="show all trace messages", action="store_true")
+                             help="show all trace messages", action="store_true")
     parser.add_option_group(logging_group)
 
     output_group = OptionGroup(parser, "Script output options")
     output_group.add_option("-i", "--ida", dest="ida_python_file",
-                      help="create an IDAPython script to annotate the decoded strings in an IDB file")
+                            help="create an IDAPython script to annotate the decoded strings in an IDB file")
     output_group.add_option("--x64dbg", dest="x64dbg_database_file",
-                      help="create a x64dbg database/json file to annotate the decoded strings in x64dbg")
+                            help="create a x64dbg database/json file to annotate the decoded strings in x64dbg")
     output_group.add_option("-r", "--radare", dest="radare2_script_file",
-                          help="create a radare2 script to annotate the decoded strings in an .r2 file")
+                            help="create a radare2 script to annotate the decoded strings in an .r2 file")
     parser.add_option_group(output_group)
 
     identification_group = OptionGroup(parser, "Identification Options")
     identification_group.add_option("-p", "--plugins", dest="plugins",
-                      help="apply the specified identification plugins only (comma-separated)")
+                                    help="apply the specified identification plugins only (comma-separated)")
     identification_group.add_option("-l", "--list-plugins", dest="list_plugins",
-                      help="list all available identification plugins and exit",
-                      action="store_true")
+                                    help="list all available identification plugins and exit",
+                                    action="store_true")
     parser.add_option_group(identification_group)
 
     profile_group = OptionGroup(parser, "FLOSS Profiles")
     profile_group.add_option("-x", "--expert", dest="expert",
-                      help="show duplicate offset/string combinations, save workspace, group function output",
+                             help="show duplicate offset/string combinations, save workspace, group function output",
                              action="store_true")
     parser.add_option_group(profile_group)
 
@@ -417,13 +420,14 @@ def print_decoded_strings(decoded_strings, quiet=False, expert=False):
         if len(ss) > 0:
             print(tabulate.tabulate(ss, headers=["Offset", "Called At", "String"]))
 
+
 def create_x64dbg_database_content(sample_file_path, imagebase, decoded_strings):
     """
     Create x64dbg database/json file contents for file annotations.
     :param sample_file_path: input file path
     :param imagebase: input files image base to allow calculation of rva
     :param decoded_strings: list of decoded strings ([DecodedString])
-    :return: json needed to annotate a binary in x64dbg 
+    :return: json needed to annotate a binary in x64dbg
     """
     export = {
         "comments": []
@@ -455,7 +459,8 @@ def create_x64dbg_database_content(sample_file_path, imagebase, decoded_strings)
         }
         export["comments"].append(comment)
 
-    return json.dumps(export,indent=1)
+    return json.dumps(export, indent=1)
+
 
 def create_ida_script_content(sample_file_path, decoded_strings, stack_strings):
     """
@@ -535,6 +540,7 @@ if __name__ == "__main__":
 """ % (len(decoded_strings) + ss_len, sample_file_path, "\n    ".join(main_commands))
     return script_content
 
+
 def create_r2_script_content(sample_file_path, decoded_strings, stack_strings):
     """
     Create r2script contents for r2 session annotations.
@@ -569,6 +575,7 @@ def create_r2_script_content(sample_file_path, decoded_strings, stack_strings):
 
     return "\n".join(main_commands)
 
+
 def create_x64dbg_database(sample_file_path, x64dbg_database_file, imagebase, decoded_strings):
     """
     Create an x64dbg database to annotate an executable with decoded strings.
@@ -578,14 +585,14 @@ def create_x64dbg_database(sample_file_path, x64dbg_database_file, imagebase, de
     :param decoded_strings: list of decoded strings ([DecodedString])
     """
     script_content = create_x64dbg_database_content(sample_file_path, imagebase, decoded_strings)
-    x64dbg_python_file = os.path.abspath(x64dbg_database_file)
     with open(x64dbg_database_file, 'wb') as f:
         try:
             f.write(script_content)
             print("Wrote x64dbg database to %s\n" % x64dbg_database_file)
         except Exception as e:
             raise e
-    
+
+
 def create_ida_script(sample_file_path, ida_python_file, decoded_strings, stack_strings):
     """
     Create an IDAPython script to annotate an IDB file with decoded strings.
@@ -604,6 +611,7 @@ def create_ida_script(sample_file_path, ida_python_file, decoded_strings, stack_
             raise e
     # TODO return, catch exception in main()
 
+
 def create_r2_script(sample_file_path, r2_script_file, decoded_strings, stack_strings):
     """
     Create an r2script to annotate r2 session with decoded strings.
@@ -621,6 +629,7 @@ def create_r2_script(sample_file_path, r2_script_file, decoded_strings, stack_st
         except Exception as e:
             raise e
     # TODO return, catch exception in main()
+
 
 def print_static_strings(path, min_length, quiet=False):
     """
@@ -824,12 +833,12 @@ def main(argv=None):
         print_stack_strings(stack_strings, min_length, quiet=options.quiet, expert=options.expert)
     else:
         stack_strings = []
-    
+
     if options.x64dbg_database_file:
         imagebase = vw.filemeta.values()[0]['imagebase']
         floss_logger.info("Creating x64dbg database...")
         create_x64dbg_database(sample_file_path, options.x64dbg_database_file, imagebase, decoded_strings)
-    
+
     if options.ida_python_file:
         floss_logger.info("Creating IDA script...")
         create_ida_script(sample_file_path, options.ida_python_file, decoded_strings, stack_strings)

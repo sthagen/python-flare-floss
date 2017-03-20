@@ -1,3 +1,6 @@
+# Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
+
+import hexdump
 import contextlib
 
 import envi
@@ -45,7 +48,9 @@ class ApiMonitor(viv_utils.emulator_drivers.Monitor):
 
         return_address = self.getStackValue(emu, -4)
         if return_address not in return_addresses:
-            self._logger.debug("Return address 0x%08X is invalid", return_address)
+            self._logger.debug("Return address 0x%08X is invalid, expected one of: %s",
+                               return_address,
+                               ', '.join(map(hex, return_addresses)))
             self._fix_return(emu, return_address, return_addresses)
             # TODO return, handle Exception
         else:
@@ -237,7 +242,7 @@ class MallocHeap(RtlAllocateHeapHook):
 
 class MemcpyHook(viv_utils.emulator_drivers.Hook):
     '''
-    Hook and handle calls to memcpy.
+    Hook and handle calls to memcpy and memmove.
     '''
     MAX_COPY_SIZE = 1024 * 1024 * 32  # don't attempt to copy more than 32MB, or something is wrong
 
@@ -245,7 +250,8 @@ class MemcpyHook(viv_utils.emulator_drivers.Hook):
         super(MemcpyHook, self).__init__(*args, **kwargs)
 
     def hook(self, callname, driver, callconv, api, argv):
-        if callname == "msvcrt.memcpy":
+        if callname == "msvcrt.memcpy" or \
+           callname == "msvcrt.memmove":
             emu = driver
             dst, src, count = argv
             if count > self.MAX_COPY_SIZE:
@@ -256,6 +262,26 @@ class MemcpyHook(viv_utils.emulator_drivers.Hook):
             callconv.execCallReturn(emu, 0x0, len(argv))
             return True
         raise viv_utils.emulator_drivers.UnsupportedFunction()
+
+
+def readStringAtRva(emu, rva, maxsize=None):
+    """
+    Borrowed from vivisect/PE/__init__.py
+    :param emu: emulator
+    :param rva: virtual address of string
+    :param maxsize: maxsize of string
+    :return: the read string
+    """
+    ret = []
+    while True:
+        if maxsize and maxsize <= len(ret):
+            break
+        x = emu.readMemory(rva, 1)
+        if x == '\x00' or x is None:
+            break
+        ret.append(x)
+        rva += 1
+    return ''.join(ret)
 
 
 class StrlenHook(viv_utils.emulator_drivers.Hook):
@@ -270,29 +296,68 @@ class StrlenHook(viv_utils.emulator_drivers.Hook):
         if callname and callname.lower() in ["msvcrt.strlen", "kernel32.lstrlena"]:
             emu = driver
             string_va = argv[0]
-            s = self.readStringAtRva(emu, string_va, 256)
+            s = readStringAtRva(emu, string_va, 256)
             callconv.execCallReturn(emu, len(s), len(argv))
             return True
         raise viv_utils.emulator_drivers.UnsupportedFunction()
 
-    def readStringAtRva(self, emu, rva, maxsize=None):
-        """
-        Borrowed from vivisect/PE/__init__.py
-        :param emu: emulator
-        :param rva: virtual address of string
-        :param maxsize: maxsize of string
-        :return: the read string
-        """
-        ret = ''
-        while True:
-            if maxsize and maxsize <= len(ret):
-                break
-            x = emu.readMemory(rva, 1)
-            if x == '\x00' or x is None:
-                break
-            ret += x
-            rva += 1
-        return ret
+
+class StrnlenHook(viv_utils.emulator_drivers.Hook):
+    '''
+    Hook and handle calls to strnlen.
+    '''
+    MAX_COPY_SIZE = 1024 * 1024 * 32
+
+    def __init__(self, *args, **kwargs):
+        super(StrnlenHook, self).__init__(*args, **kwargs)
+
+    def hook(self, callname, driver, callconv, api, argv):
+        if callname == "msvcrt.strnlen":
+            emu = driver
+            string_va, maxlen = argv
+            if maxlen > self.MAX_COPY_SIZE:
+                self.d('unusually large strnlen, truncating to 32MB: 0x%x', maxlen)
+                maxlen = self.MAX_COPY_SIZE
+            s = readStringAtRva(emu, string_va, maxsize=maxlen)
+            slen = len(s.partition('\x00')[0])
+            callconv.execCallReturn(emu, slen, len(argv))
+            return True
+
+        raise viv_utils.emulator_drivers.UnsupportedFunction()
+
+
+class StrncmpHook(viv_utils.emulator_drivers.Hook):
+    '''
+    Hook and handle calls to strncmp.
+    '''
+    MAX_COPY_SIZE = 1024 * 1024 * 32
+
+    def __init__(self, *args, **kwargs):
+        super(StrncmpHook, self).__init__(*args, **kwargs)
+
+    def hook(self, callname, driver, callconv, api, argv):
+        if callname == "msvcrt.strncmp":
+            emu = driver
+            s1va, s2va, num = argv
+            if num > self.MAX_COPY_SIZE:
+                self.d('unusually large strnlen, truncating to 32MB: 0x%x', num)
+                num = self.MAX_COPY_SIZE
+
+            s1 = readStringAtRva(emu, s1va, maxsize=num)
+            s2 = readStringAtRva(emu, s2va, maxsize=num)
+
+            self.d('s1: %s', hexdump.hexdump(s1, result="return"))
+            self.d('s2: %s', hexdump.hexdump(s2, result="return"))
+
+            s1 = s1.partition('\x00')[0]
+            s2 = s2.partition('\x00')[0]
+
+            result = cmp(s1, s2)
+
+            callconv.execCallReturn(emu, result, len(argv))
+            return True
+
+        raise viv_utils.emulator_drivers.UnsupportedFunction()
 
 
 class MemchrHook(viv_utils.emulator_drivers.Hook):
@@ -340,6 +405,8 @@ DEFAULT_HOOKS = [
     MemcpyHook(),
     StrlenHook(),
     MemchrHook(),
+    StrnlenHook(),
+    StrncmpHook(),
 ]
 
 
