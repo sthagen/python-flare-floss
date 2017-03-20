@@ -55,6 +55,11 @@ class CallContextMonitor(viv_utils.emulator_drivers.Monitor):
         stack_buf = emu.readMemory(stack_top, stack_size)
         self.ctxs.append(CallContext(op.va, stack_top, stack_bottom, stack_buf))
 
+    # def prehook(self, emu, op, startpc):
+        # try to extract stackstring whenever deref operand is moved
+        # if op.mnem == "mov" and isinstance(op.getOperands()[1], envi.archs.i386.disasm.i386SibOper):
+        #     self.apicall(emu, op, startpc, None, None)
+
 
 def extract_call_contexts(vw, fva):
     emu = makeEmulator(vw)
@@ -142,6 +147,7 @@ def extract_stackstrings(vw, selected_functions):
         logger.debug('extracting stackstrings from function: 0x%x', fva)
         seen = set([])
         filter = re.compile("^p?V?A+$")
+        filter_sub = re.compile("^p?VA")  # remove string prefixes: pVA, VA
         for ctx in extract_call_contexts(vw, fva):
             logger.debug('extracting stackstrings at checkpoint: 0x%x stacksize: 0x%x', ctx.pc, ctx.init_sp - ctx.sp)
             for s in strings.extract_ascii_strings(ctx.stack_memory):
@@ -149,15 +155,18 @@ def extract_stackstrings(vw, selected_functions):
                     # ignore strings like: pVA, pVAAA, AAAA
                     # which come from vivisect uninitialized taint tracking
                     continue
-                if s.s not in seen:
+                s_stripped = re.sub(filter_sub, "", s.s)
+                if s_stripped not in seen:
                     frame_offset = (ctx.init_sp - ctx.sp) - s.offset - getPointerSize(vw)
-                    yield(StackString(fva, s.s, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
-                    seen.add(s.s)
+                    yield(StackString(fva, s_stripped, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
+                    seen.add(s_stripped)
             for s in strings.extract_unicode_strings(ctx.stack_memory):
-                if s.s == "A" * len(s.s):
-                    # ignore vivisect taint strings
+                if filter.match(s.s):
+                    # ignore strings like: pVA, pVAAA, AAAA
+                    # which come from vivisect uninitialized taint tracking
                     continue
-                if s.s not in seen:
+                s_stripped = re.sub(filter_sub, "", s.s)
+                if s_stripped not in seen:
                     frame_offset = (ctx.init_sp - ctx.sp) - s.offset - getPointerSize(vw)
-                    yield(StackString(fva, s.s, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
-                    seen.add(s.s)
+                    yield(StackString(fva, s_stripped, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
+                    seen.add(s_stripped)
