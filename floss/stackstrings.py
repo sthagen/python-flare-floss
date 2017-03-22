@@ -4,6 +4,8 @@ import re
 import logging
 
 from collections import namedtuple
+from itertools import groupby
+from operator import itemgetter
 
 import viv_utils
 import envi.archs.i386
@@ -17,6 +19,13 @@ from utils import makeEmulator
 logger = logging.getLogger(__name__)
 MAX_STACK_SIZE = 0x10000
 
+MIN_NUMBER_OF_MOVS = 8
+MIN_CONSECUTIVE_ADDRS_DEFAULT = 4
+
+SIZE_BYTE = 1
+SIZE_WORD = 2
+SIZE_DWORD = 4
+SIZE_QWORD = 8
 
 CallContext = namedtuple("CallContext",
                          [
@@ -27,11 +36,12 @@ CallContext = namedtuple("CallContext",
                          ])
 
 
-class CallContextMonitor(viv_utils.emulator_drivers.Monitor):
-    '''
-    CallContextMonitor observes emulation and extracts the
-     active stack frame contents at each function call in a function.
-    '''
+class StackstringContextMonitor(viv_utils.emulator_drivers.Monitor):
+    """
+    Observes emulation and extracts the active stack frame contents:
+    - at each function call in a function
+    - based on a heuristic looking for mov instructions to consecutive memory addresses
+    """
 
     def __init__(self, vw, init_sp):
         viv_utils.emulator_drivers.Monitor.__init__(self, vw)
@@ -43,10 +53,16 @@ class CallContextMonitor(viv_utils.emulator_drivers.Monitor):
         # this is a private field
         self._init_sp = init_sp
 
+        self.mem_written_to = set([])
+
+        self.extract_contexts_at_vas = set([])
+
     def apicall(self, emu, op, pc, api, argv):
-        # extract only the bytes on the stack between the
-        #  base pointer (specifically, stack pointer at function entry), and
-        #  stack pointer.
+        self.extract_context(emu, op)
+
+    def extract_context(self, emu, op):
+        """ Extract only the bytes on the stack between the base pointer specifically, stack pointer at function entry),
+        and stack pointer. """
         stack_top = emu.getStackCounter()
         stack_bottom = self._init_sp
         stack_size = stack_bottom - stack_top
@@ -57,15 +73,68 @@ class CallContextMonitor(viv_utils.emulator_drivers.Monitor):
         stack_buf = emu.readMemory(stack_top, stack_size)
         self.ctxs.append(CallContext(op.va, stack_top, stack_bottom, stack_buf))
 
-    def prehook(self, emu, op, startpc):
-        # try to extract stackstring whenever deref operand is moved
-        if op.mnem == "mov" and isinstance(op.getOperands()[1], envi.archs.i386.disasm.i386SibOper):
-            self.apicall(emu, op, startpc, None, None)
+    def posthook(self, emu, op, endpc):
+        # self.d("0x%x: %s", endpc, op)
+        self.find_consecutive_movs(emu, op, endpc)
+
+    def find_consecutive_movs(self, emu, op, va):
+        """ Identify contexts based on instructions moving data to consecutive memory addresses. """
+
+        # extract at end of identified basic block
+        if va in self.extract_contexts_at_vas:
+            self.mem_written_to.clear()
+            self.extract_context(emu, op)
+            return
+
+        if op.mnem[:3] == "mov":
+            va_last_instr = self.get_va_last_instruction_current_bb(emu.vw, va)
+            if va_last_instr in self.extract_contexts_at_vas:
+                # already identified this bb
+                return
+
+            op0 = op.getOperands()[0]
+            if isinstance(op0, envi.archs.i386.disasm.i386SibOper):
+                addr = emu.getOperAddr(op, 0)
+                if addr:
+                    self.mem_written_to.add(addr)
+                    self.d("Current write count: %d", len(self.mem_written_to))
+                    self.d("Addresses written to: %s", ", ".join(map(hex, sorted(self.mem_written_to))))
+                    if len(self.mem_written_to) > MIN_NUMBER_OF_MOVS:
+                        if self.contains_consecutive_addresses(self.mem_written_to, MIN_CONSECUTIVE_ADDRS_DEFAULT):
+                            self.d("Get context at end of this basic block at VA 0x%x", va_last_instr)
+                            self.extract_contexts_at_vas.add(va_last_instr)
+                        else:
+                            self.d("Did not find consecutive addresses")
+
+    def contains_consecutive_addresses(self, data, n):
+        """ Return True if n or more consecutive addresses were found. """
+        for size in [SIZE_BYTE, SIZE_WORD, SIZE_DWORD, SIZE_QWORD]:
+            for l in self.get_len_consecutive_values(data, size):
+                if l >= n // size:
+                    self.d("Found %d consecutive addresses (size %d)", l, size)
+                    return True
+        return False
+
+    def get_len_consecutive_values(self, data, size):
+        """ Return list of length of consecutive values in data adjusted to size. """
+        r = []
+        data = sorted(map(lambda (x): x // size, data))
+        for k, g in groupby(enumerate(data), lambda (i, x): i - x):
+            r.append(len(map(itemgetter(1), g)))
+        return r
+
+    def get_va_last_instruction_current_bb(self, vw, va):
+        """ Return the VA of the last instruction of the basic block containing the input va. """
+        f = viv_utils.Function(vw, vw.getFunction(va))
+        for bb in f.basic_blocks:
+            if va > bb.va and va <= bb.va + bb.size:
+                return bb.instructions[-1].va  # last instruction
+        return None
 
 
 def extract_call_contexts(vw, fva):
     emu = makeEmulator(vw)
-    monitor = CallContextMonitor(vw, emu.getStackCounter())
+    monitor = StackstringContextMonitor(vw, emu.getStackCounter())
     driver = viv_utils.emulator_drivers.FunctionRunnerEmulatorDriver(emu)
     driver.add_monitor(monitor)
     driver.runFunction(fva, maxhit=1, maxrep=0x100, func_only=True)
