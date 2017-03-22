@@ -1,6 +1,5 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
-import hexdump
 import contextlib
 
 import envi
@@ -345,9 +344,6 @@ class StrncmpHook(viv_utils.emulator_drivers.Hook):
 
             s1 = readStringAtRva(emu, s1va, maxsize=num)
             s2 = readStringAtRva(emu, s2va, maxsize=num)
-
-            self.d('s1: %s', hexdump.hexdump(s1, result="return"))
-            self.d('s2: %s', hexdump.hexdump(s2, result="return"))
 
             s1 = s1.partition('\x00')[0]
             s2 = s2.partition('\x00')[0]
