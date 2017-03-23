@@ -13,6 +13,9 @@ from decoding_manager import DecodedString, LocationType
 floss_logger = logging.getLogger("floss")
 
 
+MAX_STRING_LENGTH = 2048
+
+
 def memdiff_search(bytes1, bytes2):
     '''
     Use binary searching to find the offset of the first difference
@@ -220,12 +223,12 @@ def extract_strings(b):
     # which come from vivisect uninitialized taint tracking
     filter = re.compile("^p?V?A+$")
     for s in strings.extract_ascii_strings(b.s):
-        if filter.match(s.s):
+        if filter.match(s.s) or len(s.s) > MAX_STRING_LEN:
             continue
         ret.append(DecodedString(b.va + s.offset, s.s, b.decoded_at_va,
                                  b.fva, b.characteristics))
     for s in strings.extract_unicode_strings(b.s):
-        if filter.match(s.s):
+        if filter.match(s.s) or len(s.s) > MAX_STRING_LEN:
             continue
         ret.append(DecodedString(b.va + s.offset, s.s, b.decoded_at_va,
                                  b.fva, b.characteristics))
