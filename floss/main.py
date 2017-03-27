@@ -715,44 +715,36 @@ def print_file_meta_info(vw, selected_functions):
         floss_logger.error("Failed to print vivisect analysis information: {0}".format(e.message))
 
 
-def floss_load_workspace(sample_file_path, verbose, save_workspace, is_shellcode, shellcode_ep_in, shellcode_base_in):
-    is_supported_file = is_supported_file_type(sample_file_path)
-    if is_shellcode:
-        if is_supported_file:
-            floss_logger.warning("Analyzing supported file type as shellcode. This will likely yield weaker analysis.")
-
-        shellcode_entry_point = 0
-        if shellcode_ep_in:
-            shellcode_entry_point = int(shellcode_ep_in, 0x10)
-
-        shellcode_base = 0
-        if shellcode_base_in:
-            shellcode_base = int(shellcode_base_in, 0x10)
-
-
-        floss_logger.info("Generating vivisect workspace for shellcode, base: 0x%x, entry point: 0x%x...",
-                          shellcode_base, shellcode_entry_point)
-        with open(sample_file_path, "rb") as f:
-            shellcode_data = f.read()
-        vw = viv_utils.getShellcodeWorkspace(shellcode_data, "i386", shellcode_base, shellcode_entry_point,
-                                             save_workspace, sample_file_path)
+def load_workspace(sample_file_path, save_workspace):
+    if is_workspace_file(sample_file_path):
+        floss_logger.info("Loading existing vivisect workspace...")
     else:
-        if not is_workspace_file(sample_file_path):
-            if not is_supported_file:
-                raise LoadNotSupportedError("FLOSS currently supports the following formats for string decoding and "
-                                            "stackstrings: PE\nYou can analyze shellcode using the -s switch. See the "
-                                            "help (-h) for more information.")
+        if not is_supported_file_type(sample_file_path):
+            raise LoadNotSupportedError("FLOSS currently supports the following formats for string decoding and "
+                                        "stackstrings: PE\nYou can analyze shellcode using the -s switch. See the "
+                                        "help (-h) for more information.")
+        floss_logger.info("Generating vivisect workspace...")
+    return viv_utils.getWorkspace(sample_file_path, should_save=save_workspace)
 
-            floss_logger.info("Generating vivisect workspace...")
-        else:
-            floss_logger.info("Loading existing vivisect workspace...")
 
-        if shellcode_ep_in or shellcode_base_in:
-            floss_logger.warning("Entry point and base offset only apply in conjunction with the -s switch when "
-                                 "analyzing raw binary files.")
+def load_shellcode_workspace(sample_file_path, save_workspace, shellcode_ep_in, shellcode_base_in):
+    if is_supported_file_type(sample_file_path):
+        floss_logger.warning("Analyzing supported file type as shellcode. This will likely yield weaker analysis.")
 
-        vw = viv_utils.getWorkspace(sample_file_path, should_save=save_workspace)
-    return vw
+    shellcode_entry_point = 0
+    if shellcode_ep_in:
+        shellcode_entry_point = int(shellcode_ep_in, 0x10)
+
+    shellcode_base = 0
+    if shellcode_base_in:
+        shellcode_base = int(shellcode_base_in, 0x10)
+
+    floss_logger.info("Generating vivisect workspace for shellcode, base: 0x%x, entry point: 0x%x...",
+                      shellcode_base, shellcode_entry_point)
+    with open(sample_file_path, "rb") as f:
+        shellcode_data = f.read()
+    return viv_utils.getShellcodeWorkspace(shellcode_data, "i386", shellcode_base, shellcode_entry_point,
+                                           save_workspace, sample_file_path)
 
 
 def main(argv=None):
@@ -798,8 +790,14 @@ def main(argv=None):
         return 1
 
     try:
-        vw = floss_load_workspace(sample_file_path, options.verbose, options.save_workspace, options.is_shellcode,
-                                  options.shellcode_entry_point, options.shellcode_base)
+        if not options.is_shellcode:
+            if options.shellcode_entry_point or options.shellcode_base:
+                floss_logger.warning("Entry point and base offset only apply in conjunction with the -s switch when "
+                                     "analyzing raw binary files.")
+            vw = load_workspace(sample_file_path, options.save_workspace)
+        else:
+            vw = load_shellcode_workspace(sample_file_path, options.save_workspace, options.shellcode_entry_point,
+                                          options.shellcode_base)
     except LoadNotSupportedError, e:
         floss_logger.error(str(e))
         return 1
