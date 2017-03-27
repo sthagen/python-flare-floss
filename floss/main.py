@@ -46,6 +46,9 @@ MIN_STRING_LENGTH_DEFAULT = 4
 class LoadNotSupportedError(Exception):
     pass
 
+class WorkspaceLoadError(Exception):
+    pass
+
 
 def hex(i):
     return "0x%X" % (i)
@@ -747,6 +750,23 @@ def load_shellcode_workspace(sample_file_path, save_workspace, shellcode_ep_in, 
                                            save_workspace, sample_file_path)
 
 
+def load_vw(sample_file_path, save_workspace, verbose, is_shellcode, shellcode_entry_point, shellcode_base):
+    try:
+        if not is_shellcode:
+            if shellcode_entry_point or shellcode_base:
+                floss_logger.warning("Entry point and base offset only apply in conjunction with the -s switch when "
+                                     "analyzing raw binary files.")
+            return load_workspace(sample_file_path, save_workspace)
+        else:
+            return load_shellcode_workspace(sample_file_path, save_workspace, shellcode_entry_point, shellcode_base)
+    except LoadNotSupportedError, e:
+        floss_logger.error(str(e))
+        raise WorkspaceLoadError
+    except Exception, e:
+        floss_logger.error("Vivisect failed to load the input file: {0}".format(e.message), exc_info=verbose)
+        raise WorkspaceLoadError
+
+
 def main(argv=None):
     """
     :param argv: optional command line arguments, like sys.argv[1:]
@@ -790,19 +810,9 @@ def main(argv=None):
         return 1
 
     try:
-        if not options.is_shellcode:
-            if options.shellcode_entry_point or options.shellcode_base:
-                floss_logger.warning("Entry point and base offset only apply in conjunction with the -s switch when "
-                                     "analyzing raw binary files.")
-            vw = load_workspace(sample_file_path, options.save_workspace)
-        else:
-            vw = load_shellcode_workspace(sample_file_path, options.save_workspace, options.shellcode_entry_point,
-                                          options.shellcode_base)
-    except LoadNotSupportedError, e:
-        floss_logger.error(str(e))
-        return 1
-    except Exception, e:
-        floss_logger.error("Vivisect failed to load the input file: {0}".format(e.message), exc_info=options.verbose)
+        vw = load_vw(sample_file_path, options.save_workspace, options.verbose, options.is_shellcode,
+                     options.shellcode_entry_point, options.shellcode_base)
+    except WorkspaceLoadError:
         return 1
 
     selected_functions = select_functions(vw, options.functions)
