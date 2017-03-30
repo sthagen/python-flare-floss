@@ -43,6 +43,13 @@ SUPPORTED_FILE_MAGIC = set(["MZ"])
 MIN_STRING_LENGTH_DEFAULT = 4
 
 
+class LoadNotSupportedError(Exception):
+    pass
+
+class WorkspaceLoadError(Exception):
+    pass
+
+
 def hex(i):
     return "0x%X" % (i)
 
@@ -711,6 +718,55 @@ def print_file_meta_info(vw, selected_functions):
         floss_logger.error("Failed to print vivisect analysis information: {0}".format(e.message))
 
 
+def load_workspace(sample_file_path, save_workspace):
+    if is_workspace_file(sample_file_path):
+        floss_logger.info("Loading existing vivisect workspace...")
+    else:
+        if not is_supported_file_type(sample_file_path):
+            raise LoadNotSupportedError("FLOSS currently supports the following formats for string decoding and "
+                                        "stackstrings: PE\nYou can analyze shellcode using the -s switch. See the "
+                                        "help (-h) for more information.")
+        floss_logger.info("Generating vivisect workspace...")
+    return viv_utils.getWorkspace(sample_file_path, should_save=save_workspace)
+
+
+def load_shellcode_workspace(sample_file_path, save_workspace, shellcode_ep_in, shellcode_base_in):
+    if is_supported_file_type(sample_file_path):
+        floss_logger.warning("Analyzing supported file type as shellcode. This will likely yield weaker analysis.")
+
+    shellcode_entry_point = 0
+    if shellcode_ep_in:
+        shellcode_entry_point = int(shellcode_ep_in, 0x10)
+
+    shellcode_base = 0
+    if shellcode_base_in:
+        shellcode_base = int(shellcode_base_in, 0x10)
+
+    floss_logger.info("Generating vivisect workspace for shellcode, base: 0x%x, entry point: 0x%x...",
+                      shellcode_base, shellcode_entry_point)
+    with open(sample_file_path, "rb") as f:
+        shellcode_data = f.read()
+    return viv_utils.getShellcodeWorkspace(shellcode_data, "i386", shellcode_base, shellcode_entry_point,
+                                           save_workspace, sample_file_path)
+
+
+def load_vw(sample_file_path, save_workspace, verbose, is_shellcode, shellcode_entry_point, shellcode_base):
+    try:
+        if not is_shellcode:
+            if shellcode_entry_point or shellcode_base:
+                floss_logger.warning("Entry point and base offset only apply in conjunction with the -s switch when "
+                                     "analyzing raw binary files.")
+            return load_workspace(sample_file_path, save_workspace)
+        else:
+            return load_shellcode_workspace(sample_file_path, save_workspace, shellcode_entry_point, shellcode_base)
+    except LoadNotSupportedError, e:
+        floss_logger.error(str(e))
+        raise WorkspaceLoadError
+    except Exception, e:
+        floss_logger.error("Vivisect failed to load the input file: {0}".format(e.message), exc_info=verbose)
+        raise WorkspaceLoadError
+
+
 def main(argv=None):
     """
     :param argv: optional command line arguments, like sys.argv[1:]
@@ -748,52 +804,16 @@ def main(argv=None):
             # we are done
             return 0
 
-    is_supported_file = is_supported_file_type(sample_file_path)
-    if options.is_shellcode:
-        if is_supported_file:
-            floss_logger.warning("Analyzing supported file type as shellcode. This will likely yield weaker analysis.")
-        shellcode_entry_point = 0
-        if options.shellcode_entry_point:
-            shellcode_entry_point = int(options.shellcode_entry_point, 0x10)
+    if os.path.getsize(sample_file_path) > MAX_FILE_SIZE:
+        floss_logger.error("FLOSS cannot extract obfuscated strings or stackstrings from files larger than"
+                           " %d bytes" % MAX_FILE_SIZE)
+        return 1
 
-        shellcode_base = 0
-        if options.shellcode_base:
-            shellcode_base = int(options.shellcode_base, 0x10)
-
-        try:
-            floss_logger.info("Generating vivisect workspace for shellcode, base: 0x%x, entry point: 0x%x...", shellcode_base,
-                              shellcode_entry_point)
-            with open(sample_file_path, "rb") as f:
-                shellcode_data = f.read()
-            vw = viv_utils.getShellcodeWorkspace(shellcode_data, "i386", shellcode_base, shellcode_entry_point,
-                                                 options.save_workspace, sample_file_path)
-        except Exception, e:
-            floss_logger.error("Vivisect failed to load the input file: {0}".format(e.message),
-                               exc_info=options.verbose)
-            return 1
-    else:
-        if not is_workspace_file(sample_file_path):
-            if not is_supported_file:
-                floss_logger.error("FLOSS currently supports the following formats for string decoding and stackstrings: PE\n"
-                                   "You can analyze shellcode using the -s switch. See the help (-h) for more information.")
-                return 1
-
-            if os.path.getsize(sample_file_path) > MAX_FILE_SIZE:
-                floss_logger.error("FLOSS cannot extract obfuscated strings from files larger than %d bytes" % (MAX_FILE_SIZE))
-                return 1
-
-            floss_logger.info("Generating vivisect workspace...")
-        else:
-            floss_logger.info("Loading existing vivisect workspace...")
-
-        if options.shellcode_base or options.shellcode_entry_point:
-            floss_logger.warning("Entry point and base offset only apply in conjunction with the -s switch when analyzing raw binary files.")
-
-        try:
-            vw = viv_utils.getWorkspace(sample_file_path, should_save=options.save_workspace)
-        except Exception, e:
-            floss_logger.error("Vivisect failed to load the input file: {0}".format(e.message), exc_info=options.verbose)
-            return 1
+    try:
+        vw = load_vw(sample_file_path, options.save_workspace, options.verbose, options.is_shellcode,
+                     options.shellcode_entry_point, options.shellcode_base)
+    except WorkspaceLoadError:
+        return 1
 
     selected_functions = select_functions(vw, options.functions)
     floss_logger.debug("Selected the following functions: %s", ", ".join(map(hex, selected_functions)))
