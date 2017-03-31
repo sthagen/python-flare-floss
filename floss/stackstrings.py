@@ -4,8 +4,6 @@ import re
 import logging
 
 from collections import namedtuple
-from itertools import groupby
-from operator import itemgetter
 
 import viv_utils
 import envi.archs.i386
@@ -19,13 +17,7 @@ from utils import makeEmulator
 logger = logging.getLogger(__name__)
 MAX_STACK_SIZE = 0x10000
 
-MIN_NUMBER_OF_MOVS = 8
-MIN_CONSECUTIVE_ADDRS_DEFAULT = 4
-
-SIZE_BYTE = 1
-SIZE_WORD = 2
-SIZE_DWORD = 4
-SIZE_QWORD = 8
+MIN_NUMBER_OF_MOVS = 5
 
 CallContext = namedtuple("CallContext",
                          [
@@ -43,7 +35,7 @@ class StackstringContextMonitor(viv_utils.emulator_drivers.Monitor):
     - based on a heuristic looking for mov instructions to consecutive memory addresses
     """
 
-    def __init__(self, vw, init_sp):
+    def __init__(self, vw, init_sp, bb_ends):
         viv_utils.emulator_drivers.Monitor.__init__(self, vw)
 
         # this is a public field
@@ -53,9 +45,8 @@ class StackstringContextMonitor(viv_utils.emulator_drivers.Monitor):
         # this is a private field
         self._init_sp = init_sp
 
-        self.mem_written_to = set([])
-
-        self.extract_contexts_at_vas = set([])
+        self.bb_ends = bb_ends  # index of VAs of the last instruction of all basic blocks
+        self.mov_count = 0  # count of stack mov instructions in current basic block
 
     def apicall(self, emu, op, pc, api, argv):
         self.extract_context(emu, op)
@@ -74,67 +65,33 @@ class StackstringContextMonitor(viv_utils.emulator_drivers.Monitor):
         self.ctxs.append(CallContext(op.va, stack_top, stack_bottom, stack_buf))
 
     def posthook(self, emu, op, endpc):
-        # self.d("0x%x: %s", endpc, op)
-        self.find_consecutive_movs(emu, op, endpc)
+        pass
+        # self.get_context_via_mov_heuristic(emu, op, endpc)
 
-    def find_consecutive_movs(self, emu, op, va):
-        """ Identify contexts based on instructions moving data to consecutive memory addresses. """
+    def get_context_via_mov_heuristic(self, emu, op, endpc):
+        """ Extract contexts at end of a basic block (bb) if bb contains enough movs to stack memory. """
+        # TODO check number of written bytes?
+        # count movs, shortcut if this basic block has enough writes to trigger context extraction already
+        if self.mov_count < MIN_NUMBER_OF_MOVS and self.is_stack_mov(emu, op):
+            self.mov_count += 1
+        if endpc in self.bb_ends:
+            if self.mov_count >= MIN_NUMBER_OF_MOVS:
+                self.extract_context(emu, op)
+            # reset counter at end of basic block
+            self.mov_count = 0
 
-        # extract at end of identified basic block
-        if va in self.extract_contexts_at_vas:
-            self.mem_written_to.clear()
-            self.extract_context(emu, op)
-            return
-
+    def is_stack_mov(self, emu, op):
         if op.mnem[:3] == "mov":
-            va_last_instr = self.get_va_last_instruction_current_bb(emu.vw, va)
-            if va_last_instr in self.extract_contexts_at_vas:
-                # already identified this bb
-                return
-
-            op0 = op.getOperands()[0]
-            if isinstance(op0, envi.archs.i386.disasm.i386SibOper):
-                addr = emu.getOperAddr(op, 0)
-                if addr:
-                    self.mem_written_to.add(addr)
-                    self.d("Current write count: %d", len(self.mem_written_to))
-                    self.d("Addresses written to: %s", ", ".join(map(hex, sorted(self.mem_written_to))))
-                    if len(self.mem_written_to) > MIN_NUMBER_OF_MOVS:
-                        if self.contains_consecutive_addresses(self.mem_written_to, MIN_CONSECUTIVE_ADDRS_DEFAULT):
-                            self.d("Get context at end of this basic block at VA 0x%x", va_last_instr)
-                            self.extract_contexts_at_vas.add(va_last_instr)
-                        else:
-                            self.d("Did not find consecutive addresses")
-
-    def contains_consecutive_addresses(self, data, n):
-        """ Return True if n or more consecutive addresses were found. """
-        for size in [SIZE_BYTE, SIZE_WORD, SIZE_DWORD, SIZE_QWORD]:
-            for l in self.get_len_consecutive_values(data, size):
-                if l >= n // size:
-                    self.d("Found %d consecutive addresses (size %d)", l, size)
-                    return True
-        return False
-
-    def get_len_consecutive_values(self, data, size):
-        """ Return list of length of consecutive values in data adjusted to size. """
-        r = []
-        data = sorted(map(lambda (x): x // size, data))
-        for k, g in groupby(enumerate(data), lambda (i, x): i - x):
-            r.append(len(map(itemgetter(1), g)))
-        return r
-
-    def get_va_last_instruction_current_bb(self, vw, va):
-        """ Return the VA of the last instruction of the basic block containing the input va. """
-        f = viv_utils.Function(vw, vw.getFunction(va))
-        for bb in f.basic_blocks:
-            if va > bb.va and va <= bb.va + bb.size:
-                return bb.instructions[-1].va  # last instruction
-        return None
+            if not op.getOperands():
+                # no operands, e.g. movsb, movsd, fail safe and count these regardless of where data is moved to
+                return True
+            else:
+                return isinstance(op.getOperands()[0], envi.archs.i386.disasm.i386SibOper)
 
 
-def extract_call_contexts(vw, fva):
+def extract_call_contexts(vw, fva, bb_ends):
     emu = makeEmulator(vw)
-    monitor = StackstringContextMonitor(vw, emu.getStackCounter())
+    monitor = StackstringContextMonitor(vw, emu.getStackCounter(), bb_ends)
     driver = viv_utils.emulator_drivers.FunctionRunnerEmulatorDriver(emu)
     driver.add_monitor(monitor)
     driver.runFunction(fva, maxhit=1, maxrep=0x100, func_only=True)
@@ -206,7 +163,7 @@ def getPointerSize(vw):
         raise NotImplementedError("unexpected architecture: %s" % (vw.arch.__class__.__name__))
 
 
-def extract_stackstrings(vw, selected_functions):
+def extract_stackstrings(vw, selected_functions, bb_ends):
     '''
     Extracts the stackstrings from functions in the given workspace.
 
@@ -219,7 +176,7 @@ def extract_stackstrings(vw, selected_functions):
         seen = set([])
         filter = re.compile("^p?V?A+$")
         filter_sub = re.compile("^p?VA")  # remove string prefixes: pVA, VA
-        for ctx in extract_call_contexts(vw, fva):
+        for ctx in extract_call_contexts(vw, fva, bb_ends):
             logger.debug('extracting stackstrings at checkpoint: 0x%x stacksize: 0x%x', ctx.pc, ctx.init_sp - ctx.sp)
             for s in strings.extract_ascii_strings(ctx.stack_memory):
                 if filter.match(s.s):
@@ -241,3 +198,15 @@ def extract_stackstrings(vw, selected_functions):
                     frame_offset = (ctx.init_sp - ctx.sp) - s.offset - getPointerSize(vw)
                     yield(StackString(fva, s_stripped, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
                     seen.add(s_stripped)
+
+
+def get_basic_block_end_index(vw):
+    """ Return list of VAs of the last instruction of all basic blocks. """
+    index = []
+    for funcva in vw.getFunctions():
+        f = viv_utils.Function(vw, funcva)
+        for bb in f.basic_blocks:
+            if len(bb.instructions) == 0:
+                continue
+            index.append(bb.instructions[-1].va)
+    return index
