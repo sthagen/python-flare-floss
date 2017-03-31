@@ -19,7 +19,8 @@ def extract_strings(vw):
     decoding_functions_candidates = identify_decoding_functions(vw)
     decoded_strings = floss_main.decode_strings(vw, function_index, decoding_functions_candidates)
     selected_functions = floss_main.select_functions(vw, None)
-    decoded_stackstrings = stackstrings.extract_stackstrings(vw, selected_functions)
+    bb_ends = stackstrings.get_basic_block_end_index(vw)
+    decoded_stackstrings = stackstrings.extract_stackstrings(vw, selected_functions, bb_ends)
     decoded_strings.extend(decoded_stackstrings)
     return [ds.s for ds in decoded_strings]
 
