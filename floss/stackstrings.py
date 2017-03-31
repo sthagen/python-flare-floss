@@ -65,8 +65,7 @@ class StackstringContextMonitor(viv_utils.emulator_drivers.Monitor):
         self.ctxs.append(CallContext(op.va, stack_top, stack_bottom, stack_buf))
 
     def posthook(self, emu, op, endpc):
-        pass
-        # self.get_context_via_mov_heuristic(emu, op, endpc)
+        self.get_context_via_mov_heuristic(emu, op, endpc)
 
     def get_context_via_mov_heuristic(self, emu, op, endpc):
         """ Extract contexts at end of a basic block (bb) if bb contains enough movs to stack memory. """
