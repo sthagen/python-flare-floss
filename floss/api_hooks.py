@@ -396,6 +396,19 @@ class ExitProcessHook(viv_utils.emulator_drivers.Hook):
             raise viv_utils.emulator_drivers.StopEmulation()
 
 
+class CriticalSectionHooks(viv_utils.emulator_drivers.Hook):
+    '''
+    Hook calls to:
+      - InitializeCriticalSection
+    '''
+    def hook(self, callname, emu, callconv, api, argv):
+        if callname == "kernel32.InitializeCriticalSection":
+            hsection, = argv
+            emu.writeMemory(hsection, "csec")
+            callconv.execCallReturn(emu, 0, len(argv))
+            return True
+
+
 DEFAULT_HOOKS = [
     GetProcessHeapHook(),
     RtlAllocateHeapHook(),
@@ -407,6 +420,7 @@ DEFAULT_HOOKS = [
     MemchrHook(),
     StrnlenHook(),
     StrncmpHook(),
+    CriticalSectionHooks(),
 ]
 
 
