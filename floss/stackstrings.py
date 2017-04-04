@@ -31,8 +31,8 @@ CallContext = namedtuple("CallContext",
 class StackstringContextMonitor(viv_utils.emulator_drivers.Monitor):
     """
     Observes emulation and extracts the active stack frame contents:
-      - at each function call in a function
-      - based on a heuristic looking for mov instructions to consecutive memory addresses
+      - at each function call in a function, and
+      - based on heuristics looking for mov instructions to a hardcoded buffer.
     """
 
     def __init__(self, vw, init_sp, bb_ends):
@@ -70,11 +70,11 @@ class StackstringContextMonitor(viv_utils.emulator_drivers.Monitor):
 
     # overrides emulator_drivers.Monitor
     def posthook(self, emu, op, endpc):
-        self.get_context_via_mov_heuristic(emu, op, endpc)
+        self.check_mov_heuristics(emu, op, endpc)
 
-    def get_context_via_mov_heuristic(self, emu, op, endpc):
+    def check_mov_heuristics(self, emu, op, endpc):
         """
-        Extract contexts at end of a basic block (bb) if bb contains enough movs to stack memory.
+        Extract contexts at end of a basic block (bb) if bb contains enough movs to a harcoded buffer.
         """
         # TODO check number of written bytes?
         # count movs, shortcut if this basic block has enough writes to trigger context extraction already
