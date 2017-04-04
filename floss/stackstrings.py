@@ -31,8 +31,8 @@ CallContext = namedtuple("CallContext",
 class StackstringContextMonitor(viv_utils.emulator_drivers.Monitor):
     """
     Observes emulation and extracts the active stack frame contents:
-    - at each function call in a function
-    - based on a heuristic looking for mov instructions to consecutive memory addresses
+      - at each function call in a function
+      - based on a heuristic looking for mov instructions to consecutive memory addresses
     """
 
     def __init__(self, vw, init_sp, bb_ends):
@@ -78,7 +78,7 @@ class StackstringContextMonitor(viv_utils.emulator_drivers.Monitor):
         """
         # TODO check number of written bytes?
         # count movs, shortcut if this basic block has enough writes to trigger context extraction already
-        if self._mov_count < MIN_NUMBER_OF_MOVS and self.is_stack_mov(emu, op):
+        if self._mov_count < MIN_NUMBER_OF_MOVS and self.is_stack_mov(op):
             self._mov_count += 1
 
         if endpc in self._bb_ends:
@@ -87,8 +87,8 @@ class StackstringContextMonitor(viv_utils.emulator_drivers.Monitor):
             # reset counter at end of basic block
             self._mov_count = 0
 
-    def is_stack_mov(self, emu, op):
-        if op.mnem[:3] != "mov":
+    def is_stack_mov(self, op):
+        if not op.mnem.startswith("mov"):
             return False
 
         opnds = op.getOperands()
