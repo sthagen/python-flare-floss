@@ -38,22 +38,23 @@ class StackstringContextMonitor(viv_utils.emulator_drivers.Monitor):
     def __init__(self, vw, init_sp, bb_ends):
         viv_utils.emulator_drivers.Monitor.__init__(self, vw)
 
-        # this is a public field
         # type: List[CallContext]
         self.ctxs = []
 
-        # this is a private field
-        self._init_sp = init_sp
 
-        self.bb_ends = bb_ends  # index of VAs of the last instruction of all basic blocks
-        self.mov_count = 0  # count of stack mov instructions in current basic block
+        self._init_sp = init_sp
+        self._bb_ends = bb_ends  # index of VAs of the last instruction of all basic blocks
+        self._mov_count = 0  # count of stack mov instructions in current basic block
 
     def apicall(self, emu, op, pc, api, argv):
         self.extract_context(emu, op)
 
     def extract_context(self, emu, op):
-        """ Extract only the bytes on the stack between the base pointer specifically, stack pointer at function entry),
-        and stack pointer. """
+        """
+        Extract only the bytes on the stack between the base pointer
+         (specifically, stack pointer at function entry),
+        and stack pointer.
+        """
         stack_top = emu.getStackCounter()
         stack_bottom = self._init_sp
         stack_size = stack_bottom - stack_top
@@ -62,30 +63,38 @@ class StackstringContextMonitor(viv_utils.emulator_drivers.Monitor):
             return
 
         stack_buf = emu.readMemory(stack_top, stack_size)
-        self.ctxs.append(CallContext(op.va, stack_top, stack_bottom, stack_buf))
+        ctx = CallContext(op.va, stack_top, stack_bottom, stack_buf)
+        self.ctxs.append(ctx)
 
     def posthook(self, emu, op, endpc):
         self.get_context_via_mov_heuristic(emu, op, endpc)
 
     def get_context_via_mov_heuristic(self, emu, op, endpc):
-        """ Extract contexts at end of a basic block (bb) if bb contains enough movs to stack memory. """
+        """
+        Extract contexts at end of a basic block (bb) if bb contains enough movs to stack memory.
+        """
         # TODO check number of written bytes?
         # count movs, shortcut if this basic block has enough writes to trigger context extraction already
-        if self.mov_count < MIN_NUMBER_OF_MOVS and self.is_stack_mov(emu, op):
-            self.mov_count += 1
-        if endpc in self.bb_ends:
-            if self.mov_count >= MIN_NUMBER_OF_MOVS:
+        if self._mov_count < MIN_NUMBER_OF_MOVS and self.is_stack_mov(emu, op):
+            self._mov_count += 1
+
+        if endpc in self._bb_ends:
+            if self._mov_count >= MIN_NUMBER_OF_MOVS:
                 self.extract_context(emu, op)
             # reset counter at end of basic block
-            self.mov_count = 0
+            self._mov_count = 0
 
     def is_stack_mov(self, emu, op):
-        if op.mnem[:3] == "mov":
-            if not op.getOperands():
-                # no operands, e.g. movsb, movsd, fail safe and count these regardless of where data is moved to
-                return True
-            else:
-                return isinstance(op.getOperands()[0], envi.archs.i386.disasm.i386SibOper)
+        if op.mnem[:3] != "mov":
+            return False
+
+        opds = op.getOperands()
+        if not opnds:
+            # no operands, e.g. movsb, movsd
+            # fail safe and count these regardless of where data is moved to.
+            return True
+
+        return isinstance(op.getOperands()[0], envi.archs.i386.disasm.i386SibOper)
 
 
 def extract_call_contexts(vw, fva, bb_ends):
