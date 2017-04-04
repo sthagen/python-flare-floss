@@ -162,6 +162,10 @@ def getPointerSize(vw):
         raise NotImplementedError("unexpected architecture: %s" % (vw.arch.__class__.__name__))
 
 
+FP_FILTER = re.compile("^p?V?A+$")
+FP_FILTER_SUB = re.compile("^p?VA")  # remove string prefixes: pVA, VA
+
+
 def extract_stackstrings(vw, selected_functions, bb_ends):
     '''
     Extracts the stackstrings from functions in the given workspace.
@@ -173,26 +177,24 @@ def extract_stackstrings(vw, selected_functions, bb_ends):
     for fva in selected_functions:
         logger.debug('extracting stackstrings from function: 0x%x', fva)
         seen = set([])
-        filter = re.compile("^p?V?A+$")
-        filter_sub = re.compile("^p?VA")  # remove string prefixes: pVA, VA
         for ctx in extract_call_contexts(vw, fva, bb_ends):
             logger.debug('extracting stackstrings at checkpoint: 0x%x stacksize: 0x%x', ctx.pc, ctx.init_sp - ctx.sp)
             for s in strings.extract_ascii_strings(ctx.stack_memory):
-                if filter.match(s.s):
+                if FP_FILTER.match(s.s):
                     # ignore strings like: pVA, pVAAA, AAAA
                     # which come from vivisect uninitialized taint tracking
                     continue
-                s_stripped = re.sub(filter_sub, "", s.s)
+                s_stripped = re.sub(FP_FILTER_SUB, "", s.s)
                 if s_stripped not in seen:
                     frame_offset = (ctx.init_sp - ctx.sp) - s.offset - getPointerSize(vw)
                     yield(StackString(fva, s_stripped, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
                     seen.add(s_stripped)
             for s in strings.extract_unicode_strings(ctx.stack_memory):
-                if filter.match(s.s):
+                if FP_FILTER.match(s.s):
                     # ignore strings like: pVA, pVAAA, AAAA
                     # which come from vivisect uninitialized taint tracking
                     continue
-                s_stripped = re.sub(filter_sub, "", s.s)
+                s_stripped = re.sub(FP_FILTER_SUB, "", s.s)
                 if s_stripped not in seen:
                     frame_offset = (ctx.init_sp - ctx.sp) - s.offset - getPointerSize(vw)
                     yield(StackString(fva, s_stripped, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
