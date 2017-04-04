@@ -202,12 +202,14 @@ def extract_stackstrings(vw, selected_functions, bb_ends):
 
 
 def get_basic_block_end_index(vw):
-    """ Return list of VAs of the last instruction of all basic blocks. """
-    index = []
+    """
+    Return the set of VAs that are the last instructions of basic blocks.
+    """
+    index = set([])
     for funcva in vw.getFunctions():
         f = viv_utils.Function(vw, funcva)
         for bb in f.basic_blocks:
             if len(bb.instructions) == 0:
                 continue
-            index.append(bb.instructions[-1].va)
+            index.add(bb.instructions[-1].va)
     return index
