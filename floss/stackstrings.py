@@ -37,17 +37,17 @@ class StackstringContextMonitor(viv_utils.emulator_drivers.Monitor):
 
     def __init__(self, vw, init_sp, bb_ends):
         viv_utils.emulator_drivers.Monitor.__init__(self, vw)
-
         # type: List[CallContext]
         self.ctxs = []
-
 
         self._init_sp = init_sp
         # index of VAs of the last instruction of all basic blocks
         self._bb_ends = bb_ends
-        # count of stack mov instructions in current basic block
+        # count of stack mov instructions in current basic block.
+        # not guaranteed to grow greater than MIN_NUMBER_OF_MOVS.
         self._mov_count = 0
 
+    # overrides emulator_drivers.Monitor
     def apicall(self, emu, op, pc, api, argv):
         self.extract_context(emu, op)
 
@@ -68,6 +68,7 @@ class StackstringContextMonitor(viv_utils.emulator_drivers.Monitor):
         ctx = CallContext(op.va, stack_top, stack_bottom, stack_buf)
         self.ctxs.append(ctx)
 
+    # overrides emulator_drivers.Monitor
     def posthook(self, emu, op, endpc):
         self.get_context_via_mov_heuristic(emu, op, endpc)
 
@@ -90,13 +91,13 @@ class StackstringContextMonitor(viv_utils.emulator_drivers.Monitor):
         if op.mnem[:3] != "mov":
             return False
 
-        opds = op.getOperands()
+        opnds = op.getOperands()
         if not opnds:
             # no operands, e.g. movsb, movsd
             # fail safe and count these regardless of where data is moved to.
             return True
 
-        return isinstance(op.getOperands()[0], envi.archs.i386.disasm.i386SibOper)
+        return isinstance(opnds[0], envi.archs.i386.disasm.i386SibOper)
 
 
 def extract_call_contexts(vw, fva, bb_ends):
