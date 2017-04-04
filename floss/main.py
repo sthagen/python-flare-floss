@@ -847,8 +847,7 @@ def main(argv=None):
 
     if not options.no_stack_strings:
         floss_logger.info("Extracting stackstrings...")
-        bb_ends = stackstrings.get_basic_block_ends(vw)
-        stack_strings = stackstrings.extract_stackstrings(vw, selected_functions, bb_ends)
+        stack_strings = stackstrings.extract_stackstrings(vw, selected_functions)
         if not options.expert:
             stack_strings = list(set(stack_strings))
         print_stack_strings(stack_strings, min_length, quiet=options.quiet, expert=options.expert)

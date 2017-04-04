@@ -166,7 +166,21 @@ FP_FILTER = re.compile("^p?V?A+$")
 FP_FILTER_SUB = re.compile("^p?VA")  # remove string prefixes: pVA, VA
 
 
-def extract_stackstrings(vw, selected_functions, bb_ends):
+def get_basic_block_ends(vw):
+    """
+    Return the set of VAs that are the last instructions of basic blocks.
+    """
+    index = set([])
+    for funcva in vw.getFunctions():
+        f = viv_utils.Function(vw, funcva)
+        for bb in f.basic_blocks:
+            if len(bb.instructions) == 0:
+                continue
+            index.add(bb.instructions[-1].va)
+    return index
+
+
+def extract_stackstrings(vw, selected_functions):
     '''
     Extracts the stackstrings from functions in the given workspace.
 
@@ -174,6 +188,7 @@ def extract_stackstrings(vw, selected_functions, bb_ends):
     :rtype: Generator[StackString]
     '''
     logger.debug('extracting stackstrings from %d functions', len(selected_functions))
+    bb_ends = get_basic_block_ends(vw)
     for fva in selected_functions:
         logger.debug('extracting stackstrings from function: 0x%x', fva)
         seen = set([])
@@ -200,16 +215,3 @@ def extract_stackstrings(vw, selected_functions, bb_ends):
                     yield(StackString(fva, s_stripped, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
                     seen.add(s_stripped)
 
-
-def get_basic_block_ends(vw):
-    """
-    Return the set of VAs that are the last instructions of basic blocks.
-    """
-    index = set([])
-    for funcva in vw.getFunctions():
-        f = viv_utils.Function(vw, funcva)
-        for bb in f.basic_blocks:
-            if len(bb.instructions) == 0:
-                continue
-            index.add(bb.instructions[-1].va)
-    return index
