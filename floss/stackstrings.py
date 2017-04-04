@@ -43,8 +43,10 @@ class StackstringContextMonitor(viv_utils.emulator_drivers.Monitor):
 
 
         self._init_sp = init_sp
-        self._bb_ends = bb_ends  # index of VAs of the last instruction of all basic blocks
-        self._mov_count = 0  # count of stack mov instructions in current basic block
+        # index of VAs of the last instruction of all basic blocks
+        self._bb_ends = bb_ends
+        # count of stack mov instructions in current basic block
+        self._mov_count = 0
 
     def apicall(self, emu, op, pc, api, argv):
         self.extract_context(emu, op)
