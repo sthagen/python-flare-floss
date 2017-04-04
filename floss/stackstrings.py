@@ -201,7 +201,7 @@ def extract_stackstrings(vw, selected_functions, bb_ends):
                     seen.add(s_stripped)
 
 
-def get_basic_block_end_index(vw):
+def get_basic_block_ends(vw):
     """
     Return the set of VAs that are the last instructions of basic blocks.
     """
