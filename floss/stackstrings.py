@@ -43,10 +43,16 @@ class CallContextMonitor(viv_utils.emulator_drivers.Monitor):
         # this is a private field
         self._init_sp = init_sp
 
+    # overrides emulator_drivers.Monitor
     def apicall(self, emu, op, pc, api, argv):
-        # extract only the bytes on the stack between the
-        #  base pointer (specifically, stack pointer at function entry), and
-        #  stack pointer.
+        self.extract_context(emu, op)
+
+    def extract_context(self, emu, op):
+        """
+        Extract only the bytes on the stack between the base pointer
+         (specifically, stack pointer at function entry),
+        and stack pointer.
+        """
         stack_top = emu.getStackCounter()
         stack_bottom = self._init_sp
         stack_size = stack_bottom - stack_top
@@ -55,7 +61,8 @@ class CallContextMonitor(viv_utils.emulator_drivers.Monitor):
             return
 
         stack_buf = emu.readMemory(stack_top, stack_size)
-        self.ctxs.append(CallContext(op.va, stack_top, stack_bottom, stack_buf))
+        ctx = CallContext(op.va, stack_top, stack_bottom, stack_buf)
+        self.ctxs.append(ctx)
 
 
 def extract_call_contexts(vw, fva):
