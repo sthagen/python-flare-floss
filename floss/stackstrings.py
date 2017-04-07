@@ -96,8 +96,7 @@ class StackstringContextMonitor(viv_utils.emulator_drivers.Monitor):
             # no operands, e.g. movsb, movsd
             # fail safe and count these regardless of where data is moved to.
             return True
-
-        return isinstance(opnds[0], envi.archs.i386.disasm.i386SibOper)
+        return isinstance(opnds[0], envi.archs.i386.disasm.i386SibOper) or isinstance(opnds[0], envi.archs.i386.disasm.i386RegMemOper)
 
 
 def extract_call_contexts(vw, fva, bb_ends):
