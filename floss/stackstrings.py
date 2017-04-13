@@ -207,20 +207,14 @@ def extract_stackstrings(vw, selected_functions):
         for ctx in extract_call_contexts(vw, fva, bb_ends):
             logger.debug('extracting stackstrings at checkpoint: 0x%x stacksize: 0x%x', ctx.pc, ctx.init_sp - ctx.sp)
             for s in strings.extract_ascii_strings(ctx.stack_memory):
-                try:
-                    s_stripped = filter_string(s.s)
-                except StringIsFPError:
-                    continue
-                if s_stripped not in seen:
+                s_stripped = filter_string(s.s)
+                if s_stripped and s_stripped not in seen:
                     frame_offset = (ctx.init_sp - ctx.sp) - s.offset - getPointerSize(vw)
                     yield(StackString(fva, s_stripped, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
                     seen.add(s_stripped)
             for s in strings.extract_unicode_strings(ctx.stack_memory):
-                try:
-                    s_stripped = filter_string(s.s)
-                except StringIsFPError:
-                    continue
-                if s_stripped not in seen:
+                s_stripped = filter_string(s.s)
+                if s_stripped and s_stripped not in seen:
                     frame_offset = (ctx.init_sp - ctx.sp) - s.offset - getPointerSize(vw)
                     yield(StackString(fva, s_stripped, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
                     seen.add(s_stripped)
@@ -232,12 +226,12 @@ class StringIsFPError(Exception):
 
 def filter_string(s):
     """
-    Return string stripped from false positive (FP) pre- or suffixes like pVA. Raise exception if string
+    Return string stripped from false positive (FP) pre- or suffixes like pVA. Return None if string
     matches a well-known FP pattern.
     :param s: input string
-    :return: string stripped from FP pre- or suffixes
+    :return: string stripped from FP pre- or suffixes or None
     """
     if FP_FILTER.match(s) or FP_FILTER_CHARS.match(s):
-        raise StringIsFPError
+        return None
     s_stripped = re.sub(FP_FILTER_SUB, "", s)
     return s_stripped
