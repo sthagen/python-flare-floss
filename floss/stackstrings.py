@@ -173,8 +173,9 @@ def getPointerSize(vw):
         raise NotImplementedError("unexpected architecture: %s" % (vw.arch.__class__.__name__))
 
 
-FP_FILTER = re.compile("^p?V?A+$")
+FP_FILTER = re.compile("^p?V?A+$") # ignore strings like: pVA, pVAAA, AAAA which come from vivisect uninitialized taint tracking
 FP_FILTER_SUB = re.compile("^p?VA")  # remove string prefixes: pVA, VA
+FP_FILTER_CHARS = re.compile(".*(AAA|BBB|CCC|DDD|EEE|FFF|@@@).*")
 
 
 def get_basic_block_ends(vw):
@@ -236,9 +237,7 @@ def filter_string(s):
     :param s: input string
     :return: string stripped from FP pre- or suffixes
     """
-    if FP_FILTER.match(s):
-        # ignore strings like: pVA, pVAAA, AAAA
-        # which come from vivisect uninitialized taint tracking
+    if FP_FILTER.match(s) or FP_FILTER_CHARS.match(s):
         raise StringIsFPError
     s_stripped = re.sub(FP_FILTER_SUB, "", s)
     return s_stripped
