@@ -5,7 +5,7 @@ import logging
 
 import strings
 import decoding_manager
-from utils import makeEmulator
+from utils import makeEmulator, is_fp_string, strip_string
 from function_argument_getter import get_function_contexts
 from decoding_manager import DecodedString, LocationType
 
@@ -219,17 +219,16 @@ def extract_strings(b):
     :rtype: Sequence[decoding_manager.DecodedString]
     '''
     ret = []
-    # ignore strings like: pVA, pVAAA, AAAA
-    # which come from vivisect uninitialized taint tracking
-    filter = re.compile("^p?V?A+$")
     for s in strings.extract_ascii_strings(b.s):
-        if filter.match(s.s) or len(s.s) > MAX_STRING_LENGTH:
+        if is_fp_string(s.s) or len(s.s) > MAX_STRING_LENGTH:
             continue
-        ret.append(DecodedString(b.va + s.offset, s.s, b.decoded_at_va,
+        s_stripped = strip_string(s.s)
+        ret.append(DecodedString(b.va + s.offset, s_stripped, b.decoded_at_va,
                                  b.fva, b.characteristics))
     for s in strings.extract_unicode_strings(b.s):
-        if filter.match(s.s) or len(s.s) > MAX_STRING_LENGTH:
+        if is_fp_string(s.s) or len(s.s) > MAX_STRING_LENGTH:
             continue
-        ret.append(DecodedString(b.va + s.offset, s.s, b.decoded_at_va,
+        s_stripped = strip_string(s.s)
+        ret.append(DecodedString(b.va + s.offset, s_stripped, b.decoded_at_va,
                                  b.fva, b.characteristics))
     return ret

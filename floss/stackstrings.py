@@ -11,7 +11,7 @@ import envi.archs.amd64
 import viv_utils.emulator_drivers
 
 import strings
-from utils import makeEmulator
+from utils import makeEmulator, is_fp_string, strip_string
 
 
 logger = logging.getLogger(__name__)
@@ -173,11 +173,6 @@ def getPointerSize(vw):
         raise NotImplementedError("unexpected architecture: %s" % (vw.arch.__class__.__name__))
 
 
-FP_FILTER = re.compile("^p?V?A+$") # ignore strings like: pVA, pVAAA, AAAA which come from vivisect uninitialized taint tracking
-FP_FILTER_SUB = re.compile("^p?VA")  # remove string prefixes: pVA, VA
-FP_FILTER_CHARS = re.compile(".*(AAA|BBB|CCC|DDD|EEE|FFF|@@@).*")
-
-
 def get_basic_block_ends(vw):
     """
     Return the set of VAs that are the last instructions of basic blocks.
@@ -207,31 +202,19 @@ def extract_stackstrings(vw, selected_functions):
         for ctx in extract_call_contexts(vw, fva, bb_ends):
             logger.debug('extracting stackstrings at checkpoint: 0x%x stacksize: 0x%x', ctx.pc, ctx.init_sp - ctx.sp)
             for s in strings.extract_ascii_strings(ctx.stack_memory):
-                s_stripped = filter_string(s.s)
-                if s_stripped and s_stripped not in seen:
+                # TODO check for MAX_STRING_LENGTH
+                if is_fp_string(s.s):
+                    continue
+                s_stripped = strip_string(s.s)
+                if s_stripped not in seen:
                     frame_offset = (ctx.init_sp - ctx.sp) - s.offset - getPointerSize(vw)
                     yield(StackString(fva, s_stripped, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
                     seen.add(s_stripped)
             for s in strings.extract_unicode_strings(ctx.stack_memory):
-                s_stripped = filter_string(s.s)
-                if s_stripped and s_stripped not in seen:
+                if is_fp_string(s.s):
+                    continue
+                s_stripped = strip_string(s.s)
+                if s_stripped not in seen:
                     frame_offset = (ctx.init_sp - ctx.sp) - s.offset - getPointerSize(vw)
                     yield(StackString(fva, s_stripped, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
                     seen.add(s_stripped)
-
-
-class StringIsFPError(Exception):
-    pass
-
-
-def filter_string(s):
-    """
-    Return string stripped from false positive (FP) pre- or suffixes like pVA. Return None if string
-    matches a well-known FP pattern.
-    :param s: input string
-    :return: string stripped from FP pre- or suffixes or None
-    """
-    if FP_FILTER.match(s) or FP_FILTER_CHARS.match(s):
-        return None
-    s_stripped = re.sub(FP_FILTER_SUB, "", s)
-    return s_stripped

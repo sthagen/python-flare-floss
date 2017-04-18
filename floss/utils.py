@@ -1,5 +1,6 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
+import re
 import tabulate
 from collections import OrderedDict
 
@@ -76,3 +77,26 @@ def get_vivisect_meta_info(vw, selected_functions):
 
 def hex(i):
     return "0x%X" % (i)
+
+
+FP_FILTER_PREFIXES = re.compile(r"^.?((p|P|0)?VA)|0\\A|P?\\A|\[A")  # remove string prefixes: pVA, VA, 0VA, etc.
+FP_FILTER_SUFFIXES = re.compile(r".*[0-9A-G>]VA$")  # remove string suffixes: 0VA, AVA, >VA, etc.
+FP_FILTER_CHARS = re.compile(r".*(AAA|BBB|CCC|DDD|EEE|FFF|UUU|ZZZ|@@@|;;;|\?\?\?|\|\|\||    ).*")
+# alternatively: ".*([^0-9wW])\1{2}.*" to match any 3 consecutive chars (except numbers, ws, and others?)
+
+
+def is_fp_string(s):
+    """
+    Return True if string matches a well-known FP pattern.
+    :param s: input string
+    """
+    return FP_FILTER_CHARS.match(s)
+
+
+def strip_string(s):
+    """
+    Return string stripped from false positive (FP) pre- or suffixes.
+    :param s: input string
+    :return: string stripped from FP pre- or suffixes
+    """
+    return re.sub(FP_FILTER_PREFIXES, "", re.sub(FP_FILTER_SUFFIXES, "", s))
