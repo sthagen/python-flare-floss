@@ -723,7 +723,8 @@ def print_file_meta_info(vw, selected_functions):
 
 
 def load_workspace(sample_file_path, save_workspace):
-    if is_workspace_file(sample_file_path):
+    # inform user that getWorkspace implicitly loads saved workspace if .viv file exists
+    if is_workspace_file(sample_file_path) or os.path.exists("%s.viv" % sample_file_path):
         floss_logger.info("Loading existing vivisect workspace...")
     else:
         if not is_supported_file_type(sample_file_path):
