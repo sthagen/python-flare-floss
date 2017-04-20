@@ -1,4 +1,5 @@
 <img src="resources/logo.png?raw=true " width="350"/>
+
 # FireEye Labs Obfuscated String Solver
 
 Rather than heavily protecting backdoors with hardcore packers, many
