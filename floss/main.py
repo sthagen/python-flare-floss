@@ -46,6 +46,7 @@ MIN_STRING_LENGTH_DEFAULT = 4
 class LoadNotSupportedError(Exception):
     pass
 
+
 class WorkspaceLoadError(Exception):
     pass
 
@@ -275,11 +276,14 @@ def select_functions(vw, functions_option):
 
     function_vas = set(function_vas)
     if len(function_vas - workspace_functions) > 0:
-        floss_logger.warn("Functions don't exist:", function_vas - workspace_functions)
-        # TODO handle exception
-        raise Exception("Functions not found")
+        raise Exception("Functions don't exist in vivisect workspace: %s" % get_str_from_func_list(
+            list(function_vas - workspace_functions)))
 
     return function_vas
+
+
+def get_str_from_func_list(function_list):
+    return ", ".join(map(hex, function_list))
 
 
 def parse_plugins_option(plugins_option):
@@ -815,8 +819,13 @@ def main(argv=None):
     except WorkspaceLoadError:
         return 1
 
-    selected_functions = select_functions(vw, options.functions)
-    floss_logger.debug("Selected the following functions: %s", ", ".join(map(hex, selected_functions)))
+    try:
+        selected_functions = select_functions(vw, options.functions)
+    except Exception as e:
+        floss_logger.error(str(e))
+        return 1
+
+    floss_logger.debug("Selected the following functions: %s", get_str_from_func_list(selected_functions))
 
     selected_plugin_names = select_plugins(options.plugins)
     floss_logger.debug("Selected the following plugins: %s", ", ".join(map(str, selected_plugin_names)))
