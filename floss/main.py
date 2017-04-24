@@ -696,7 +696,7 @@ def print_stack_strings(extracted_strings, quiet=False, expert=False):
     :param quiet: print strings only, suppresses headers
     :param expert: expert mode
     """
-    count = len(extracted_strings)
+    count = len(list(extracted_strings))
 
     if not quiet:
         print("\nFLOSS extracted %d stackstrings" % (count))
@@ -849,7 +849,7 @@ def main(argv=None):
         floss_logger.info("Extracting stackstrings...")
         stack_strings = stackstrings.extract_stackstrings(vw, selected_functions, min_length, options.no_filter)
         if not options.expert:
-            stack_strings = list(set(stack_strings))
+            stack_strings = set(stack_strings)
         print_stack_strings(stack_strings, quiet=options.quiet, expert=options.expert)
     else:
         stack_strings = []
