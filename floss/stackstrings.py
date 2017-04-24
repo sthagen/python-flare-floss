@@ -186,14 +186,15 @@ def get_basic_block_ends(vw):
     return index
 
 
-def extract_stackstrings(vw, selected_functions, no_filter=False):
+def extract_stackstrings(vw, selected_functions, min_length, no_filter=False):
     '''
     Extracts the stackstrings from functions in the given workspace.
 
     :param vw: The vivisect workspace from which to extract stackstrings.
-    :rtype: Generator[StackString]
     :param selected_functions: list of selected functions
+    :param min_length: minimum string length
     :param no_filter: do not filter deobfuscated stackstrings
+    :rtype: Generator[StackString]
     '''
     logger.debug('extracting stackstrings from %d functions', len(selected_functions))
     bb_ends = get_basic_block_ends(vw)
@@ -213,7 +214,7 @@ def extract_stackstrings(vw, selected_functions, no_filter=False):
                 else:
                     continue
 
-                if decoded_string not in seen:
+                if decoded_string not in seen and len(decoded_string) >= min_length:
                     frame_offset = (ctx.init_sp - ctx.sp) - s.offset - getPointerSize(vw)
                     yield(StackString(fva, decoded_string, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
                     seen.add(decoded_string)
@@ -228,7 +229,7 @@ def extract_stackstrings(vw, selected_functions, no_filter=False):
                 else:
                     continue
 
-                if decoded_string not in seen:
+                if decoded_string not in seen and len(decoded_string) >= min_length:
                     frame_offset = (ctx.init_sp - ctx.sp) - s.offset - getPointerSize(vw)
                     yield(StackString(fva, decoded_string, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
                     seen.add(decoded_string)

@@ -205,7 +205,7 @@ def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
     return delta_bytes
 
 
-def extract_strings(b, no_filter):
+def extract_strings(b, min_length, no_filter):
     '''
     Extract the ASCII and UTF-16 strings from a bytestring.
 
@@ -213,6 +213,7 @@ def extract_strings(b, no_filter):
     :param b: The data from which to extract the strings. Note its a
       DecodedString instance that tracks extra metadata beyond the
       bytestring contents.
+    :param min_length: minimum string length
     :param no_filter: do not filter decoded strings
     :rtype: Sequence[decoding_manager.DecodedString]
     '''
@@ -228,7 +229,8 @@ def extract_strings(b, no_filter):
         else:
             continue
 
-        ret.append(DecodedString(b.va + s.offset, decoded_string, b.decoded_at_va, b.fva, b.characteristics))
+        if len(decoded_string) >= min_length:
+            ret.append(DecodedString(b.va + s.offset, decoded_string, b.decoded_at_va, b.fva, b.characteristics))
     for s in strings.extract_unicode_strings(b.s):
         if len(s.s) > MAX_STRING_LENGTH:
             continue
@@ -240,5 +242,6 @@ def extract_strings(b, no_filter):
         else:
             continue
 
-        ret.append(DecodedString(b.va + s.offset, decoded_string, b.decoded_at_va, b.fva, b.characteristics))
+        if len(decoded_string) >= min_length:
+            ret.append(DecodedString(b.va + s.offset, decoded_string, b.decoded_at_va, b.fva, b.characteristics))
     return ret

@@ -55,12 +55,13 @@ def hex(i):
     return "0x%X" % (i)
 
 
-def decode_strings(vw, function_index, decoding_functions_candidates, no_filter=False):
+def decode_strings(vw, function_index, decoding_functions_candidates, min_length, no_filter=False):
     """
     FLOSS string decoding algorithm
     :param vw: vivisect workspace
     :param function_index: function data
     :param decoding_functions_candidates: identification manager
+    :param min_length: minimum string length
     :param no_filter: do not filter decoded strings
     :return: list of decoded strings ([DecodedString])
     """
@@ -70,7 +71,7 @@ def decode_strings(vw, function_index, decoding_functions_candidates, no_filter=
         for ctx in string_decoder.extract_decoding_contexts(vw, fva):
             for delta in string_decoder.emulate_decoding_routine(vw, function_index, fva, ctx):
                 for delta_bytes in string_decoder.extract_delta_bytes(delta, ctx.decoded_at_va, fva):
-                    for decoded_string in string_decoder.extract_strings(delta_bytes, no_filter):
+                    for decoded_string in string_decoder.extract_strings(delta_bytes, min_length, no_filter):
                         decoded_strings.append(decoded_string)
     return decoded_strings
 
@@ -380,31 +381,28 @@ def print_identification_results(sample_file_path, decoder_results):
             headers=["address", "score"]))
 
 
-def print_decoding_results(decoded_strings, min_length, group_functions, quiet=False, expert=False):
+def print_decoding_results(decoded_strings, group_functions, quiet=False, expert=False):
     """
     Print results of string decoding phase.
     :param decoded_strings: list of decoded strings ([DecodedString])
-    :param min_length: minimum string length
     :param group_functions: group output by VA of decoding routines
     :param quiet: print strings only, suppresses headers
     :param expert: expert mode
     """
-    long_strings = filter(lambda ds: len(ds.s) >= min_length, decoded_strings)
-
     if not quiet:
-        print("\nFLOSS decoded %d strings" % len(long_strings))
+        print("\nFLOSS decoded %d strings" % len(decoded_strings))
 
     if group_functions:
-        fvas = set(map(lambda i: i.fva, long_strings))
+        fvas = set(map(lambda i: i.fva, decoded_strings))
         for fva in fvas:
-            grouped_strings = filter(lambda ds: ds.fva == fva, long_strings)
+            grouped_strings = filter(lambda ds: ds.fva == fva, decoded_strings)
             len_ds = len(grouped_strings)
             if len_ds > 0:
                 if not quiet:
                     print("\nDecoding function at 0x%X (decoded %d strings)" % (fva, len_ds))
                 print_decoded_strings(grouped_strings, quiet=quiet, expert=expert)
     else:
-        print_decoded_strings(long_strings, quiet=quiet, expert=expert)
+        print_decoded_strings(decoded_strings, quiet=quiet, expert=expert)
 
 
 def print_decoded_strings(decoded_strings, quiet=False, expert=False):
@@ -691,15 +689,13 @@ def print_static_strings(path, min_length, quiet=False):
                 print("")
 
 
-def print_stack_strings(extracted_strings, min_length, quiet=False, expert=False):
+def print_stack_strings(extracted_strings, quiet=False, expert=False):
     """
     Print extracted stackstrings.
     :param extracted_strings: list of decoded strings ([DecodedString])
-    :param min_length: minimum string length
     :param quiet: print strings only, suppresses headers
     :param expert: expert mode
     """
-    extracted_strings = list(filter(lambda s: len(s.s) >= min_length, extracted_strings))
     count = len(extracted_strings)
 
     if not quiet:
@@ -843,19 +839,19 @@ def main(argv=None):
 
         floss_logger.info("Decoding strings...")
         function_index = viv_utils.InstructionFunctionIndex(vw)
-        decoded_strings = decode_strings(vw, function_index, decoding_functions_candidates, options.no_filter)
+        decoded_strings = decode_strings(vw, function_index, decoding_functions_candidates, min_length, options.no_filter)
         if not options.expert:
             decoded_strings = filter_unique_decoded(decoded_strings)
-        print_decoding_results(decoded_strings, min_length, options.group_functions, quiet=options.quiet, expert=options.expert)
+        print_decoding_results(decoded_strings, options.group_functions, quiet=options.quiet, expert=options.expert)
     else:
         decoded_strings = []
 
     if not options.no_stack_strings:
         floss_logger.info("Extracting stackstrings...")
-        stack_strings = stackstrings.extract_stackstrings(vw, selected_functions, options.no_filter)
+        stack_strings = stackstrings.extract_stackstrings(vw, selected_functions, min_length, options.no_filter)
         if not options.expert:
             stack_strings = list(set(stack_strings))
-        print_stack_strings(stack_strings, min_length, quiet=options.quiet, expert=options.expert)
+        print_stack_strings(stack_strings, quiet=options.quiet, expert=options.expert)
     else:
         stack_strings = []
 
