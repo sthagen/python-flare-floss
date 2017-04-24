@@ -1,6 +1,5 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
-import re
 import logging
 
 from collections import namedtuple
@@ -11,7 +10,7 @@ import envi.archs.amd64
 import viv_utils.emulator_drivers
 
 import strings
-from utils import makeEmulator, is_fp_string, strip_string
+from utils import makeEmulator, is_fp_string, strip_string, MAX_STRING_LENGTH
 
 
 logger = logging.getLogger(__name__)
@@ -187,12 +186,14 @@ def get_basic_block_ends(vw):
     return index
 
 
-def extract_stackstrings(vw, selected_functions):
+def extract_stackstrings(vw, selected_functions, no_filter=False):
     '''
     Extracts the stackstrings from functions in the given workspace.
 
     :param vw: The vivisect workspace from which to extract stackstrings.
     :rtype: Generator[StackString]
+    :param selected_functions: list of selected functions
+    :param no_filter: do not filter deobfuscated stackstrings
     '''
     logger.debug('extracting stackstrings from %d functions', len(selected_functions))
     bb_ends = get_basic_block_ends(vw)
@@ -202,19 +203,32 @@ def extract_stackstrings(vw, selected_functions):
         for ctx in extract_call_contexts(vw, fva, bb_ends):
             logger.debug('extracting stackstrings at checkpoint: 0x%x stacksize: 0x%x', ctx.pc, ctx.init_sp - ctx.sp)
             for s in strings.extract_ascii_strings(ctx.stack_memory):
-                # TODO check for MAX_STRING_LENGTH
-                if is_fp_string(s.s):
+                if len(s.s) > MAX_STRING_LENGTH:
                     continue
-                s_stripped = strip_string(s.s)
-                if s_stripped not in seen:
+
+                if no_filter:
+                    decoded_string = s.s
+                elif not is_fp_string(s.s):
+                    decoded_string = strip_string(s.s)
+                else:
+                    continue
+
+                if decoded_string not in seen:
                     frame_offset = (ctx.init_sp - ctx.sp) - s.offset - getPointerSize(vw)
-                    yield(StackString(fva, s_stripped, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
-                    seen.add(s_stripped)
+                    yield(StackString(fva, decoded_string, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
+                    seen.add(decoded_string)
             for s in strings.extract_unicode_strings(ctx.stack_memory):
-                if is_fp_string(s.s):
+                if len(s.s) > MAX_STRING_LENGTH:
                     continue
-                s_stripped = strip_string(s.s)
-                if s_stripped not in seen:
+
+                if no_filter:
+                    decoded_string = s.s
+                elif not is_fp_string(s.s):
+                    decoded_string = strip_string(s.s)
+                else:
+                    continue
+
+                if decoded_string not in seen:
                     frame_offset = (ctx.init_sp - ctx.sp) - s.offset - getPointerSize(vw)
-                    yield(StackString(fva, s_stripped, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
-                    seen.add(s_stripped)
+                    yield(StackString(fva, decoded_string, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
+                    seen.add(decoded_string)

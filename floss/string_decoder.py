@@ -5,15 +5,12 @@ import logging
 
 import strings
 import decoding_manager
-from utils import makeEmulator, is_fp_string, strip_string
+from utils import makeEmulator, is_fp_string, strip_string, MAX_STRING_LENGTH
 from function_argument_getter import get_function_contexts
 from decoding_manager import DecodedString, LocationType
 
 
 floss_logger = logging.getLogger("floss")
-
-
-MAX_STRING_LENGTH = 2048
 
 
 def memdiff_search(bytes1, bytes2):
@@ -208,7 +205,7 @@ def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
     return delta_bytes
 
 
-def extract_strings(b):
+def extract_strings(b, no_filter):
     '''
     Extract the ASCII and UTF-16 strings from a bytestring.
 
@@ -216,19 +213,32 @@ def extract_strings(b):
     :param b: The data from which to extract the strings. Note its a
       DecodedString instance that tracks extra metadata beyond the
       bytestring contents.
+    :param no_filter: do not filter decoded strings
     :rtype: Sequence[decoding_manager.DecodedString]
     '''
     ret = []
     for s in strings.extract_ascii_strings(b.s):
-        if is_fp_string(s.s) or len(s.s) > MAX_STRING_LENGTH:
+        if len(s.s) > MAX_STRING_LENGTH:
             continue
-        s_stripped = strip_string(s.s)
-        ret.append(DecodedString(b.va + s.offset, s_stripped, b.decoded_at_va,
-                                 b.fva, b.characteristics))
+
+        if no_filter:
+            decoded_string = s.s
+        elif not is_fp_string(s.s):
+            decoded_string = strip_string(s.s)
+        else:
+            continue
+
+        ret.append(DecodedString(b.va + s.offset, decoded_string, b.decoded_at_va, b.fva, b.characteristics))
     for s in strings.extract_unicode_strings(b.s):
-        if is_fp_string(s.s) or len(s.s) > MAX_STRING_LENGTH:
+        if len(s.s) > MAX_STRING_LENGTH:
             continue
-        s_stripped = strip_string(s.s)
-        ret.append(DecodedString(b.va + s.offset, s_stripped, b.decoded_at_va,
-                                 b.fva, b.characteristics))
+
+        if no_filter:
+            decoded_string = s.s
+        elif not is_fp_string(s.s):
+            decoded_string = strip_string(s.s)
+        else:
+            continue
+
+        ret.append(DecodedString(b.va + s.offset, decoded_string, b.decoded_at_va, b.fva, b.characteristics))
     return ret

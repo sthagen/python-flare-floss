@@ -55,12 +55,13 @@ def hex(i):
     return "0x%X" % (i)
 
 
-def decode_strings(vw, function_index, decoding_functions_candidates):
+def decode_strings(vw, function_index, decoding_functions_candidates, no_filter=False):
     """
     FLOSS string decoding algorithm
     :param vw: vivisect workspace
     :param function_index: function data
     :param decoding_functions_candidates: identification manager
+    :param no_filter: do not filter decoded strings
     :return: list of decoded strings ([DecodedString])
     """
     decoded_strings = []
@@ -69,7 +70,7 @@ def decode_strings(vw, function_index, decoding_functions_candidates):
         for ctx in string_decoder.extract_decoding_contexts(vw, fva):
             for delta in string_decoder.emulate_decoding_routine(vw, function_index, fva, ctx):
                 for delta_bytes in string_decoder.extract_delta_bytes(delta, ctx.decoded_at_va, fva):
-                    for decoded_string in string_decoder.extract_strings(delta_bytes):
+                    for decoded_string in string_decoder.extract_strings(delta_bytes, no_filter):
                         decoded_strings.append(decoded_string)
     return decoded_strings
 
@@ -139,6 +140,9 @@ def make_parser():
                       help="save vivisect .viv workspace file in current directory", action="store_true")
     parser.add_option("-m", "--show-metainfo", dest="should_show_metainfo",
                       help="display vivisect workspace meta information", action="store_true")
+    parser.add_option("--no-filter", dest="no_filter",
+                      help="do not filter deobfuscated strings (may result in many false positive strings)",
+                      action="store_true")
 
     shellcode_group = OptionGroup(parser, "Shellcode options", "Analyze raw binary file containing shellcode")
     shellcode_group.add_option("-s", "--shellcode", dest="is_shellcode", help="analyze shellcode",
@@ -839,7 +843,7 @@ def main(argv=None):
 
         floss_logger.info("Decoding strings...")
         function_index = viv_utils.InstructionFunctionIndex(vw)
-        decoded_strings = decode_strings(vw, function_index, decoding_functions_candidates)
+        decoded_strings = decode_strings(vw, function_index, decoding_functions_candidates, options.no_filter)
         if not options.expert:
             decoded_strings = filter_unique_decoded(decoded_strings)
         print_decoding_results(decoded_strings, min_length, options.group_functions, quiet=options.quiet, expert=options.expert)
@@ -848,7 +852,7 @@ def main(argv=None):
 
     if not options.no_stack_strings:
         floss_logger.info("Extracting stackstrings...")
-        stack_strings = stackstrings.extract_stackstrings(vw, selected_functions)
+        stack_strings = stackstrings.extract_stackstrings(vw, selected_functions, options.no_filter)
         if not options.expert:
             stack_strings = list(set(stack_strings))
         print_stack_strings(stack_strings, min_length, quiet=options.quiet, expert=options.expert)

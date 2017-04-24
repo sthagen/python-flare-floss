@@ -7,6 +7,8 @@ from collections import OrderedDict
 ONE_MB = 1024 * 1024
 STACK_MEM_NAME = "[stack]"
 
+MAX_STRING_LENGTH = 2048
+
 
 def makeEmulator(vw):
     """
