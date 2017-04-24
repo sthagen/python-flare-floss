@@ -55,17 +55,17 @@ def hex(i):
     return "0x%X" % (i)
 
 
-def decode_strings(vw, function_index, decoding_functions_candidates, min_length, no_filter=False):
+def decode_strings(vw, decoding_functions_candidates, min_length, no_filter=False):
     """
     FLOSS string decoding algorithm
     :param vw: vivisect workspace
-    :param function_index: function data
     :param decoding_functions_candidates: identification manager
     :param min_length: minimum string length
     :param no_filter: do not filter decoded strings
     :return: list of decoded strings ([DecodedString])
     """
     decoded_strings = []
+    function_index = viv_utils.InstructionFunctionIndex(vw)
     # TODO pass function list instead of identification manager
     for fva, _ in decoding_functions_candidates.get_top_candidate_functions(10):
         for ctx in string_decoder.extract_decoding_contexts(vw, fva):
@@ -838,8 +838,7 @@ def main(argv=None):
             print_identification_results(sample_file_path, decoding_functions_candidates)
 
         floss_logger.info("Decoding strings...")
-        function_index = viv_utils.InstructionFunctionIndex(vw)
-        decoded_strings = decode_strings(vw, function_index, decoding_functions_candidates, min_length, options.no_filter)
+        decoded_strings = decode_strings(vw, decoding_functions_candidates, min_length, options.no_filter)
         if not options.expert:
             decoded_strings = filter_unique_decoded(decoded_strings)
         print_decoding_results(decoded_strings, options.group_functions, quiet=options.quiet, expert=options.expert)

@@ -15,9 +15,8 @@ def extract_strings(vw):
     """
     Deobfuscate strings from vivisect workspace
     """
-    function_index = viv_utils.InstructionFunctionIndex(vw)
     decoding_functions_candidates = identify_decoding_functions(vw)
-    decoded_strings = floss_main.decode_strings(vw, function_index, decoding_functions_candidates, 4)
+    decoded_strings = floss_main.decode_strings(vw, decoding_functions_candidates, 4)
     selected_functions = floss_main.select_functions(vw, None)
     decoded_stackstrings = stackstrings.extract_stackstrings(vw, selected_functions, 4)
     decoded_strings.extend(decoded_stackstrings)
