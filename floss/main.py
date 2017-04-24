@@ -46,6 +46,7 @@ MIN_STRING_LENGTH_DEFAULT = 4
 class LoadNotSupportedError(Exception):
     pass
 
+
 class WorkspaceLoadError(Exception):
     pass
 
