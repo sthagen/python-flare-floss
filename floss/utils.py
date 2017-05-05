@@ -82,7 +82,7 @@ def hex(i):
 
 
 FP_FILTER_PREFIXES = re.compile(r"^.?((p|P|0)?VA)|(0|P)?\\A|\[A|P\]A|@AA")  # remove string prefixes: pVA, VA, 0VA, etc.
-FP_FILTER_SUFFIXES = re.compile(r".*([0-9A-G>]VA$|@AA|iiVV)$")  # remove string suffixes: 0VA, AVA, >VA, etc.
+FP_FILTER_SUFFIXES = re.compile(r"([0-9A-G>]VA|@AA|iiVV|j=p@|ids@|iDC@|i4C@|i%1@)$")  # remove string suffixes: 0VA, AVA, >VA, etc.
 FP_FILTER_CHARS = re.compile(r".*(AAA|BBB|CCC|DDD|EEE|FFF|PPP|UUU|ZZZ|@@@|;;;|&&&|\?\?\?|\|\|\||    ).*")
 # alternatively: ".*([^0-9wW])\1{2}.*" to match any 3 consecutive chars (except numbers, ws, and others?)
 FP_FILTER_REP_CHARS = re.compile(r".*(.)\1{7}.*")  # any string containing the same char 8 or more consecutive times
