@@ -134,6 +134,15 @@ and number of discovered functions. In conjunction with the `-f` or
 functions.
 
 
+### Do not filter deobfuscated strings (`--no-filter`)
+
+The FLOSS emulation process can result in many false positive deobfuscated
+strings. By default, various filters are applied to remove most strings
+stemming from vivisect's memory initializations as well as taint and pointer
+handling, among other things. Use the `--no-filter` option to obtain the
+raw and unfiltered deobfuscated strings.
+
+
 ### Generate annotation scripts (`-i`, `-r`, and `--x64dbg`)
 
 FLOSS can generate an IDA Pro Python script that will

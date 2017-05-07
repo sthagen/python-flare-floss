@@ -1,6 +1,5 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
-import re
 import logging
 
 from collections import namedtuple
@@ -11,7 +10,7 @@ import envi.archs.amd64
 import viv_utils.emulator_drivers
 
 import strings
-from utils import makeEmulator
+from utils import makeEmulator, is_fp_string, strip_string, MAX_STRING_LENGTH
 
 
 logger = logging.getLogger(__name__)
@@ -173,10 +172,6 @@ def getPointerSize(vw):
         raise NotImplementedError("unexpected architecture: %s" % (vw.arch.__class__.__name__))
 
 
-FP_FILTER = re.compile("^p?V?A+$")
-FP_FILTER_SUB = re.compile("^p?VA")  # remove string prefixes: pVA, VA
-
-
 def get_basic_block_ends(vw):
     """
     Return the set of VAs that are the last instructions of basic blocks.
@@ -191,11 +186,14 @@ def get_basic_block_ends(vw):
     return index
 
 
-def extract_stackstrings(vw, selected_functions):
+def extract_stackstrings(vw, selected_functions, min_length, no_filter=False):
     '''
     Extracts the stackstrings from functions in the given workspace.
 
     :param vw: The vivisect workspace from which to extract stackstrings.
+    :param selected_functions: list of selected functions
+    :param min_length: minimum string length
+    :param no_filter: do not filter deobfuscated stackstrings
     :rtype: Generator[StackString]
     '''
     logger.debug('extracting stackstrings from %d functions', len(selected_functions))
@@ -206,23 +204,32 @@ def extract_stackstrings(vw, selected_functions):
         for ctx in extract_call_contexts(vw, fva, bb_ends):
             logger.debug('extracting stackstrings at checkpoint: 0x%x stacksize: 0x%x', ctx.pc, ctx.init_sp - ctx.sp)
             for s in strings.extract_ascii_strings(ctx.stack_memory):
-                if FP_FILTER.match(s.s):
-                    # ignore strings like: pVA, pVAAA, AAAA
-                    # which come from vivisect uninitialized taint tracking
+                if len(s.s) > MAX_STRING_LENGTH:
                     continue
-                s_stripped = re.sub(FP_FILTER_SUB, "", s.s)
-                if s_stripped not in seen:
-                    frame_offset = (ctx.init_sp - ctx.sp) - s.offset - getPointerSize(vw)
-                    yield(StackString(fva, s_stripped, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
-                    seen.add(s_stripped)
-            for s in strings.extract_unicode_strings(ctx.stack_memory):
-                if FP_FILTER.match(s.s):
-                    # ignore strings like: pVA, pVAAA, AAAA
-                    # which come from vivisect uninitialized taint tracking
-                    continue
-                s_stripped = re.sub(FP_FILTER_SUB, "", s.s)
-                if s_stripped not in seen:
-                    frame_offset = (ctx.init_sp - ctx.sp) - s.offset - getPointerSize(vw)
-                    yield(StackString(fva, s_stripped, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
-                    seen.add(s_stripped)
 
+                if no_filter:
+                    decoded_string = s.s
+                elif not is_fp_string(s.s):
+                    decoded_string = strip_string(s.s)
+                else:
+                    continue
+
+                if decoded_string not in seen and len(decoded_string) >= min_length:
+                    frame_offset = (ctx.init_sp - ctx.sp) - s.offset - getPointerSize(vw)
+                    yield(StackString(fva, decoded_string, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
+                    seen.add(decoded_string)
+            for s in strings.extract_unicode_strings(ctx.stack_memory):
+                if len(s.s) > MAX_STRING_LENGTH:
+                    continue
+
+                if no_filter:
+                    decoded_string = s.s
+                elif not is_fp_string(s.s):
+                    decoded_string = strip_string(s.s)
+                else:
+                    continue
+
+                if decoded_string not in seen and len(decoded_string) >= min_length:
+                    frame_offset = (ctx.init_sp - ctx.sp) - s.offset - getPointerSize(vw)
+                    yield(StackString(fva, decoded_string, ctx.pc, ctx.sp, ctx.init_sp, s.offset, frame_offset))
+                    seen.add(decoded_string)
