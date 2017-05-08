@@ -30,6 +30,7 @@ install:
     - pip install https://github.com/williballenthin/vivisect/zipball/master
     - pip install pyinstaller pep8
     - echo "__version__ = '$(git describe --tags)'" > floss/version.py
+    - cat floss/version.py
     - pip install -e .
     # haven't figured how to build wclang on osx yet, so don't build tests
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install -y git clang mingw-w64 gcc-mingw-w64 cmake make gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-dev  binutils-mingw-w64-i686 gcc-mingw-w64-i686 g++-mingw-w64-i686; fi
