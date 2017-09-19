@@ -33,7 +33,7 @@ install:
     - cat floss/version.py
     - pip install -e .
     # haven't figured how to build wclang on osx yet, so don't build tests
-    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install -y git clang mingw-w64 gcc-mingw-w64 cmake make gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-dev  binutils-mingw-w64-i686 gcc-mingw-w64-i686 g++-mingw-w64-i686; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install -y git clang mingw-w64 gcc-mingw-w64 cmake make gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-x86-64-dev mingw-w64-i686-dev  binutils-mingw-w64-i686 gcc-mingw-w64-i686 g++-mingw-w64-i686; fi
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then git clone https://github.com/tpoechtrager/wclang.git ../wclang;                              fi
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pushd ../wclang; cmake -DCMAKE_INSTALL_PREFIX=/usr/local && make && sudo make install; popd; fi
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pushd tests/src; make all; popd;                                                             fi
