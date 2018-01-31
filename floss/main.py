@@ -701,11 +701,11 @@ def print_static_strings(path, min_length, quiet=False):
 def print_stack_strings(extracted_strings, quiet=False, expert=False):
     """
     Print extracted stackstrings.
-    :param extracted_strings: list of decoded strings ([DecodedString])
+    :param extracted_strings: list of stack strings ([StackString])
     :param quiet: print strings only, suppresses headers
     :param expert: expert mode
     """
-    count = len(list(extracted_strings))
+    count = len(extracted_strings)
 
     if not quiet:
         print("\nFLOSS extracted %d stackstrings" % (count))
@@ -863,7 +863,9 @@ def main(argv=None):
     if not options.no_stack_strings:
         floss_logger.info("Extracting stackstrings...")
         stack_strings = stackstrings.extract_stackstrings(vw, selected_functions, min_length, options.no_filter)
+        stack_strings = list(stack_strings)
         if not options.expert:
+            # remove duplicate entries
             stack_strings = set(stack_strings)
         print_stack_strings(stack_strings, quiet=options.quiet, expert=options.expert)
     else:
