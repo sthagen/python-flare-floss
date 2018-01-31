@@ -29,7 +29,7 @@ before_install:
 install:
     - pip install https://github.com/williballenthin/vivisect/zipball/master
     - pip install pyinstaller pep8
-    - echo "__version__ = '$(git describe --tags)'" > floss/version.py
+    - echo "__version__ = '$(git describe --tags --always)'" > floss/version.py
     - cat floss/version.py
     - pip install -e .
     # haven't figured how to build wclang on osx yet, so don't build tests
