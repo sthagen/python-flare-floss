@@ -231,7 +231,7 @@ If you want to specify a base address for the shellcode, use the the `-b` or
     floss.exe -s malware.bin -b 0x1000000
 
 You can specify an entry point for the shellcode with the `-e` or `--shellcode_ep`
-option. Although vivisect does a good job identifying code, providing an entry point
+option. The `entry point` value is the relative offset from `base` where the shellcode starts executing. Although vivisect does a good job identifying code, providing an entry point
 might improve code analysis.
 
     floss.exe -s malware.bin -b 0x1000000 -e 0x100
