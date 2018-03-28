@@ -106,7 +106,7 @@ class FunctionArgumentGetter(viv_utils.LoggingObject):
         monitor = CallMonitor(self.vivisect_workspace, target_fva)
         with installed_monitor(self.driver, monitor):
             with api_hooks.defaultHooks(self.driver):
-                self.driver.runFunction(self.index[fva], maxhit=1, maxrep=0x100, func_only=True)
+                self.driver.runFunction(self.index[fva], maxhit=1, maxrep=0x1000, func_only=True)
         contexts = monitor.get_contexts()
 
         self.d("      results:")
