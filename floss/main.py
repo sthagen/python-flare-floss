@@ -55,13 +55,14 @@ def hex(i):
     return "0x%X" % (i)
 
 
-def decode_strings(vw, decoding_functions_candidates, min_length, no_filter=False):
+def decode_strings(vw, decoding_functions_candidates, min_length, no_filter=False, max_instruction_count=20000):
     """
     FLOSS string decoding algorithm
     :param vw: vivisect workspace
     :param decoding_functions_candidates: identification manager
     :param min_length: minimum string length
     :param no_filter: do not filter decoded strings
+    :param max_instruction_count: The maximum number of instructions to emulate per function.
     :return: list of decoded strings ([DecodedString])
     """
     decoded_strings = []
@@ -69,7 +70,7 @@ def decode_strings(vw, decoding_functions_candidates, min_length, no_filter=Fals
     # TODO pass function list instead of identification manager
     for fva, _ in decoding_functions_candidates.get_top_candidate_functions(10):
         for ctx in string_decoder.extract_decoding_contexts(vw, fva):
-            for delta in string_decoder.emulate_decoding_routine(vw, function_index, fva, ctx):
+            for delta in string_decoder.emulate_decoding_routine(vw, function_index, fva, ctx, max_instruction_count):
                 for delta_bytes in string_decoder.extract_delta_bytes(delta, ctx.decoded_at_va, fva):
                     for decoded_string in string_decoder.extract_strings(delta_bytes, min_length, no_filter):
                         decoded_strings.append(decoded_string)
@@ -144,6 +145,8 @@ def make_parser():
     parser.add_option("--no-filter", dest="no_filter",
                       help="do not filter deobfuscated strings (may result in many false positive strings)",
                       action="store_true")
+    parser.add_option("--max-instruction-count", dest="max_instruction_count", type=int, default=20000,
+                      help="maximum number of instructions to emulate per function")
 
     shellcode_group = OptionGroup(parser, "Shellcode options", "Analyze raw binary file containing shellcode")
     shellcode_group.add_option("-s", "--shellcode", dest="is_shellcode", help="analyze shellcode",
@@ -853,7 +856,7 @@ def main(argv=None):
             print_identification_results(sample_file_path, decoding_functions_candidates)
 
         floss_logger.info("Decoding strings...")
-        decoded_strings = decode_strings(vw, decoding_functions_candidates, min_length, options.no_filter)
+        decoded_strings = decode_strings(vw, decoding_functions_candidates, min_length, options.no_filter, options.max_instruction_count)
         if not options.expert:
             decoded_strings = filter_unique_decoded(decoded_strings)
         print_decoding_results(decoded_strings, options.group_functions, quiet=options.quiet, expert=options.expert)
