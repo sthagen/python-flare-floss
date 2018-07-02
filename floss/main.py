@@ -207,7 +207,15 @@ def make_parser():
 
     return parser
 
-def set_log_config(should_debug=False, should_verbose=False):
+def set_logging_levels(should_debug=False, should_verbose=False):
+    """
+    Sets the logging levels of each of Floss's loggers individually. 
+    Recomended to use if Floss is being used as a library, and your 
+    project has its own logging set up. If both parameters 'should_debug'
+    and 'should_verbose' are false, the logging level will be set to ERROR.
+    :param should_debug: set logging level to DEBUG
+    :param should_verbose: set logging level to INFO
+    """
     log_level = None
     emulator_driver_level = None
 
@@ -300,7 +308,15 @@ def set_log_config(should_debug=False, should_verbose=False):
     logging.getLogger("floss.plugins.mov_plugin.MovPlugin").setLevel(log_level)
         
 
-def set_logging_level(should_debug=False, should_verbose=False):
+def set_log_config(should_debug=False, should_verbose=False):
+    """
+    Removes root logging handlers, and sets Floss's logging level.
+    Recomended to use if Floss is being used in a standalone script, or 
+    your project doesn't have any loggers. If both parameters 'should_debug'
+    and 'should_verbose' are false, the logging level will be set to ERROR.
+    :param should_debug: set logging level to DEBUG
+    :param should_verbose: set logging level to INFO
+    """
     # reset .basicConfig root handler
     # via: http://stackoverflow.com/a/2588054
     root = logging.getLogger()
@@ -314,7 +330,8 @@ def set_logging_level(should_debug=False, should_verbose=False):
         logging.basicConfig(level=logging.INFO)
     else:
         logging.basicConfig(level=logging.WARNING)
-        set_log_config(should_debug, should_verbose)
+
+    set_logging_levels(should_debug, should_verbose)
 
 
 def parse_functions_option(functions_option):
@@ -862,7 +879,7 @@ def main(argv=None):
     else:
         options, args = parser.parse_args()
 
-    set_logging_level(options.debug, options.verbose)
+    set_log_config(options.debug, options.verbose)
 
     if options.list_plugins:
         print_plugin_list()
