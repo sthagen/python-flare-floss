@@ -734,7 +734,7 @@ def create_r2_script(sample_file_path, r2_script_file, decoded_strings, stack_st
     :param r2script_file: output file path
     :param decoded_strings: list of decoded strings ([DecodedString])
     :param stack_strings: list of stack strings ([StackString])
-    :param log: conrols whether to log or print the location of the eadare2script
+    :param log: conrols whether to log or print the location of the radare2script
     """
     script_content = create_r2_script_content(sample_file_path, decoded_strings, stack_strings)
     r2_script_file = os.path.abspath(r2_script_file)
