@@ -207,8 +207,116 @@ def make_parser():
 
     return parser
 
+def set_logging_levels(should_debug=False, should_verbose=False):
+    """
+    Sets the logging levels of each of Floss's loggers individually. 
+    Recomended to use if Floss is being used as a library, and your 
+    project has its own logging set up. If both parameters 'should_debug'
+    and 'should_verbose' are false, the logging level will be set to ERROR.
+    :param should_debug: set logging level to DEBUG
+    :param should_verbose: set logging level to INFO
+    """
+    log_level = None
+    emulator_driver_level = None
 
-def set_logging_level(should_debug=False, should_verbose=False):
+    if should_debug:
+        log_level = logging.DEBUG
+        emulator_driver_level = log_level
+
+    elif should_verbose:
+        log_level = logging.INFO
+        emulator_driver_level = log_level
+    else:
+        log_level = logging.ERROR
+        emulator_driver_level = logging.CRITICAL
+
+    # ignore messages like:
+    # DEBUG: mapping section: 0 .text
+    logging.getLogger("vivisect.parsers.pe").setLevel(log_level)
+
+    # ignore messages like:
+    # WARNING:EmulatorDriver:error during emulation of function: BreakpointHit at 0x1001fbfb
+    # ERROR:EmulatorDriver:error during emulation of function ... DivideByZero: DivideByZero at 0x10004940
+    # TODO: probably should modify emulator driver to de-prioritize this
+    logging.getLogger("EmulatorDriver").setLevel(emulator_driver_level)
+
+    # ignore messages like:
+    # WARNING:Monitor:logAnomaly: anomaly: BreakpointHit at 0x1001fbfb
+    logging.getLogger("Monitor").setLevel(log_level)
+
+    # ignore messages like:
+    # WARNING:envi/codeflow.addCodeFlow:parseOpcode error at 0x1001044c: InvalidInstruction("'660f3a0fd90c660f7f1f660f6fe0660f' at 0x1001044c",)
+    logging.getLogger("envi/codeflow.addCodeFlow").setLevel(log_level)
+
+    # ignore messages like:
+    # WARNING:vtrace.platforms.win32:LoadLibrary C:\Users\USERNA~1\AppData\Local\Temp\_MEI21~1\vtrace\platforms\windll\amd64\symsrv.dll: [Error 126] The specified module could not be found
+    # WARNING:vtrace.platforms.win32:LoadLibrary C:\Users\USERNA~1\AppData\Local\Temp\_MEI21~1\vtrace\platforms\windll\amd64\dbghelp.dll: [Error 126] The specified module could not be found
+    logging.getLogger("vtrace.platforms.win32").setLevel(log_level)
+
+    # ignore messages like:
+    # DEBUG: merge_candidates: Function at 0x00401500 is new, adding
+    logging.getLogger("floss.identification_manager.IdentificationManager").setLevel(log_level)
+
+    # ignore messages like:
+    # WARNING: get_caller_vas: unknown caller function: 0x403441
+    # DEBUG: get_all_function_contexts: Getting function context for function at 0x00401500...
+    logging.getLogger("floss.function_argument_getter.FunctionArgumentGetter").setLevel(log_level)
+
+    # ignore messages like:
+    # DEBUG: Emulating function at 0x004017A9 called at 0x00401644, return address: 0x00401649
+    logging.getLogger("floss").setLevel(log_level)
+
+    # ignore messages like:
+    # DEBUG: extracting stackstrings at checkpoint: 0x4048dd stacksize: 0x58
+    logging.getLogger("floss.stackstrings").setLevel(log_level)
+
+    # ignore messages like:
+    # WARNING:plugins.arithmetic_plugin.XORPlugin:identify: Invalid instruction encountered in basic block, skipping: 0x4a0637
+    logging.getLogger("floss.plugins.arithmetic_plugin.XORPlugin").setLevel(log_level)
+    logging.getLogger("floss.plugins.arithmetic_plugin.ShiftPlugin").setLevel(log_level)
+
+    # ignore messages like:
+    # DEBUG: identify: Identified WSAStartup_00401476 at VA 0x00401476
+    logging.getLogger("floss.plugins.library_function_plugin.FunctionIsLibraryPlugin").setLevel(log_level)
+
+    # ignore messages like:
+    # DEBUG: identify: Function at 0x00401500: Cross references to: 2
+    logging.getLogger("floss.plugins.function_meta_data_plugin.FunctionCrossReferencesToPlugin").setLevel(log_level)
+
+    # ignore messages like:
+    # DEBUG: identify: Function at 0x00401FFF: Number of arguments: 3
+    logging.getLogger("floss.plugins.function_meta_data_plugin.FunctionArgumentCountPlugin").setLevel(log_level)
+
+    # ignore messages like:
+    # DEBUG: get_meta_data: Function at 0x00401470 has meta data: Thunk: ws2_32.WSACleanup
+    logging.getLogger("floss.plugins.function_meta_data_plugin.FunctionIsThunkPlugin").setLevel(log_level)
+
+    # ignore messages like:
+    # DEBUG: get_meta_data: Function at 0x00401000 has meta data: BlockCount: 7
+    logging.getLogger("floss.plugins.function_meta_data_plugin.FunctionBlockCountPlugin").setLevel(log_level)
+
+    # ignore messages like:
+    # DEBUG: get_meta_data: Function at 0x00401000 has meta data: InstructionCount: 60
+    logging.getLogger("floss.plugins.function_meta_data_plugin.FunctionInstructionCountPlugin").setLevel(log_level)
+
+    # ignore messages like:
+    # DEBUG: get_meta_data: Function at 0x00401000 has meta data: Size: 177
+    logging.getLogger("floss.plugins.function_meta_data_plugin.FunctionSizePlugin").setLevel(log_level)
+
+    # ignore messages like:
+    # DEBUG: identify: suspicious MOV instruction at 0x00401017 in function 0x00401000: mov byte [edx],al
+    logging.getLogger("floss.plugins.mov_plugin.MovPlugin").setLevel(log_level)
+        
+
+def set_log_config(should_debug=False, should_verbose=False):
+    """
+    Removes root logging handlers, and sets Floss's logging level.
+    Recomended to use if Floss is being used in a standalone script, or 
+    your project doesn't have any loggers. If both parameters 'should_debug'
+    and 'should_verbose' are false, the logging level will be set to ERROR.
+    :param should_debug: set logging level to DEBUG
+    :param should_verbose: set logging level to INFO
+    """
     # reset .basicConfig root handler
     # via: http://stackoverflow.com/a/2588054
     root = logging.getLogger()
@@ -223,30 +331,7 @@ def set_logging_level(should_debug=False, should_verbose=False):
     else:
         logging.basicConfig(level=logging.WARNING)
 
-        # ignore messages like:
-        # WARNING:EmulatorDriver:error during emulation of function: BreakpointHit at 0x1001fbfb
-        # ERROR:EmulatorDriver:error during emulation of function ... DivideByZero: DivideByZero at 0x10004940
-        # TODO: probably should modify emulator driver to de-prioritize this
-        logging.getLogger("EmulatorDriver").setLevel(logging.CRITICAL)
-
-        # ignore messages like:
-        # WARNING:Monitor:logAnomaly: anomaly: BreakpointHit at 0x1001fbfb
-        logging.getLogger("Monitor").setLevel(logging.ERROR)
-
-        # ignore messages like:
-        # WARNING:envi/codeflow.addCodeFlow:parseOpcode error at 0x1001044c: InvalidInstruction("'660f3a0fd90c660f7f1f660f6fe0660f' at 0x1001044c",)
-        logging.getLogger("envi/codeflow.addCodeFlow").setLevel(logging.ERROR)
-
-
-        # ignore messages like:
-        # WARNING:vtrace.platforms.win32:LoadLibrary C:\Users\USERNA~1\AppData\Local\Temp\_MEI21~1\vtrace\platforms\windll\amd64\symsrv.dll: [Error 126] The specified module could not be found
-        # WARNING:vtrace.platforms.win32:LoadLibrary C:\Users\USERNA~1\AppData\Local\Temp\_MEI21~1\vtrace\platforms\windll\amd64\dbghelp.dll: [Error 126] The specified module could not be found
-        logging.getLogger('vtrace.platforms.win32').setLevel(logging.ERROR)
-
-        # ignore messages like:
-        # WARNING:plugins.arithmetic_plugin.XORPlugin:identify: Invalid instruction encountered in basic block, skipping: 0x4a0637
-        logging.getLogger("floss.plugins.arithmetic_plugin.XORPlugin").setLevel(logging.ERROR)
-        logging.getLogger("floss.plugins.arithmetic_plugin.ShiftPlugin").setLevel(logging.ERROR)
+    set_logging_levels(should_debug, should_verbose)
 
 
 def parse_functions_option(functions_option):
@@ -794,7 +879,7 @@ def main(argv=None):
     else:
         options, args = parser.parse_args()
 
-    set_logging_level(options.debug, options.verbose)
+    set_log_config(options.debug, options.verbose)
 
     if options.list_plugins:
         print_plugin_list()
