@@ -690,7 +690,7 @@ def create_x64dbg_database(sample_file_path, x64dbg_database_file, imagebase, de
     :param x64dbg_database_file: output file path
     :param imagebase: imagebase for target file
     :param decoded_strings: list of decoded strings ([DecodedString])
-    :param log: conrols whether to log or print the location of the x64dbg database
+    :param log: controls whether to log or print the location of the x64dbg database
     """
     script_content = create_x64dbg_database_content(sample_file_path, imagebase, decoded_strings)
     with open(x64dbg_database_file, 'wb') as f:
@@ -711,7 +711,7 @@ def create_ida_script(sample_file_path, ida_python_file, decoded_strings, stack_
     :param ida_python_file: output file path
     :param decoded_strings: list of decoded strings ([DecodedString])
     :param stack_strings: list of stack strings ([StackString])
-    :param log: conrols whether to log or print the location of the IDAPython script file
+    :param log: controls whether to log or print the location of the IDAPython script file
     """
     script_content = create_ida_script_content(sample_file_path, decoded_strings, stack_strings)
     ida_python_file = os.path.abspath(ida_python_file)
@@ -734,7 +734,7 @@ def create_r2_script(sample_file_path, r2_script_file, decoded_strings, stack_st
     :param r2script_file: output file path
     :param decoded_strings: list of decoded strings ([DecodedString])
     :param stack_strings: list of stack strings ([StackString])
-    :param log: conrols whether to log or print the location of the radare2script
+    :param log: controls whether to log or print the location of the radare2script
     """
     script_content = create_r2_script_content(sample_file_path, decoded_strings, stack_strings)
     r2_script_file = os.path.abspath(r2_script_file)
