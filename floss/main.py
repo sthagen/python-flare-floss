@@ -683,68 +683,68 @@ def create_r2_script_content(sample_file_path, decoded_strings, stack_strings):
     return "\n".join(main_commands)
 
 
-def create_x64dbg_database(sample_file_path, x64dbg_database_file, imagebase, decoded_strings, log=False):
+def create_x64dbg_database(sample_file_path, x64dbg_database_file, imagebase, decoded_strings):
     """
     Create an x64dbg database to annotate an executable with decoded strings.
     :param sample_file_path: input file path
     :param x64dbg_database_file: output file path
     :param imagebase: imagebase for target file
     :param decoded_strings: list of decoded strings ([DecodedString])
+<<<<<<< HEAD
     :param log: controls whether to log or print the location of the x64dbg database
+=======
+>>>>>>> parent of 1d71ee0... Add the option of logging messages the create script functions for consistency
     """
     script_content = create_x64dbg_database_content(sample_file_path, imagebase, decoded_strings)
     with open(x64dbg_database_file, 'wb') as f:
         try:
             f.write(script_content)
-            if log:
-                floss_logger.info("Wrote x64dbg database to %s\n" % x64dbg_database_file)
-            else:
-                print("Wrote x64dbg database to %s\n" % x64dbg_database_file)
+            print("Wrote x64dbg database to %s\n" % x64dbg_database_file)
         except Exception as e:
             raise e
 
 
-def create_ida_script(sample_file_path, ida_python_file, decoded_strings, stack_strings, log=False):
+def create_ida_script(sample_file_path, ida_python_file, decoded_strings, stack_strings):
     """
     Create an IDAPython script to annotate an IDB file with decoded strings.
     :param sample_file_path: input file path
     :param ida_python_file: output file path
     :param decoded_strings: list of decoded strings ([DecodedString])
     :param stack_strings: list of stack strings ([StackString])
+<<<<<<< HEAD
     :param log: controls whether to log or print the location of the IDAPython script file
+=======
+>>>>>>> parent of 1d71ee0... Add the option of logging messages the create script functions for consistency
     """
     script_content = create_ida_script_content(sample_file_path, decoded_strings, stack_strings)
     ida_python_file = os.path.abspath(ida_python_file)
     with open(ida_python_file, 'wb') as f:
         try:
             f.write(script_content)
-            if log:
-                floss_logger.info("Wrote IDAPython script file to %s\n" % ida_python_file)
-            else:
-                print("Wrote IDAPython script file to %s\n" % ida_python_file)
+            print("Wrote IDAPython script file to %s\n" % ida_python_file)
         except Exception as e:
             raise e
     # TODO return, catch exception in main()
 
 
-def create_r2_script(sample_file_path, r2_script_file, decoded_strings, stack_strings, log=False):
+def create_r2_script(sample_file_path, r2_script_file, decoded_strings, stack_strings):
     """
     Create an r2script to annotate r2 session with decoded strings.
     :param sample_file_path: input file path
     :param r2script_file: output file path
     :param decoded_strings: list of decoded strings ([DecodedString])
     :param stack_strings: list of stack strings ([StackString])
+<<<<<<< HEAD
     :param log: controls whether to log or print the location of the radare2script
+=======
+>>>>>>> parent of 1d71ee0... Add the option of logging messages the create script functions for consistency
     """
     script_content = create_r2_script_content(sample_file_path, decoded_strings, stack_strings)
     r2_script_file = os.path.abspath(r2_script_file)
     with open(r2_script_file, 'wb') as f:
         try:
             f.write(script_content)
-            if log:
-                floss_logger.info("Wrote radare2script file to %s\n" % r2_script_file)
-            else:
-                print("Wrote radare2script file to %s\n" % r2_script_file)
+            print("Wrote radare2script file to %s\n" % r2_script_file)
         except Exception as e:
             raise e
     # TODO return, catch exception in main()
