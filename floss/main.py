@@ -695,7 +695,7 @@ def create_x64dbg_database(sample_file_path, x64dbg_database_file, imagebase, de
     with open(x64dbg_database_file, 'wb') as f:
         try:
             f.write(script_content)
-            print("Wrote x64dbg database to %s\n" % x64dbg_database_file)
+            floss_logger.info("Wrote x64dbg database to %s\n" % x64dbg_database_file)
         except Exception as e:
             raise e
 
@@ -713,7 +713,7 @@ def create_ida_script(sample_file_path, ida_python_file, decoded_strings, stack_
     with open(ida_python_file, 'wb') as f:
         try:
             f.write(script_content)
-            print("Wrote IDAPython script file to %s\n" % ida_python_file)
+            floss_logger.info("Wrote IDAPython script file to %s\n" % ida_python_file)
         except Exception as e:
             raise e
     # TODO return, catch exception in main()
@@ -732,7 +732,7 @@ def create_r2_script(sample_file_path, r2_script_file, decoded_strings, stack_st
     with open(r2_script_file, 'wb') as f:
         try:
             f.write(script_content)
-            print("Wrote radare2script file to %s\n" % r2_script_file)
+            floss_logger.info("Wrote radare2script file to %s\n" % r2_script_file)
         except Exception as e:
             raise e
     # TODO return, catch exception in main()
