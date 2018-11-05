@@ -160,7 +160,7 @@ def round(i, size):
     '''
     if i % size == 0:
         return i
-    return i + (i - (i % size))
+    return i + (size - (i % size))
 
 
 class RtlAllocateHeapHook(viv_utils.emulator_drivers.Hook):
