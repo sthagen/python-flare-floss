@@ -19,3 +19,7 @@ lib/
 
 # Test executables
 bin/
+
+# PyCharm
+.idea
+venv
