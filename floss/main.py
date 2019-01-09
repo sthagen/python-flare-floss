@@ -55,7 +55,7 @@ def hex(i):
     return "0x%X" % (i)
 
 
-def decode_strings(vw, decoding_functions_candidates, min_length, no_filter=False, max_instruction_count=20000):
+def decode_strings(vw, decoding_functions_candidates, min_length, no_filter=False, max_instruction_count=20000, max_hits=1):
     """
     FLOSS string decoding algorithm
     :param vw: vivisect workspace
@@ -63,13 +63,14 @@ def decode_strings(vw, decoding_functions_candidates, min_length, no_filter=Fals
     :param min_length: minimum string length
     :param no_filter: do not filter decoded strings
     :param max_instruction_count: The maximum number of instructions to emulate per function.
+    :param max_hits: The maximum number of hits per address
     :return: list of decoded strings ([DecodedString])
     """
     decoded_strings = []
     function_index = viv_utils.InstructionFunctionIndex(vw)
     # TODO pass function list instead of identification manager
     for fva, _ in decoding_functions_candidates.get_top_candidate_functions(10):
-        for ctx in string_decoder.extract_decoding_contexts(vw, fva):
+        for ctx in string_decoder.extract_decoding_contexts(vw, fva, max_hits):
             for delta in string_decoder.emulate_decoding_routine(vw, function_index, fva, ctx, max_instruction_count):
                 for delta_bytes in string_decoder.extract_delta_bytes(delta, ctx.decoded_at_va, fva):
                     for decoded_string in string_decoder.extract_strings(delta_bytes, min_length, no_filter):
@@ -146,7 +147,9 @@ def make_parser():
                       help="do not filter deobfuscated strings (may result in many false positive strings)",
                       action="store_true")
     parser.add_option("--max-instruction-count", dest="max_instruction_count", type=int, default=20000,
-                      help="maximum number of instructions to emulate per function")
+                      help="maximum number of instructions to emulate per function (default is 20000)")
+    parser.add_option("--max-address-revisits", dest="max_address_revisits", type=int, default=0,
+                      help="maximum number of address revisits per function (default is 0)")
 
     shellcode_group = OptionGroup(parser, "Shellcode options", "Analyze raw binary file containing shellcode")
     shellcode_group.add_option("-s", "--shellcode", dest="is_shellcode", help="analyze shellcode",
@@ -420,7 +423,7 @@ def filter_unique_decoded(decoded_strings):
     unique_values = set()
     originals = []
     for decoded in decoded_strings:
-        hashable = (decoded.va, decoded.s, decoded.decoded_at_va, decoded.fva)
+        hashable = (decoded.s, decoded.decoded_at_va, decoded.fva)
         if hashable not in unique_values:
             unique_values.add(hashable)
             originals.append(decoded)
@@ -486,10 +489,10 @@ def print_decoding_results(decoded_strings, group_functions, quiet=False, expert
     :param quiet: print strings only, suppresses headers
     :param expert: expert mode
     """
-    if not quiet:
-        print("\nFLOSS decoded %d strings" % len(decoded_strings))
 
     if group_functions:
+        if not quiet:
+            print("\nFLOSS decoded %d strings" % len(decoded_strings))
         fvas = set(map(lambda i: i.fva, decoded_strings))
         for fva in fvas:
             grouped_strings = filter(lambda ds: ds.fva == fva, decoded_strings)
@@ -499,6 +502,12 @@ def print_decoding_results(decoded_strings, group_functions, quiet=False, expert
                     print("\nDecoding function at 0x%X (decoded %d strings)" % (fva, len_ds))
                 print_decoded_strings(grouped_strings, quiet=quiet, expert=expert)
     else:
+        if not expert:
+            seen = set()
+            decoded_strings = [x for x in decoded_strings if not (x.s in seen or seen.add(x.s))]
+        if not quiet:
+            print("\nFLOSS decoded %d strings" % len(decoded_strings))
+
         print_decoded_strings(decoded_strings, quiet=quiet, expert=expert)
 
 
@@ -941,7 +950,10 @@ def main(argv=None):
             print_identification_results(sample_file_path, decoding_functions_candidates)
 
         floss_logger.info("Decoding strings...")
-        decoded_strings = decode_strings(vw, decoding_functions_candidates, min_length, options.no_filter, options.max_instruction_count)
+        decoded_strings = decode_strings(vw, decoding_functions_candidates, min_length, options.no_filter,
+                                         options.max_instruction_count, options.max_address_revisits + 1)
+        # TODO: The de-duplication process isn't perfect as it is done here and in print_decoding_results and
+        # TODO: all of them on non-sanitized strings.
         if not options.expert:
             decoded_strings = filter_unique_decoded(decoded_strings)
         print_decoding_results(decoded_strings, options.group_functions, quiet=options.quiet, expert=options.expert)

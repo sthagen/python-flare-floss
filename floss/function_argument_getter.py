@@ -51,12 +51,12 @@ class FunctionArgumentGetter(viv_utils.LoggingObject):
         self.driver = viv_utils.emulator_drivers.FunctionRunnerEmulatorDriver(self.emu)
         self.index = viv_utils.InstructionFunctionIndex(vivisect_workspace)
 
-    def get_all_function_contexts(self, function_va):
+    def get_all_function_contexts(self, function_va, max_hits):
         self.d("Getting function context for function at 0x%08X...", function_va)
 
         all_contexts = []
         for caller_va in self.get_caller_vas(function_va):
-            function_context = self.get_contexts_via_monitor(caller_va, function_va)
+            function_context = self.get_contexts_via_monitor(caller_va, function_va, max_hits)
             all_contexts.extend(function_context)
 
         self.d("Got %d function contexts for function at 0x%08X.", len(all_contexts), function_va)
@@ -92,7 +92,7 @@ class FunctionArgumentGetter(viv_utils.LoggingObject):
             caller_function_vas.add(caller_function_va)
         return caller_function_vas
 
-    def get_contexts_via_monitor(self, fva, target_fva):
+    def get_contexts_via_monitor(self, fva, target_fva, max_hits):
         """
         run the given function while collecting arguments to a target function
         """
@@ -106,7 +106,7 @@ class FunctionArgumentGetter(viv_utils.LoggingObject):
         monitor = CallMonitor(self.vivisect_workspace, target_fva)
         with installed_monitor(self.driver, monitor):
             with api_hooks.defaultHooks(self.driver):
-                self.driver.runFunction(self.index[fva], maxhit=1, maxrep=0x1000, func_only=True)
+                self.driver.runFunction(self.index[fva], maxhit=max_hits, maxrep=0x1000, func_only=True)
         contexts = monitor.get_contexts()
 
         self.d("      results:")
@@ -116,5 +116,5 @@ class FunctionArgumentGetter(viv_utils.LoggingObject):
         return contexts
 
 
-def get_function_contexts(vw, fva):
-    return FunctionArgumentGetter(vw).get_all_function_contexts(fva)
+def get_function_contexts(vw, fva, max_hits):
+    return FunctionArgumentGetter(vw).get_all_function_contexts(fva, max_hits)
