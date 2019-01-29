@@ -143,7 +143,7 @@ handling, among other things. Use the `--no-filter` option to obtain the
 raw and unfiltered deobfuscated strings.
 
 
-### Generate annotation scripts (`-i`, `-r`, and `--x64dbg`)
+### Generate annotation scripts (`-i`, `-j`, `-r`, and `--x64dbg`)
 
 FLOSS can generate an IDA Pro Python script that will
  annotate the idb database of the malware sample with
@@ -155,6 +155,11 @@ Provide the option `-i` or `--ida` to instruct FLOSS to
 
     floss.exe -i myscript.py malware.bin
     floss.exe --ida=myscript.py malware.bin
+
+To create an annotation script for Binary Ninja, use the `-j`, or `--binja` switch.
+
+    floss.exe -j myscript.py malware.bin
+    floss.exe --binja myscript.py malware.bin
 
 To create an annotation script for radare2, use the `-r`
 or `--radare` switch.

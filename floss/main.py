@@ -192,6 +192,8 @@ def make_parser():
                             help="create a x64dbg database/json file to annotate the decoded strings in x64dbg")
     output_group.add_option("-r", "--radare", dest="radare2_script_file",
                             help="create a radare2 script to annotate the decoded strings in an .r2 file")
+    output_group.add_option("-j", "--binja", dest="binja_script_file",
+                            help="create a Binary Ninja script to annotate the decoded strings in a BNDB file")
     parser.add_option_group(output_group)
 
     identification_group = OptionGroup(parser, "Identification Options")
@@ -657,6 +659,84 @@ if __name__ == "__main__":
     return script_content
 
 
+def create_binja_script_content(sample_file_path, decoded_strings, stack_strings):
+    """
+    Create Binary Ninja script contents for BNDB file annotations.
+    :param sample_file_path: input file path
+    :param decoded_strings: list of decoded strings ([DecodedString])
+    :param stack_strings: list of stack strings ([StackString])
+    :return: content of the Binary Ninja script
+    """
+    main_commands = []
+    for ds in decoded_strings:
+        if ds.s != "":
+            sanitized_string = sanitize_string_for_script(ds.s)
+            if ds.characteristics["location_type"] == LocationType.GLOBAL:
+                main_commands.append("print \"FLOSS: string \\\"%s\\\" at global VA 0x%X\"" % (sanitized_string, ds.va))
+                main_commands.append("AppendComment(%d, \"FLOSS: %s\")" % (ds.va, sanitized_string))
+            else:
+                main_commands.append("print \"FLOSS: string \\\"%s\\\" decoded at VA 0x%X\"" % (sanitized_string, ds.decoded_at_va))
+                main_commands.append("AppendComment(%d, \"FLOSS: %s\")" % (ds.decoded_at_va, sanitized_string))
+    main_commands.append("print \"Imported decoded strings from FLOSS\"")
+
+    ss_len = 0
+    for ss in stack_strings:
+        if ss.s != "":
+            sanitized_string = sanitize_string_for_script(ss.s)
+            main_commands.append("AppendLvarComment(%d, %d, \"FLOSS stackstring: %s\")" % (ss.fva, ss.pc, sanitized_string))
+            ss_len += 1
+    main_commands.append("print \"Imported stackstrings from FLOSS\"")
+
+    script_content = """import binaryninja as bn
+
+
+def AppendComment(ea, s):
+
+    s = s.encode('ascii')
+    refAddrs = []
+    for ref in bv.get_code_refs(ea):
+        refAddrs.append(ref)
+
+    for addr in refAddrs:
+        fnc = bv.get_functions_containing(addr.address)
+        fn = fnc[0]
+
+        string = fn.get_comment_at(addr.address)
+
+        if not string:
+            string = s  # no existing comment
+        else:
+            if s in string:  # ignore duplicates
+                return
+            string = string + "\\n" + s
+
+        fn.set_comment_at(addr.address, string)
+
+def AppendLvarComment(fva, pc, s):
+    
+    # stack var comments are not a thing in Binary Ninja so just add at top of function
+    # and at location where it's used as an arg
+    s = s.encode('ascii')
+    fn = bv.get_function_at(fva)
+    
+    for addr in [fva, pc]:
+        string = fn.get_comment_at(addr)
+        
+        if not string:
+            string = s
+        else:
+            if s in string:  # ignore duplicates
+                return
+            string = string + "\\n" + s
+
+        fn.set_comment(addr, string)
+
+print "Annotating %d strings from FLOSS for %s"
+%s
+
+""" % (len(decoded_strings) + ss_len, sample_file_path, "\n".join(main_commands))
+    return script_content
+
 def create_r2_script_content(sample_file_path, decoded_strings, stack_strings):
     """
     Create r2script contents for r2 session annotations.
@@ -727,6 +807,23 @@ def create_ida_script(sample_file_path, ida_python_file, decoded_strings, stack_
             raise e
     # TODO return, catch exception in main()
 
+def create_binja_script(sample_file_path, binja_script_file, decoded_strings, stack_strings):
+    """
+    Create a Binary Ninja script to annotate a BNDB file with decoded strings.
+    :param sample_file_path: input file path
+    :param binja_script_file: output file path
+    :param decoded_strings: list of decoded strings ([DecodedString])
+    :param stack_strings: list of stack strings ([StackString])
+    """
+    script_content = create_binja_script_content(sample_file_path, decoded_strings, stack_strings)
+    binja_script__file = os.path.abspath(binja_script_file)
+    with open(binja_script_file, 'wb') as f:
+        try:
+            f.write(script_content)
+            floss_logger.info("Wrote Binary Ninja script file to %s\n" % binja_script_file)
+        except Exception as e:
+            raise e
+    # TODO return, catch exception in main()
 
 def create_r2_script(sample_file_path, r2_script_file, decoded_strings, stack_strings):
     """
@@ -983,6 +1080,10 @@ def main(argv=None):
     if options.radare2_script_file:
         floss_logger.info("Creating r2script...")
         create_r2_script(sample_file_path, options.radare2_script_file, decoded_strings, stack_strings)
+
+    if options.binja_script_file:
+        floss_logger.info("Creating Binary Ninja script...")
+        create_binja_script(sample_file_path, options.binja_script_file, decoded_strings, stack_strings)
 
     time1 = time()
     if not options.quiet:
