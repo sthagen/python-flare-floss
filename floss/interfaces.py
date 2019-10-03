@@ -11,6 +11,7 @@ class DecodingRoutineIdentifier(Interface):
     Return mapping from function virtual addresses to score of likelihood to be
     a decoding function.
     """
+
     def identify(self, vivisect_workspace, function_vas):
         """
 

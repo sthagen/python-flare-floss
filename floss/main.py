@@ -212,10 +212,11 @@ def make_parser():
 
     return parser
 
+
 def set_logging_levels(should_debug=False, should_verbose=False):
     """
-    Sets the logging levels of each of Floss's loggers individually. 
-    Recomended to use if Floss is being used as a library, and your 
+    Sets the logging levels of each of Floss's loggers individually.
+    Recomended to use if Floss is being used as a library, and your
     project has its own logging set up. If both parameters 'should_debug'
     and 'should_verbose' are false, the logging level will be set to ERROR.
     :param should_debug: set logging level to DEBUG
@@ -311,12 +312,12 @@ def set_logging_levels(should_debug=False, should_verbose=False):
     # ignore messages like:
     # DEBUG: identify: suspicious MOV instruction at 0x00401017 in function 0x00401000: mov byte [edx],al
     logging.getLogger("floss.plugins.mov_plugin.MovPlugin").setLevel(log_level)
-        
+
 
 def set_log_config(should_debug=False, should_verbose=False):
     """
     Removes root logging handlers, and sets Floss's logging level.
-    Recomended to use if Floss is being used in a standalone script, or 
+    Recomended to use if Floss is being used in a standalone script, or
     your project doesn't have any loggers. If both parameters 'should_debug'
     and 'should_verbose' are false, the logging level will be set to ERROR.
     :param should_debug: set logging level to DEBUG
@@ -559,13 +560,13 @@ def create_x64dbg_database_content(sample_file_path, imagebase, decoded_strings)
                 rva = hex(ds.va - imagebase)
                 try:
                     processed[rva] += "\t" + sanitized_string
-                except:
+                except BaseException:
                     processed[rva] = "FLOSS: " + sanitized_string
             else:
                 rva = hex(ds.decoded_at_va - imagebase)
                 try:
                     processed[rva] += "\t" + sanitized_string
-                except:
+                except BaseException:
                     processed[rva] = "FLOSS: " + sanitized_string
 
     for i in processed.keys():
@@ -713,15 +714,15 @@ def AppendComment(ea, s):
         fn.set_comment_at(addr.address, string)
 
 def AppendLvarComment(fva, pc, s):
-    
+
     # stack var comments are not a thing in Binary Ninja so just add at top of function
     # and at location where it's used as an arg
     s = s.encode('ascii')
     fn = bv.get_function_at(fva)
-    
+
     for addr in [fva, pc]:
         string = fn.get_comment_at(addr)
-        
+
         if not string:
             string = s
         else:
@@ -736,6 +737,7 @@ print "Annotating %d strings from FLOSS for %s"
 
 """ % (len(decoded_strings) + ss_len, sample_file_path, "\n".join(main_commands))
     return script_content
+
 
 def create_r2_script_content(sample_file_path, decoded_strings, stack_strings):
     """
@@ -807,6 +809,7 @@ def create_ida_script(sample_file_path, ida_python_file, decoded_strings, stack_
             raise e
     # TODO return, catch exception in main()
 
+
 def create_binja_script(sample_file_path, binja_script_file, decoded_strings, stack_strings):
     """
     Create a Binary Ninja script to annotate a BNDB file with decoded strings.
@@ -824,6 +827,7 @@ def create_binja_script(sample_file_path, binja_script_file, decoded_strings, st
         except Exception as e:
             raise e
     # TODO return, catch exception in main()
+
 
 def create_r2_script(sample_file_path, r2_script_file, decoded_strings, stack_strings):
     """
@@ -871,7 +875,7 @@ def print_static_strings(path, min_length, quiet=False):
             if not quiet:
                 print("")
 
-            if os.path.getsize(path) > sys.maxint:
+            if os.path.getsize(path) > sys.maxsize:
                 floss_logger.warning("File too large, strings listings may be truncated.")
                 floss_logger.warning("FLOSS cannot handle files larger than 4GB on 32bit systems.")
 
@@ -918,7 +922,7 @@ def print_file_meta_info(vw, selected_functions):
     try:
         for k, v in get_vivisect_meta_info(vw, selected_functions).iteritems():
             print("%s: %s" % (k, v or "N/A"))  # display N/A if value is None
-    except Exception, e:
+    except Exception as e:
         floss_logger.error("Failed to print vivisect analysis information: {0}".format(e.message))
 
 
@@ -964,10 +968,10 @@ def load_vw(sample_file_path, save_workspace, verbose, is_shellcode, shellcode_e
             return load_workspace(sample_file_path, save_workspace)
         else:
             return load_shellcode_workspace(sample_file_path, save_workspace, shellcode_entry_point, shellcode_base)
-    except LoadNotSupportedError, e:
+    except LoadNotSupportedError as e:
         floss_logger.error(str(e))
         raise WorkspaceLoadError
-    except Exception, e:
+    except Exception as e:
         floss_logger.error("Vivisect failed to load the input file: {0}".format(e.message), exc_info=verbose)
         raise WorkspaceLoadError
 

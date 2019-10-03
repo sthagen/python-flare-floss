@@ -16,6 +16,7 @@ FunctionContext = namedtuple("FunctionContext", ["emu_snap", "return_address", "
 
 class CallMonitor(viv_utils.emulator_drivers.Monitor):
     """ collect call arguments to a target function during emulation """
+
     def __init__(self, vivisect_workspace, target_fva):
         """ :param target_fva: address of function whose arguments to monitor """
         viv_utils.emulator_drivers.Monitor.__init__(self, vivisect_workspace)

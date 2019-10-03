@@ -103,6 +103,7 @@ class DebugMonitor(viv_utils.emulator_drivers.Monitor):
     """
     Emulator monitor that is useful during debugging.
     """
+
     def __init__(self, *args, **kwargs):
         super(DebugMonitor, self).__init__(*args, **kwargs)
 
