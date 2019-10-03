@@ -28,7 +28,7 @@ install:
     - pyinstaller floss.spec
 
 script:
-    - find . -name \*.py -exec pep8 --ignore=E501 {} \;
+    - pep8 --ignore=E501 .
     # haven't figured how to build wclang on osx yet, so no tests
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then py.test tests/src/ -v; fi
 
