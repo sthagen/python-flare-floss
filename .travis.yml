@@ -16,7 +16,7 @@ matrix:
 
 install:
     - pip install https://github.com/williballenthin/vivisect/zipball/master
-    - pip install pyinstaller pep8
+    - pip install pyinstaller pycodestyle
     - echo "__version__ = '$(git describe --tags --always)'" > floss/version.py
     - cat floss/version.py
     - pip install -e .
@@ -28,7 +28,7 @@ install:
     - pyinstaller floss.spec
 
 script:
-    - pep8 --ignore=E501 .
+    - pycodestyle --ignore=E501 .
     # haven't figured how to build wclang on osx yet, so no tests
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then py.test tests/src/ -v; fi
 
