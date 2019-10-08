@@ -397,6 +397,7 @@ class CriticalSectionHooks(viv_utils.emulator_drivers.Hook):
     Hook calls to:
       - InitializeCriticalSection
     '''
+
     def hook(self, callname, emu, callconv, api, argv):
         if callname == "kernel32.InitializeCriticalSection":
             hsection, = argv
