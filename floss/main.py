@@ -139,6 +139,8 @@ def make_parser():
     parser.add_option("-f", "--functions", dest="functions",
                       help="only analyze the specified functions (comma-separated)",
                       type="string")
+    parser.add_option("-o", "--output-json", dest="json_output_file",
+                      help="save analysis output as a JSON document")
     parser.add_option("--save-workspace", dest="save_workspace",
                       help="save vivisect .viv workspace file in current directory", action="store_true")
     parser.add_option("-m", "--show-metainfo", dest="should_show_metainfo",
@@ -848,6 +850,24 @@ def create_r2_script(sample_file_path, r2_script_file, decoded_strings, stack_st
     # TODO return, catch exception in main()
 
 
+def create_json_output(json_file_path, sample_file_path, decoded_strings, stack_strings):
+    """
+    Create a report of the analysis performed by FLOSS
+    :param json_file_path: path to write the report
+    :param sample_file_path: path of the sample analyzed
+    :param decoded_strings: list of decoded strings ([DecodedString])
+    :param stack_strings: list of stack strings ([StackString])
+    """
+    results = {'stack_strings': [sanitize_string_for_printing(ss.s) for ss in stack_strings],
+               'decoded_strings': [sanitize_string_for_printing(ds.s) for ds in decoded_strings]}
+    report = {'file_path': sample_file_path, 'results': results}
+    try:
+        with open(json_file_path, 'w') as f:
+            json.dump(report, f)
+    except Exception:
+        raise
+
+
 def print_static_strings(path, min_length, quiet=False):
     """
     Print static ASCII and UTF-16 strings from provided file.
@@ -1092,6 +1112,10 @@ def main(argv=None):
     time1 = time()
     if not options.quiet:
         print("\nFinished execution after %f seconds" % (time1 - time0))
+
+    if options.json_output_file:
+        create_json_output(options.json_output_file, sample_file_path, decoded_strings, stack_strings)
+        floss_logger.info("Wrote JSON file to %s\n" % options.json_output_file)
 
     return 0
 
