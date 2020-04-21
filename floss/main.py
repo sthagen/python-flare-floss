@@ -6,7 +6,6 @@ from __future__ import print_function
 import os
 import sys
 import mmap
-import json
 import string
 import logging
 from time import time
@@ -15,6 +14,7 @@ from optparse import OptionParser, OptionGroup
 
 import tabulate
 import viv_utils
+import simplejson as json
 
 import version
 import strings
@@ -851,7 +851,7 @@ def create_r2_script(sample_file_path, r2_script_file, decoded_strings, stack_st
     # TODO return, catch exception in main()
 
 
-def create_json_output(options, sample_file_path, decoded_strings, stack_strings):
+def create_json_output(options, sample_file_path, decoded_strings, stack_strings, static_strings):
     """
     Create a report of the analysis performed by FLOSS
     :param options: parsed options
@@ -859,15 +859,17 @@ def create_json_output(options, sample_file_path, decoded_strings, stack_strings
     :param decoded_strings: list of decoded strings ([DecodedString])
     :param stack_strings: list of stack strings ([StackString])
     """
-    strings = {'stack_strings': [sanitize_string_for_printing(ss.s) for ss in stack_strings],
-               'decoded_strings': [sanitize_string_for_printing(ds.s) for ds in decoded_strings]}
+    strings = {'stack_strings': stack_strings,
+               'decoded_strings': decoded_strings,
+               'static_strings': static_strings}
     metadata = {'file_path': sample_file_path,
                 'stack_strings': not options.no_stack_strings,
                 'decoded_strings': not options.no_decoded_strings,
                 'static_strings': not options.no_static_strings}
+    report = {'metadata': metadata, 'strings': strings}
     try:
         with open(options.json_file_path, 'w') as f:
-            json.dump({'metadata': metadata, 'strings': strings}, f)
+            json.dump(report, f, iterable_as_array=True)
     except Exception:
         raise
 
@@ -1026,6 +1028,7 @@ def main(argv=None):
             static_ascii_strings = strings.extract_ascii_strings(file_buf, min_length)
             static_unicode_strings = strings.extract_unicode_strings(file_buf, min_length)
             static_strings = chain(static_ascii_strings, static_unicode_strings)
+            del file_buf
         else:
             static_strings = []
 
@@ -1114,7 +1117,10 @@ def main(argv=None):
         print("\nFinished execution after %f seconds" % (time1 - time0))
 
     if options.json_output_file:
-        create_json_output(options, sample_file_path, decoded_strings, stack_strings)
+        create_json_output(options, sample_file_path,
+                           decoded_strings=decoded_strings,
+                           stack_strings=stack_strings,
+                           static_strings=static_strings)
         floss_logger.info("Wrote JSON file to %s\n" % options.json_output_file)
 
     return 0
