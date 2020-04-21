@@ -8,6 +8,7 @@ import sys
 import mmap
 import string
 import logging
+import datetime
 from time import time
 from itertools import chain
 from optparse import OptionParser, OptionGroup
@@ -863,6 +864,7 @@ def create_json_output(options, sample_file_path, decoded_strings, stack_strings
                'decoded_strings': decoded_strings,
                'static_strings': static_strings}
     metadata = {'file_path': sample_file_path,
+                'date': datetime.datetime.now().isoformat(),
                 'stack_strings': not options.no_stack_strings,
                 'decoded_strings': not options.no_decoded_strings,
                 'static_strings': not options.no_static_strings}
