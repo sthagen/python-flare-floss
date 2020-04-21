@@ -868,7 +868,7 @@ def create_json_output(options, sample_file_path, decoded_strings, stack_strings
                 'static_strings': not options.no_static_strings}
     report = {'metadata': metadata, 'strings': strings}
     try:
-        with open(options.json_file_path, 'w') as f:
+        with open(options.json_output_file, 'w') as f:
             json.dump(report, f, iterable_as_array=True)
     except Exception:
         raise
