@@ -13,6 +13,7 @@ except ImportError:
 requirements = [
     "q",
     "pyyaml",
+    "simplejson",
     "tabulate",
     "vivisect",
     "plugnplay",
