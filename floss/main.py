@@ -859,6 +859,7 @@ def create_json_output(options, sample_file_path, decoded_strings, stack_strings
     :param sample_file_path: path of the sample analyzed
     :param decoded_strings: list of decoded strings ([DecodedString])
     :param stack_strings: list of stack strings ([StackString])
+    :param static_strings: iterable of static strings ([String])
     """
     strings = {'stack_strings': stack_strings,
                'decoded_strings': decoded_strings,
