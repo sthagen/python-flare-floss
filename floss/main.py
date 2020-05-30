@@ -80,6 +80,17 @@ def decode_strings(vw, decoding_functions_candidates, min_length, no_filter=Fals
     return decoded_strings
 
 
+def sanitize_strings_iterator(str_coll):
+    """
+    Iterate a collection and yield sanitized strings (uses sanitize_string_for_printing)
+    :param str_coll: collection of strings to be sanitized
+    :return: a sanitized string
+    """
+    for s_obj in str_coll:
+        s = getattr(s_obj, 's', s_obj)  # Use .s attribute from each namedtuple if possible
+        yield sanitize_string_for_printing(s)
+
+
 def sanitize_string_for_printing(s):
     """
     Return sanitized string for printing.
@@ -861,9 +872,9 @@ def create_json_output(options, sample_file_path, decoded_strings, stack_strings
     :param stack_strings: list of stack strings ([StackString])
     :param static_strings: iterable of static strings ([String])
     """
-    strings = {'stack_strings': stack_strings,
-               'decoded_strings': decoded_strings,
-               'static_strings': static_strings}
+    strings = {'stack_strings': sanitize_strings_iterator(stack_strings),
+               'decoded_strings': sanitize_strings_iterator(decoded_strings),
+               'static_strings': sanitize_strings_iterator(static_strings)}
     metadata = {'file_path': sample_file_path,
                 'date': datetime.datetime.now().isoformat(),
                 'stack_strings': not options.no_stack_strings,
