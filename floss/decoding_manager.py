@@ -21,10 +21,10 @@ MAX_MAPS_SIZE = 1024 * 1024 * 100  # 100MB max memory allocated in an emulator i
 DecodedString = namedtuple("DecodedString", ["va", "s", "decoded_at_va", "fva", "characteristics"])
 
 
-class LocationType(Enum):
-    STACK = 1
-    GLOBAL = 2
-    HEAP = 3
+class LocationType(str, Enum):
+    STACK = 'STACK'
+    GLOBAL = 'GLOBAL'
+    HEAP = 'HEAP'
 
 
 def is_import(emu, va):

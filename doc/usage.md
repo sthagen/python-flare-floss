@@ -49,6 +49,16 @@ Analogous, you can disable the extraction of obfuscated strings or stackstrings.
     floss.exe --no-stack-strings malware.bin
 
 
+### Write output as JSON (`-o/--output-json`)
+
+Use the `-o` or `--output-json` with the name of a file you want
+ the output to be written to.  The resulting report will contain
+ all the same data that was written to `stdout` but structured
+ in JSON to make it easy to ingest by a script.
+
+    floss.exe --output-json report.json malware.bin
+
+
 ### Quiet mode (`-q`)
 
 You can supress the formatting of FLOSS output by providing

@@ -6,14 +6,16 @@ from __future__ import print_function
 import os
 import sys
 import mmap
-import json
 import string
 import logging
+import datetime
 from time import time
+from itertools import chain
 from optparse import OptionParser, OptionGroup
 
 import tabulate
 import viv_utils
+import simplejson as json
 
 import version
 import strings
@@ -78,6 +80,17 @@ def decode_strings(vw, decoding_functions_candidates, min_length, no_filter=Fals
     return decoded_strings
 
 
+def sanitize_strings_iterator(str_coll):
+    """
+    Iterate a collection and yield sanitized strings (uses sanitize_string_for_printing)
+    :param str_coll: collection of strings to be sanitized
+    :return: a sanitized string
+    """
+    for s_obj in str_coll:
+        s = getattr(s_obj, 's', s_obj)  # Use .s attribute from each namedtuple if possible
+        yield sanitize_string_for_printing(s)
+
+
 def sanitize_string_for_printing(s):
     """
     Return sanitized string for printing.
@@ -139,6 +152,8 @@ def make_parser():
     parser.add_option("-f", "--functions", dest="functions",
                       help="only analyze the specified functions (comma-separated)",
                       type="string")
+    parser.add_option("-o", "--output-json", dest="json_output_file",
+                      help="save analysis output as a JSON document")
     parser.add_option("--save-workspace", dest="save_workspace",
                       help="save vivisect .viv workspace file in current directory", action="store_true")
     parser.add_option("-m", "--show-metainfo", dest="should_show_metainfo",
@@ -848,52 +863,63 @@ def create_r2_script(sample_file_path, r2_script_file, decoded_strings, stack_st
     # TODO return, catch exception in main()
 
 
-def print_static_strings(path, min_length, quiet=False):
+def create_json_output(options, sample_file_path, decoded_strings, stack_strings, static_strings):
+    """
+    Create a report of the analysis performed by FLOSS
+    :param options: parsed options
+    :param sample_file_path: path of the sample analyzed
+    :param decoded_strings: list of decoded strings ([DecodedString])
+    :param stack_strings: list of stack strings ([StackString])
+    :param static_strings: iterable of static strings ([String])
+    """
+    strings = {'stack_strings': sanitize_strings_iterator(stack_strings),
+               'decoded_strings': sanitize_strings_iterator(decoded_strings),
+               'static_strings': sanitize_strings_iterator(static_strings)}
+    metadata = {'file_path': sample_file_path,
+                'date': datetime.datetime.now().isoformat(),
+                'stack_strings': not options.no_stack_strings,
+                'decoded_strings': not options.no_decoded_strings,
+                'static_strings': not options.no_static_strings}
+    report = {'metadata': metadata, 'strings': strings}
+    try:
+        with open(options.json_output_file, 'w') as f:
+            json.dump(report, f, iterable_as_array=True)
+    except Exception:
+        raise
+
+
+def get_file_as_mmap(path):
+    """
+    Returns an mmap object of the file
+    :param path: path of the file to map
+    """
+    with open(path, 'rb') as f:
+        return mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+
+
+def print_static_strings(file_buf, min_length, quiet=False):
     """
     Print static ASCII and UTF-16 strings from provided file.
-    :param path: input file
+    :param file_buf: the file buffer
     :param min_length: minimum string length
     :param quiet: print strings only, suppresses headers
     """
-    with open(path, "rb") as f:
-        b = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+    static_ascii_strings = strings.extract_ascii_strings(file_buf, min_length)
+    static_unicode_strings = strings.extract_unicode_strings(file_buf, min_length)
 
-        if os.path.getsize(path) > MAX_FILE_SIZE:
-            # for large files, there might be a huge number of strings,
-            # so don't worry about forming everything into a perfect table
-            if not quiet:
-                print("FLOSS static ASCII strings")
-            for s in strings.extract_ascii_strings(b, n=min_length):
-                print("%s" % s.s)
-            if not quiet:
-                print("")
+    if not quiet:
+        print("FLOSS static ASCII strings")
+    for s in static_ascii_strings:
+        print("%s" % s.s)
+    if not quiet:
+        print("")
 
-            if not quiet:
-                print("FLOSS static Unicode strings")
-            for s in strings.extract_unicode_strings(b, n=min_length):
-                print("%s" % s.s)
-            if not quiet:
-                print("")
-
-            if os.path.getsize(path) > sys.maxsize:
-                floss_logger.warning("File too large, strings listings may be truncated.")
-                floss_logger.warning("FLOSS cannot handle files larger than 4GB on 32bit systems.")
-
-        else:
-            # for reasonably sized files, we can read all the strings at once
-            if not quiet:
-                print("FLOSS static ASCII strings")
-            for s in strings.extract_ascii_strings(b, n=min_length):
-                print("%s" % (s.s))
-            if not quiet:
-                print("")
-
-            if not quiet:
-                print("FLOSS static UTF-16 strings")
-            for s in strings.extract_unicode_strings(b, n=min_length):
-                print("%s" % (s.s))
-            if not quiet:
-                print("")
+    if not quiet:
+        print("FLOSS static Unicode strings")
+    for s in static_unicode_strings:
+        print("%s" % s.s)
+    if not quiet:
+        print("")
 
 
 def print_stack_strings(extracted_strings, quiet=False, expert=False):
@@ -1007,7 +1033,18 @@ def main(argv=None):
     if not is_workspace_file(sample_file_path):
         if not options.no_static_strings and not options.functions:
             floss_logger.info("Extracting static strings...")
-            print_static_strings(sample_file_path, min_length=min_length, quiet=options.quiet)
+            if os.path.getsize(sample_file_path) > sys.maxsize:
+                floss_logger.warning("File too large, strings listings may be truncated.")
+                floss_logger.warning("FLOSS cannot handle files larger than 4GB on 32bit systems.")
+
+            file_buf = get_file_as_mmap(sample_file_path)
+            print_static_strings(file_buf, min_length=min_length, quiet=options.quiet)
+            static_ascii_strings = strings.extract_ascii_strings(file_buf, min_length)
+            static_unicode_strings = strings.extract_unicode_strings(file_buf, min_length)
+            static_strings = chain(static_ascii_strings, static_unicode_strings)
+            del file_buf
+        else:
+            static_strings = []
 
         if options.no_decoded_strings and options.no_stack_strings and not options.should_show_metainfo:
             # we are done
@@ -1092,6 +1129,13 @@ def main(argv=None):
     time1 = time()
     if not options.quiet:
         print("\nFinished execution after %f seconds" % (time1 - time0))
+
+    if options.json_output_file:
+        create_json_output(options, sample_file_path,
+                           decoded_strings=decoded_strings,
+                           stack_strings=stack_strings,
+                           static_strings=static_strings)
+        floss_logger.info("Wrote JSON file to %s\n" % options.json_output_file)
 
     return 0
 
