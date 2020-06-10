@@ -7,8 +7,8 @@ import envi
 import viv_utils
 import viv_utils.emulator_drivers
 
-import api_hooks
-from utils import makeEmulator
+from . import api_hooks
+from .utils import makeEmulator
 
 # TODO get return address from emu_snap
 FunctionContext = namedtuple("FunctionContext", ["emu_snap", "return_address", "decoded_at_va"])

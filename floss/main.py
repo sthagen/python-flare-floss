@@ -9,6 +9,7 @@ import mmap
 import string
 import logging
 import datetime
+from base64 import b64encode
 from time import time
 from itertools import chain
 from optparse import OptionParser, OptionGroup
@@ -17,20 +18,18 @@ import tabulate
 import viv_utils
 import simplejson as json
 
-import version
-import strings
-import stackstrings
-import string_decoder
-import plugins.arithmetic_plugin
-import identification_manager as im
-import plugins.library_function_plugin
-import plugins.function_meta_data_plugin
-import plugins.mov_plugin
-from interfaces import DecodingRoutineIdentifier
-from decoding_manager import LocationType
-from base64 import b64encode
-
-from utils import get_vivisect_meta_info
+from . import version
+from . import strings
+from . import stackstrings
+from . import string_decoder
+from . import identification_manager as im
+from .plugins import arithmetic_plugin
+from .plugins import library_function_plugin
+from .plugins import function_meta_data_plugin
+from .plugins import mov_plugin
+from .interfaces import DecodingRoutineIdentifier
+from .decoding_manager import LocationType
+from .utils import get_vivisect_meta_info
 
 
 floss_logger = logging.getLogger("floss")
@@ -127,17 +126,17 @@ def get_all_plugins():
     """
     ps = DecodingRoutineIdentifier.implementors()
     if len(ps) == 0:
-        ps.append(plugins.function_meta_data_plugin.FunctionCrossReferencesToPlugin())
-        ps.append(plugins.function_meta_data_plugin.FunctionArgumentCountPlugin())
-        ps.append(plugins.function_meta_data_plugin.FunctionIsThunkPlugin())
-        ps.append(plugins.function_meta_data_plugin.FunctionBlockCountPlugin())
-        ps.append(plugins.function_meta_data_plugin.FunctionInstructionCountPlugin())
-        ps.append(plugins.function_meta_data_plugin.FunctionSizePlugin())
-        ps.append(plugins.function_meta_data_plugin.FunctionRecursivePlugin())
-        ps.append(plugins.library_function_plugin.FunctionIsLibraryPlugin())
-        ps.append(plugins.arithmetic_plugin.XORPlugin())
-        ps.append(plugins.arithmetic_plugin.ShiftPlugin())
-        ps.append(plugins.mov_plugin.MovPlugin())
+        ps.append(function_meta_data_plugin.FunctionCrossReferencesToPlugin())
+        ps.append(function_meta_data_plugin.FunctionArgumentCountPlugin())
+        ps.append(function_meta_data_plugin.FunctionIsThunkPlugin())
+        ps.append(function_meta_data_plugin.FunctionBlockCountPlugin())
+        ps.append(function_meta_data_plugin.FunctionInstructionCountPlugin())
+        ps.append(function_meta_data_plugin.FunctionSizePlugin())
+        ps.append(function_meta_data_plugin.FunctionRecursivePlugin())
+        ps.append(library_function_plugin.FunctionIsLibraryPlugin())
+        ps.append(arithmetic_plugin.XORPlugin())
+        ps.append(arithmetic_plugin.ShiftPlugin())
+        ps.append(mov_plugin.MovPlugin())
     return ps
 
 
