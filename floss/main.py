@@ -8,23 +8,21 @@ import mmap
 import string
 import logging
 import datetime
-
-from base64 import b64encode
 from time import time
 from itertools import chain
+from base64 import b64encode
 from optparse import OptionParser, OptionGroup
 
 import tabulate
 import viv_utils
 import simplejson as json
 
-from . import __version__, logger as pkg_logger
+from .decoding_manager import LocationType
+from .utils import get_vivisect_meta_info, hex
+from .interfaces import DecodingRoutineIdentifier
+from . import __version__, logger as pkg_logger, plugins
 from . import strings, stackstrings, string_decoder, identification_manager as im
 from .const import MAX_FILE_SIZE, SUPPORTED_FILE_MAGIC, MIN_STRING_LENGTH_DEFAULT
-from .decoding_manager import LocationType
-from .interfaces import DecodingRoutineIdentifier
-from .plugins import arithmetic_plugin, library_function_plugin, function_meta_data_plugin, mov_plugin
-from .utils import get_vivisect_meta_info, hex
 
 
 handler = logging.StreamHandler()
@@ -111,17 +109,17 @@ def get_all_plugins():
     """
     ps = DecodingRoutineIdentifier.implementors()
     if len(ps) == 0:
-        ps.append(function_meta_data_plugin.FunctionCrossReferencesToPlugin())
-        ps.append(function_meta_data_plugin.FunctionArgumentCountPlugin())
-        ps.append(function_meta_data_plugin.FunctionIsThunkPlugin())
-        ps.append(function_meta_data_plugin.FunctionBlockCountPlugin())
-        ps.append(function_meta_data_plugin.FunctionInstructionCountPlugin())
-        ps.append(function_meta_data_plugin.FunctionSizePlugin())
-        ps.append(function_meta_data_plugin.FunctionRecursivePlugin())
-        ps.append(library_function_plugin.FunctionIsLibraryPlugin())
-        ps.append(arithmetic_plugin.XORPlugin())
-        ps.append(arithmetic_plugin.ShiftPlugin())
-        ps.append(mov_plugin.MovPlugin())
+        ps.append(plugins.function_meta_data_plugin.FunctionCrossReferencesToPlugin())
+        ps.append(plugins.function_meta_data_plugin.FunctionArgumentCountPlugin())
+        ps.append(plugins.function_meta_data_plugin.FunctionIsThunkPlugin())
+        ps.append(plugins.function_meta_data_plugin.FunctionBlockCountPlugin())
+        ps.append(plugins.function_meta_data_plugin.FunctionInstructionCountPlugin())
+        ps.append(plugins.function_meta_data_plugin.FunctionSizePlugin())
+        ps.append(plugins.function_meta_data_plugin.FunctionRecursivePlugin())
+        ps.append(plugins.library_function_plugin.FunctionIsLibraryPlugin())
+        ps.append(plugins.arithmetic_plugin.XORPlugin())
+        ps.append(plugins.arithmetic_plugin.ShiftPlugin())
+        ps.append(plugins.mov_plugin.MovPlugin())
     return ps
 
 

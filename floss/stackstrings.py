@@ -1,7 +1,6 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
 import logging
-
 from collections import namedtuple
 
 import viv_utils

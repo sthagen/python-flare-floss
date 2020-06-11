@@ -1,9 +1,9 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
 import re
-import tabulate
-
 from collections import OrderedDict
+
+import tabulate
 
 from .const import MEGABYTE
 

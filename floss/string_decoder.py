@@ -2,8 +2,8 @@
 
 import logging
 
-from . import strings, decoding_manager
 from .const import MAX_STRING_LENGTH
+from . import strings, decoding_manager
 from .utils import makeEmulator, is_fp_string, strip_string
 from .function_argument_getter import get_function_contexts
 from .decoding_manager import DecodedString, LocationType
