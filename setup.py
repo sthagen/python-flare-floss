@@ -43,6 +43,12 @@ setup(
             "floss=floss.main:main",
         ]
     },
+    setup_requires=[
+        'pytest-runner',
+    ],
+    tests_require=[
+        'pytest',
+    ],
     include_package_data=True,
     install_requires=requirements,
     zip_safe=False,
