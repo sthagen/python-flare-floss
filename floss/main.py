@@ -18,13 +18,13 @@ import tabulate
 import viv_utils
 import simplejson as json
 
-from floss import __version__, logger as pkg_logger
-from floss.const import MAX_FILE_SIZE, SUPPORTED_FILE_MAGIC, MIN_STRING_LENGTH_DEFAULT
-from floss import strings, stackstrings, string_decoder, identification_manager as im
-from floss.plugins import arithmetic_plugin, library_function_plugin, function_meta_data_plugin, mov_plugin
-from floss.interfaces import DecodingRoutineIdentifier
-from floss.decoding_manager import LocationType
-from floss.utils import get_vivisect_meta_info, hex
+from . import __version__, logger as pkg_logger
+from . import strings, stackstrings, string_decoder, identification_manager as im
+from .const import MAX_FILE_SIZE, SUPPORTED_FILE_MAGIC, MIN_STRING_LENGTH_DEFAULT
+from .decoding_manager import LocationType
+from .interfaces import DecodingRoutineIdentifier
+from .plugins import arithmetic_plugin, library_function_plugin, function_meta_data_plugin, mov_plugin
+from .utils import get_vivisect_meta_info, hex
 
 
 handler = logging.StreamHandler()
