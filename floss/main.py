@@ -27,9 +27,9 @@ from floss.decoding_manager import LocationType
 from floss.utils import get_vivisect_meta_info, hex
 
 
-lsh = logging.StreamHandler()
-lsh.setLevel(logging.INFO)
-pkg_logger.addHandler(lsh)
+handler = logging.StreamHandler()
+handler.setLevel(logging.INFO)
+pkg_logger.addHandler(handler)
 logger = logging.getLogger(__name__)
 
 
