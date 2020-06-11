@@ -842,6 +842,14 @@ def create_r2_script(sample_file_path, r2_script_file, decoded_strings, stack_st
     # TODO return, catch exception in main()
 
 
+def create_json_output_static_only(options, sample_file_path, static_strings):
+    create_json_output(options, sample_file_path,
+                       decoded_strings=[],
+                       stack_strings=[],
+                       static_strings=static_strings)
+    floss_logger.info("Wrote JSON file to %s\n" % options.json_output_file)
+
+
 def create_json_output(options, sample_file_path, decoded_strings, stack_strings, static_strings):
     """
     Create a report of the analysis performed by FLOSS
@@ -1026,18 +1034,24 @@ def main(argv=None):
             static_strings = []
 
         if options.no_decoded_strings and options.no_stack_strings and not options.should_show_metainfo:
+            if options.json_output_file:
+                create_json_output_static_only(options, sample_file_path, static_strings)
             # we are done
             return 0
 
     if os.path.getsize(sample_file_path) > MAX_FILE_SIZE:
         floss_logger.error("FLOSS cannot extract obfuscated strings or stackstrings from files larger than"
                            " %d bytes" % MAX_FILE_SIZE)
+        if options.json_output_file:
+            create_json_output_static_only(options, sample_file_path, static_strings)
         return 1
 
     try:
         vw = load_vw(sample_file_path, options.save_workspace, options.verbose, options.is_shellcode,
                      options.shellcode_entry_point, options.shellcode_base)
     except WorkspaceLoadError:
+        if options.json_output_file:
+            create_json_output_static_only(options, sample_file_path, static_strings)
         return 1
 
     try:
