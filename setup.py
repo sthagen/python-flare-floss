@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
+import os
+
 from setuptools import setup
 
 
@@ -16,9 +18,15 @@ requirements = [
     "enum34"
 ]
 
+# this sets __version__
+# via: http://stackoverflow.com/a/7071358/87207
+# and: http://stackoverflow.com/a/2073599/87207
+with open(os.path.join("floss", "version.py"), "rb") as f:
+    exec(f.read())
+
 setup(
     name='floss',
-    version='1.6.1',
+    version=__version__,
     description="FireEye Labs Obfuscated String Solver",
     author="Willi Ballenthin, Moritz Raabe",
     author_email='william.ballenthin@mandiant.com, moritz.raabe@mandiant.com',

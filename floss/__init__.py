@@ -1,12 +1,12 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
-from .utils import ONE_MB
-from .utils import STACK_MEM_NAME
-from .utils import makeEmulator
-from .utils import removeStackMemory
+import logging
 
-import pkg_resources
+from . import version
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
-__all__ = ('__version__', 'ONE_MB', 'STACK_MEM_NAME', 'makeEmulator', 'removeStackMemory')
-__version__ = pkg_resources.get_distribution("mypackage").version
+__all__ = ('__version__',
+           'logger')
+__version__ = version.__version__
