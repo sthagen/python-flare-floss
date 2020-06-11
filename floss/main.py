@@ -20,15 +20,8 @@ import simplejson as json
 from .decoding_manager import LocationType
 from .utils import get_vivisect_meta_info, hex
 from .interfaces import DecodingRoutineIdentifier
-from . import __version__, logger as pkg_logger, plugins
-from . import strings, stackstrings, string_decoder, identification_manager as im
 from .const import MAX_FILE_SIZE, SUPPORTED_FILE_MAGIC, MIN_STRING_LENGTH_DEFAULT
-
-
-handler = logging.StreamHandler()
-handler.setLevel(logging.INFO)
-pkg_logger.addHandler(handler)
-logger = logging.getLogger(__name__)
+from . import __version__, plugins, strings, stackstrings, string_decoder, identification_manager as im
 
 
 class LoadNotSupportedError(Exception):
