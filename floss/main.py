@@ -18,7 +18,7 @@ import tabulate
 import viv_utils
 import simplejson as json
 
-from . import version
+from . import __version__
 from . import strings
 from . import stackstrings
 from . import string_decoder
@@ -144,7 +144,7 @@ def make_parser():
     usage_message = "%prog [options] FILEPATH"
 
     parser = OptionParser(usage=usage_message,
-                          version="%prog {:s}\nhttps://github.com/fireeye/flare-floss/".format(version.__version__))
+                          version="%prog {:s}\nhttps://github.com/fireeye/flare-floss/".format(floss.__version__))
 
     parser.add_option("-n", "--minimum-length", dest="min_length",
                       help="minimum string length (default is %d)" % MIN_STRING_LENGTH_DEFAULT)
