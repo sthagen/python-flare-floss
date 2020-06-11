@@ -1,6 +1,7 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
-import plugin_object
+from . import plugin_object
+
 import floss.interfaces as interfaces
 
 
