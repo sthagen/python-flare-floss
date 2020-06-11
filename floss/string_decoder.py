@@ -1,13 +1,12 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
-import re
 import logging
 
-from floss import strings, decoding_manager
-from floss.const import MAX_STRING_LENGTH
-from floss.utils import makeEmulator, is_fp_string, strip_string
-from floss.function_argument_getter import get_function_contexts
-from floss.decoding_manager import DecodedString, LocationType
+from . import strings, decoding_manager
+from .const import MAX_STRING_LENGTH
+from .utils import makeEmulator, is_fp_string, strip_string
+from .function_argument_getter import get_function_contexts
+from .decoding_manager import DecodedString, LocationType
 
 
 floss_logger = logging.getLogger("floss")

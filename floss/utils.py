@@ -5,7 +5,7 @@ import tabulate
 
 from collections import OrderedDict
 
-from floss.const import MEGABYTE
+from .const import MEGABYTE
 
 STACK_MEM_NAME = "[stack]"
 

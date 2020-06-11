@@ -4,8 +4,10 @@
 
 import os
 
-from setuptools import setup
-
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
 
 requirements = [
     "q",

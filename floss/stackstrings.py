@@ -9,9 +9,9 @@ import envi.archs.i386
 import envi.archs.amd64
 import viv_utils.emulator_drivers
 
-from floss import strings
-from floss.const import MAX_STRING_LENGTH
-from floss.utils import makeEmulator, is_fp_string, strip_string
+from . import strings
+from .const import MAX_STRING_LENGTH
+from .utils import makeEmulator, is_fp_string, strip_string
 
 
 logger = logging.getLogger(__name__)
