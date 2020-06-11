@@ -20,8 +20,12 @@ import simplejson as json
 from .decoding_manager import LocationType
 from .utils import get_vivisect_meta_info, hex
 from .interfaces import DecodingRoutineIdentifier
+from . import __version__, plugins
+from . import strings, stackstrings, string_decoder, identification_manager as im
 from .const import MAX_FILE_SIZE, SUPPORTED_FILE_MAGIC, MIN_STRING_LENGTH_DEFAULT
-from . import __version__, plugins, strings, stackstrings, string_decoder, identification_manager as im
+
+
+floss_logger = logging.getLogger("floss")
 
 
 class LoadNotSupportedError(Exception):
@@ -776,7 +780,7 @@ def create_x64dbg_database(sample_file_path, x64dbg_database_file, imagebase, de
     with open(x64dbg_database_file, 'wb') as f:
         try:
             f.write(script_content)
-            logger.info("Wrote x64dbg database to %s\n" % x64dbg_database_file)
+            floss_logger.info("Wrote x64dbg database to %s\n" % x64dbg_database_file)
         except Exception as e:
             raise e
 
@@ -794,7 +798,7 @@ def create_ida_script(sample_file_path, ida_python_file, decoded_strings, stack_
     with open(ida_python_file, 'wb') as f:
         try:
             f.write(script_content)
-            logger.info("Wrote IDAPython script file to %s\n" % ida_python_file)
+            floss_logger.info("Wrote IDAPython script file to %s\n" % ida_python_file)
         except Exception as e:
             raise e
     # TODO return, catch exception in main()
@@ -813,7 +817,7 @@ def create_binja_script(sample_file_path, binja_script_file, decoded_strings, st
     with open(binja_script_file, 'wb') as f:
         try:
             f.write(script_content)
-            logger.info("Wrote Binary Ninja script file to %s\n" % binja_script_file)
+            floss_logger.info("Wrote Binary Ninja script file to %s\n" % binja_script_file)
         except Exception as e:
             raise e
     # TODO return, catch exception in main()
@@ -832,7 +836,7 @@ def create_r2_script(sample_file_path, r2_script_file, decoded_strings, stack_st
     with open(r2_script_file, 'wb') as f:
         try:
             f.write(script_content)
-            logger.info("Wrote radare2script file to %s\n" % r2_script_file)
+            floss_logger.info("Wrote radare2script file to %s\n" % r2_script_file)
         except Exception as e:
             raise e
     # TODO return, catch exception in main()
@@ -924,25 +928,25 @@ def print_file_meta_info(vw, selected_functions):
         for k, v in get_vivisect_meta_info(vw, selected_functions).iteritems():
             print("%s: %s" % (k, v or "N/A"))  # display N/A if value is None
     except Exception as e:
-        logger.error("Failed to print vivisect analysis information: {0}".format(e.message))
+        floss_logger.error("Failed to print vivisect analysis information: {0}".format(e.message))
 
 
 def load_workspace(sample_file_path, save_workspace):
     # inform user that getWorkspace implicitly loads saved workspace if .viv file exists
     if is_workspace_file(sample_file_path) or os.path.exists("%s.viv" % sample_file_path):
-        logger.info("Loading existing vivisect workspace...")
+        floss_logger.info("Loading existing vivisect workspace...")
     else:
         if not is_supported_file_type(sample_file_path):
             raise LoadNotSupportedError("FLOSS currently supports the following formats for string decoding and "
                                         "stackstrings: PE\nYou can analyze shellcode using the -s switch. See the "
                                         "help (-h) for more information.")
-        logger.info("Generating vivisect workspace...")
+        floss_logger.info("Generating vivisect workspace...")
     return viv_utils.getWorkspace(sample_file_path, should_save=save_workspace)
 
 
 def load_shellcode_workspace(sample_file_path, save_workspace, shellcode_ep_in, shellcode_base_in):
     if is_supported_file_type(sample_file_path):
-        logger.warning("Analyzing supported file type as shellcode. This will likely yield weaker analysis.")
+        floss_logger.warning("Analyzing supported file type as shellcode. This will likely yield weaker analysis.")
 
     shellcode_entry_point = 0
     if shellcode_ep_in:
@@ -952,8 +956,8 @@ def load_shellcode_workspace(sample_file_path, save_workspace, shellcode_ep_in, 
     if shellcode_base_in:
         shellcode_base = int(shellcode_base_in, 0x10)
 
-    logger.info("Generating vivisect workspace for shellcode, base: 0x%x, entry point: 0x%x...",
-                shellcode_base, shellcode_entry_point)
+    floss_logger.info("Generating vivisect workspace for shellcode, base: 0x%x, entry point: 0x%x...",
+                      shellcode_base, shellcode_entry_point)
     with open(sample_file_path, "rb") as f:
         shellcode_data = f.read()
     return viv_utils.getShellcodeWorkspace(shellcode_data, "i386", shellcode_base, shellcode_entry_point,
@@ -964,16 +968,16 @@ def load_vw(sample_file_path, save_workspace, verbose, is_shellcode, shellcode_e
     try:
         if not is_shellcode:
             if shellcode_entry_point or shellcode_base:
-                logger.warning("Entry point and base offset only apply in conjunction with the -s switch when "
+                floss_logger.warning("Entry point and base offset only apply in conjunction with the -s switch when "
                                      "analyzing raw binary files.")
             return load_workspace(sample_file_path, save_workspace)
         else:
             return load_shellcode_workspace(sample_file_path, save_workspace, shellcode_entry_point, shellcode_base)
     except LoadNotSupportedError as e:
-        logger.error(str(e))
+        floss_logger.error(str(e))
         raise WorkspaceLoadError
     except Exception as e:
-        logger.error("Vivisect failed to load the input file: {0}".format(e.message), exc_info=verbose)
+        floss_logger.error("Vivisect failed to load the input file: {0}".format(e.message), exc_info=verbose)
         raise WorkspaceLoadError
 
 
@@ -1007,10 +1011,10 @@ def main(argv=None):
 
     if not is_workspace_file(sample_file_path):
         if not options.no_static_strings and not options.functions:
-            logger.info("Extracting static strings...")
+            floss_logger.info("Extracting static strings...")
             if os.path.getsize(sample_file_path) > sys.maxsize:
-                logger.warning("File too large, strings listings may be truncated.")
-                logger.warning("FLOSS cannot handle files larger than 4GB on 32bit systems.")
+                floss_logger.warning("File too large, strings listings may be truncated.")
+                floss_logger.warning("FLOSS cannot handle files larger than 4GB on 32bit systems.")
 
             file_buf = get_file_as_mmap(sample_file_path)
             print_static_strings(file_buf, min_length=min_length, quiet=options.quiet)
@@ -1026,7 +1030,7 @@ def main(argv=None):
             return 0
 
     if os.path.getsize(sample_file_path) > MAX_FILE_SIZE:
-        logger.error("FLOSS cannot extract obfuscated strings or stackstrings from files larger than"
+        floss_logger.error("FLOSS cannot extract obfuscated strings or stackstrings from files larger than"
                            " %d bytes" % MAX_FILE_SIZE)
         return 1
 
@@ -1039,13 +1043,13 @@ def main(argv=None):
     try:
         selected_functions = select_functions(vw, options.functions)
     except Exception as e:
-        logger.error(str(e))
+        floss_logger.error(str(e))
         return 1
 
-    logger.debug("Selected the following functions: %s", get_str_from_func_list(selected_functions))
+    floss_logger.debug("Selected the following functions: %s", get_str_from_func_list(selected_functions))
 
     selected_plugin_names = select_plugins(options.plugins)
-    logger.debug("Selected the following plugins: %s", ", ".join(map(str, selected_plugin_names)))
+    floss_logger.debug("Selected the following plugins: %s", ", ".join(map(str, selected_plugin_names)))
     selected_plugins = filter(lambda p: str(p) in selected_plugin_names, get_all_plugins())
 
     if options.should_show_metainfo:
@@ -1057,12 +1061,12 @@ def main(argv=None):
     time0 = time()
 
     if not options.no_decoded_strings:
-        logger.info("Identifying decoding functions...")
+        floss_logger.info("Identifying decoding functions...")
         decoding_functions_candidates = im.identify_decoding_functions(vw, selected_plugins, selected_functions)
         if options.expert:
             print_identification_results(sample_file_path, decoding_functions_candidates)
 
-        logger.info("Decoding strings...")
+        floss_logger.info("Decoding strings...")
         decoded_strings = decode_strings(vw, decoding_functions_candidates, min_length, options.no_filter,
                                          options.max_instruction_count, options.max_address_revisits + 1)
         # TODO: The de-duplication process isn't perfect as it is done here and in print_decoding_results and
@@ -1074,7 +1078,7 @@ def main(argv=None):
         decoded_strings = []
 
     if not options.no_stack_strings:
-        logger.info("Extracting stackstrings...")
+        floss_logger.info("Extracting stackstrings...")
         stack_strings = stackstrings.extract_stackstrings(vw, selected_functions, min_length, options.no_filter)
         stack_strings = list(stack_strings)
         if not options.expert:
@@ -1086,19 +1090,19 @@ def main(argv=None):
 
     if options.x64dbg_database_file:
         imagebase = vw.filemeta.values()[0]['imagebase']
-        logger.info("Creating x64dbg database...")
+        floss_logger.info("Creating x64dbg database...")
         create_x64dbg_database(sample_file_path, options.x64dbg_database_file, imagebase, decoded_strings)
 
     if options.ida_python_file:
-        logger.info("Creating IDA script...")
+        floss_logger.info("Creating IDA script...")
         create_ida_script(sample_file_path, options.ida_python_file, decoded_strings, stack_strings)
 
     if options.radare2_script_file:
-        logger.info("Creating r2script...")
+        floss_logger.info("Creating r2script...")
         create_r2_script(sample_file_path, options.radare2_script_file, decoded_strings, stack_strings)
 
     if options.binja_script_file:
-        logger.info("Creating Binary Ninja script...")
+        floss_logger.info("Creating Binary Ninja script...")
         create_binja_script(sample_file_path, options.binja_script_file, decoded_strings, stack_strings)
 
     time1 = time()
@@ -1110,7 +1114,7 @@ def main(argv=None):
                            decoded_strings=decoded_strings,
                            stack_strings=stack_strings,
                            static_strings=static_strings)
-        logger.info("Wrote JSON file to %s\n" % options.json_output_file)
+        floss_logger.info("Wrote JSON file to %s\n" % options.json_output_file)
 
     return 0
 
