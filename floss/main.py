@@ -2,7 +2,6 @@
 # encoding: utf-8
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
-from __future__ import print_function
 import os
 import sys
 import mmap
@@ -11,38 +10,22 @@ import logging
 import datetime
 from time import time
 from itertools import chain
+from base64 import b64encode
 from optparse import OptionParser, OptionGroup
 
 import tabulate
 import viv_utils
 import simplejson as json
 
-import version
-import strings
-import stackstrings
-import string_decoder
-import plugins.arithmetic_plugin
-import identification_manager as im
-import plugins.library_function_plugin
-import plugins.function_meta_data_plugin
-import plugins.mov_plugin
-from interfaces import DecodingRoutineIdentifier
-from decoding_manager import LocationType
-from base64 import b64encode
-
-from utils import get_vivisect_meta_info
+from .decoding_manager import LocationType
+from .utils import get_vivisect_meta_info, hex
+from .interfaces import DecodingRoutineIdentifier
+from . import __version__, plugins
+from . import strings, stackstrings, string_decoder, identification_manager as im
+from .const import MAX_FILE_SIZE, SUPPORTED_FILE_MAGIC, MIN_STRING_LENGTH_DEFAULT
 
 
 floss_logger = logging.getLogger("floss")
-
-
-KILOBYTE = 1024
-MEGABYTE = 1024 * KILOBYTE
-MAX_FILE_SIZE = 16 * MEGABYTE
-
-SUPPORTED_FILE_MAGIC = set(["MZ"])
-
-MIN_STRING_LENGTH_DEFAULT = 4
 
 
 class LoadNotSupportedError(Exception):
@@ -51,10 +34,6 @@ class LoadNotSupportedError(Exception):
 
 class WorkspaceLoadError(Exception):
     pass
-
-
-def hex(i):
-    return "0x%X" % (i)
 
 
 def decode_strings(vw, decoding_functions_candidates, min_length, no_filter=False, max_instruction_count=20000, max_hits=1):
@@ -145,7 +124,7 @@ def make_parser():
     usage_message = "%prog [options] FILEPATH"
 
     parser = OptionParser(usage=usage_message,
-                          version="%prog {:s}\nhttps://github.com/fireeye/flare-floss/".format(version.__version__))
+                          version="%prog {:s}\nhttps://github.com/fireeye/flare-floss/".format(__version__))
 
     parser.add_option("-n", "--minimum-length", dest="min_length",
                       help="minimum string length (default is %d)" % MIN_STRING_LENGTH_DEFAULT)

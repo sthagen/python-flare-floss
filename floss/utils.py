@@ -1,13 +1,13 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
 import re
-import tabulate
 from collections import OrderedDict
 
-ONE_MB = 1024 * 1024
-STACK_MEM_NAME = "[stack]"
+import tabulate
 
-MAX_STRING_LENGTH = 2048
+from .const import MEGABYTE
+
+STACK_MEM_NAME = "[stack]"
 
 
 def makeEmulator(vw):
@@ -16,8 +16,8 @@ def makeEmulator(vw):
     """
     emu = vw.getEmulator(logwrite=True)
     removeStackMemory(emu)
-    emu.initStackMemory(stacksize=int(0.5 * ONE_MB))
-    emu.setStackCounter(emu.getStackCounter() - int(0.25 * ONE_MB))
+    emu.initStackMemory(stacksize=int(0.5 * MEGABYTE))
+    emu.setStackCounter(emu.getStackCounter() - int(0.25 * MEGABYTE))
     emu.setEmuOpt('i386:reponce', False)  # do not short circuit rep prefix
     return emu
 
@@ -33,7 +33,7 @@ def removeStackMemory(emu):
             emu.setMemorySnap(memory_snap)
             emu.stack_map_base = None
             return
-    raise Exception  # STACK_MEM_NAME not in memory map
+    raise ValueError("`STACK_MEM_NAME` not in memory map")
 
 
 def get_vivisect_meta_info(vw, selected_functions):

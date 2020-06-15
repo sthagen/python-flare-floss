@@ -9,7 +9,6 @@ try:
 except ImportError:
     from distutils.core import setup
 
-
 requirements = [
     "q",
     "pyyaml",
@@ -30,8 +29,7 @@ with open(os.path.join("floss", "version.py"), "rb") as f:
 setup(
     name='floss',
     version=__version__,
-    description="",
-    long_description="",
+    description="FireEye Labs Obfuscated String Solver",
     author="Willi Ballenthin, Moritz Raabe",
     author_email='william.ballenthin@mandiant.com, moritz.raabe@mandiant.com',
     url='https://www.github.com/fireeye/flare-floss',
@@ -45,6 +43,12 @@ setup(
             "floss=floss.main:main",
         ]
     },
+    setup_requires=[
+        'pytest-runner',
+    ],
+    tests_require=[
+        'pytest',
+    ],
     include_package_data=True,
     install_requires=requirements,
     zip_safe=False,

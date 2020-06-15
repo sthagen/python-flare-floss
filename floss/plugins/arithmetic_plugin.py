@@ -3,7 +3,7 @@
 import envi
 import viv_utils
 
-import plugin_object
+from . import plugin_object
 import floss.interfaces as interfaces
 
 
