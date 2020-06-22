@@ -1,3 +1,7 @@
+![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/fireeye/flare-floss?branch=master&svg=true)
+![Travis Build Status](https://api.travis-ci.org/fireeye/flare-floss.svg?branch=master)
+
+
 <img src="resources/logo.png?raw=true " width="350"/>
 
 # FireEye Labs Obfuscated String Solver
