@@ -17,12 +17,16 @@ import tabulate
 import viv_utils
 import simplejson as json
 
-from .decoding_manager import LocationType
-from .utils import get_vivisect_meta_info, hex
-from .interfaces import DecodingRoutineIdentifier
-from . import __version__, plugins
-from . import strings, stackstrings, string_decoder, identification_manager as im
-from .const import MAX_FILE_SIZE, SUPPORTED_FILE_MAGIC, MIN_STRING_LENGTH_DEFAULT
+import floss.plugins as plugins
+import floss.strings as strings
+import floss.stackstrings as stackstrings
+import floss.string_decoder as string_decoder
+import floss.identification_manager as im
+from floss.const import MAX_FILE_SIZE, SUPPORTED_FILE_MAGIC, MIN_STRING_LENGTH_DEFAULT
+from floss.utils import get_vivisect_meta_info, hex
+from floss.version import __version__
+from floss.interfaces import DecodingRoutineIdentifier
+from floss.decoding_manager import LocationType
 
 
 floss_logger = logging.getLogger("floss")
