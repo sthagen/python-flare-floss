@@ -45,6 +45,7 @@ a = Analysis(
                 "vivisect.analysis.i386.calling",
                 "vivisect.analysis.i386.golang",
                 "vivisect.analysis.i386.importcalls",
+                "vivisect.analysis.i386.instrhook",
                 "vivisect.analysis.i386.thunk_bx",
                 "vivisect.analysis.ms",
                 "vivisect.analysis.ms",
