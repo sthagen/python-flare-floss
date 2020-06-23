@@ -28,9 +28,9 @@ install:
     - pyinstaller floss.spec
 
 script:
-    - pycodestyle --ignore=E501 .
+    - pycodestyle --exclude=.eggs --ignore=E501 .
     # haven't figured how to build wclang on osx yet, so no tests
-    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then py.test tests/src/ -v; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pytest tests/ -v; fi
 
 addons:
     artifacts:
@@ -38,4 +38,3 @@ addons:
         paths:
             - $(find . -type f | grep -e '/bin/' -e 'dist/floss$' | awk 1 ORS=':')
         target_paths: travis/$TRAVIS_OS_NAME/
-
