@@ -1,4 +1,7 @@
+import os
+
 import pytest
+
 import floss.main
 
 
@@ -10,6 +13,6 @@ def test_main_help():
     assert pytest_wrapped_e.value.code == 0
 
 
-def test_main():
+def test_main(request):
     # see tests/src/decode-to-stack
-    assert floss.main.main(["", "data/test-decode-to-stack.exe"]) == 0
+    assert floss.main.main(["", os.path.join(request.fspath.dirname, 'data', 'test-decode-to-stack.exe')]) == 0
