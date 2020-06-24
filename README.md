@@ -1,5 +1,5 @@
-![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/fireeye/flare-floss?branch=master&svg=true)
-![Travis Build Status](https://api.travis-ci.org/fireeye/flare-floss.svg?branch=master)
+[![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/fireeye/flare-floss?branch=master&svg=true)](https://ci.appveyor.com/project/williballenthin/flare-floss)
+[![Travis Build Status](https://travis-ci.org/fireeye/flare-floss.svg?branch=master)](https://travis-ci.org/fireeye/flare-floss)
 
 
 <img src="resources/logo.png?raw=true " width="350"/>
