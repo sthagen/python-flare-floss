@@ -592,12 +592,12 @@ def create_ida_script_content(sample_file_path, decoded_strings, stack_strings):
         if ds.s != "":
             sanitized_string = sanitize_string_for_script(ds.s)
             if ds.characteristics["location_type"] == LocationType.GLOBAL:
-                main_commands.append("print \"FLOSS: string \\\"%s\\\" at global VA 0x%X\"" % (sanitized_string, ds.va))
+                main_commands.append("print(\"FLOSS: string \\\"%s\\\" at global VA 0x%X\")" % (sanitized_string, ds.va))
                 main_commands.append("AppendComment(%d, \"FLOSS: %s\", True)" % (ds.va, sanitized_string))
             else:
-                main_commands.append("print \"FLOSS: string \\\"%s\\\" decoded at VA 0x%X\"" % (sanitized_string, ds.decoded_at_va))
+                main_commands.append("print(\"FLOSS: string \\\"%s\\\" decoded at VA 0x%X\")" % (sanitized_string, ds.decoded_at_va))
                 main_commands.append("AppendComment(%d, \"FLOSS: %s\")" % (ds.decoded_at_va, sanitized_string))
-    main_commands.append("print \"Imported decoded strings from FLOSS\"")
+    main_commands.append("print(\"Imported decoded strings from FLOSS\")")
 
     ss_len = 0
     for ss in stack_strings:
@@ -605,51 +605,43 @@ def create_ida_script_content(sample_file_path, decoded_strings, stack_strings):
             sanitized_string = sanitize_string_for_script(ss.s)
             main_commands.append("AppendLvarComment(%d, %d, \"FLOSS stackstring: %s\", True)" % (ss.fva, ss.frame_offset, sanitized_string))
             ss_len += 1
-    main_commands.append("print \"Imported stackstrings from FLOSS\"")
+    main_commands.append("print(\"Imported stackstrings from FLOSS\")")
 
-    script_content = """from idc import RptCmt, Comment, MakeRptCmt, MakeComm, GetFrame, GetFrameLvarSize, GetMemberComment, SetMemberComment, Refresh
+    script_content = """
+def AppendComment(ea, string, repeatable=False):
+    current_string = get_cmt(ea, repeatable)
 
-
-def AppendComment(ea, s, repeatable=False):
-    if repeatable:
-        string = RptCmt(ea)
+    if not current_string:
+        cmt = string
     else:
-        string = Comment(ea)
-
-    if not string:
-        string = s  # no existing comment
-    else:
-        if s in string:  # ignore duplicates
+        if string in current_string:  # ignore duplicates
             return
-        string = string + "\\n" + s
-    if repeatable:
-        MakeRptCmt(ea, string)
-    else:
-        MakeComm(ea, string)
+        cmt = string + "\\n" + string
+    set_cmt(ea, cmt, repeatable)
 
 
 def AppendLvarComment(fva, frame_offset, s, repeatable=False):
-    stack = GetFrame(fva)
+    stack = get_func_attr(fva, FUNCATTR_FRAME)
     if stack:
-        lvar_offset = GetFrameLvarSize(fva) - frame_offset
+        lvar_offset = get_func_attr(fva, FUNCATTR_FRSIZE) - frame_offset
         if lvar_offset and lvar_offset > 0:
-            string = GetMemberComment(stack, lvar_offset, repeatable)
+            string = get_member_cmt(stack, lvar_offset, repeatable)
             if not string:
                 string = s
             else:
                 if s in string:  # ignore duplicates
                     return
                 string = string + "\\n" + s
-            if SetMemberComment(stack, lvar_offset, string, repeatable):
-                print "FLOSS appended stackstring comment \\\"%%s\\\" at stack frame offset 0x%%X in function 0x%%X" %% (s, frame_offset, fva)
+            if set_member_cmt(stack, lvar_offset, string, repeatable):
+                print("FLOSS appended stackstring comment \\\"%%s\\\" at stack frame offset 0x%%X in function 0x%%X" %% (s, frame_offset, fva))
                 return
-    print "Failed to append stackstring comment \\\"%%s\\\" at stack frame offset 0x%%X in function 0x%%X" %% (s, frame_offset, fva)
+    print("Failed to append stackstring comment \\\"%%s\\\" at stack frame offset 0x%%X in function 0x%%X" %% (s, frame_offset, fva))
 
 
 def main():
-    print "Annotating %d strings from FLOSS for %s"
+    print("Annotating %d strings from FLOSS for %s")
     %s
-    Refresh()
+    ida_kernwin.refresh_idaview_anyway()
 
 if __name__ == "__main__":
     main()
