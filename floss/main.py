@@ -611,7 +611,6 @@ def create_ida_script_content(sample_file_path, decoded_strings, stack_strings):
 
 
 def AppendComment(ea, s, repeatable=False):
-    # see williutils and http://blogs.norman.com/2011/security-research/improving-ida-analysis-of-x64-exception-handling
     if repeatable:
         string = RptCmt(ea)
     else:
