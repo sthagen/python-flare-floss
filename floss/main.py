@@ -592,20 +592,20 @@ def create_ida_script_content(sample_file_path, decoded_strings, stack_strings):
         if ds.s != "":
             sanitized_string = sanitize_string_for_script(ds.s)
             if ds.characteristics["location_type"] == LocationType.GLOBAL:
-                main_commands.append("print(\"FLOSS: string \\\"%s\\\" at global VA 0x%X\")" % (sanitized_string, ds.va))
-                main_commands.append("AppendComment(%d, \"FLOSS: %s\", True)" % (ds.va, sanitized_string))
+                main_commands.append('print("FLOSS: string \\"%s\\" at global VA 0x%X")' % (sanitized_string, ds.va))
+                main_commands.append('AppendComment(%d, "FLOSS: %s", True)' % (ds.va, sanitized_string))
             else:
-                main_commands.append("print(\"FLOSS: string \\\"%s\\\" decoded at VA 0x%X\")" % (sanitized_string, ds.decoded_at_va))
-                main_commands.append("AppendComment(%d, \"FLOSS: %s\")" % (ds.decoded_at_va, sanitized_string))
-    main_commands.append("print(\"Imported decoded strings from FLOSS\")")
+                main_commands.append('print("FLOSS: string \\"%s\\" decoded at VA 0x%X")' % (sanitized_string, ds.decoded_at_va))
+                main_commands.append('AppendComment(%d, "FLOSS: %s")' % (ds.decoded_at_va, sanitized_string))
+    main_commands.append('print("Imported decoded strings from FLOSS")')
 
     ss_len = 0
     for ss in stack_strings:
         if ss.s != "":
             sanitized_string = sanitize_string_for_script(ss.s)
-            main_commands.append("AppendLvarComment(%d, %d, \"FLOSS stackstring: %s\", True)" % (ss.fva, ss.frame_offset, sanitized_string))
+            main_commands.append('AppendLvarComment(%d, %d, "FLOSS stackstring: %s", True)' % (ss.fva, ss.frame_offset, sanitized_string))
             ss_len += 1
-    main_commands.append("print(\"Imported stackstrings from FLOSS\")")
+    main_commands.append('print("Imported stackstrings from FLOSS")')
 
     script_content = """
 def AppendComment(ea, string, repeatable=False):
@@ -633,13 +633,13 @@ def AppendLvarComment(fva, frame_offset, s, repeatable=False):
                     return
                 string = string + "\\n" + s
             if set_member_cmt(stack, lvar_offset, string, repeatable):
-                print("FLOSS appended stackstring comment \\\"%%s\\\" at stack frame offset 0x%%X in function 0x%%X" %% (s, frame_offset, fva))
+                print('FLOSS appended stackstring comment \\"%%s\\" at stack frame offset 0x%%X in function 0x%%X' %% (s, frame_offset, fva))
                 return
-    print("Failed to append stackstring comment \\\"%%s\\\" at stack frame offset 0x%%X in function 0x%%X" %% (s, frame_offset, fva))
+    print('Failed to append stackstring comment \\"%%s\\" at stack frame offset 0x%%X in function 0x%%X' %% (s, frame_offset, fva))
 
 
 def main():
-    print("Annotating %d strings from FLOSS for %s")
+    print('Annotating %d strings from FLOSS for %s')
     %s
     ida_kernwin.refresh_idaview_anyway()
 
@@ -662,20 +662,20 @@ def create_binja_script_content(sample_file_path, decoded_strings, stack_strings
         if ds.s != "":
             sanitized_string = sanitize_string_for_script(ds.s)
             if ds.characteristics["location_type"] == LocationType.GLOBAL:
-                main_commands.append("print \"FLOSS: string \\\"%s\\\" at global VA 0x%X\"" % (sanitized_string, ds.va))
-                main_commands.append("AppendComment(%d, \"FLOSS: %s\")" % (ds.va, sanitized_string))
+                main_commands.append('print "FLOSS: string \\"%s\\" at global VA 0x%X"' % (sanitized_string, ds.va))
+                main_commands.append('AppendComment(%d, "FLOSS: %s")' % (ds.va, sanitized_string))
             else:
-                main_commands.append("print \"FLOSS: string \\\"%s\\\" decoded at VA 0x%X\"" % (sanitized_string, ds.decoded_at_va))
-                main_commands.append("AppendComment(%d, \"FLOSS: %s\")" % (ds.decoded_at_va, sanitized_string))
-    main_commands.append("print \"Imported decoded strings from FLOSS\"")
+                main_commands.append('print "FLOSS: string \\"%s\\" decoded at VA 0x%X"' % (sanitized_string, ds.decoded_at_va))
+                main_commands.append('AppendComment(%d, "FLOSS: %s")' % (ds.decoded_at_va, sanitized_string))
+    main_commands.append('print "Imported decoded strings from FLOSS"')
 
     ss_len = 0
     for ss in stack_strings:
         if ss.s != "":
             sanitized_string = sanitize_string_for_script(ss.s)
-            main_commands.append("AppendLvarComment(%d, %d, \"FLOSS stackstring: %s\")" % (ss.fva, ss.pc, sanitized_string))
+            main_commands.append('AppendLvarComment(%d, %d, "FLOSS stackstring: %s")' % (ss.fva, ss.pc, sanitized_string))
             ss_len += 1
-    main_commands.append("print \"Imported stackstrings from FLOSS\"")
+    main_commands.append('print "Imported stackstrings from FLOSS"')
 
     script_content = """import binaryninja as bn
 
@@ -740,7 +740,7 @@ def create_r2_script_content(sample_file_path, decoded_strings, stack_strings):
     fvas = []
     for ds in decoded_strings:
         if ds.s != "":
-            sanitized_string = b64encode("\"FLOSS: %s (floss_%x)\"" % (ds.s, ds.fva))
+            sanitized_string = b64encode('"FLOSS: %s (floss_%x)"' % (ds.s, ds.fva))
             if ds.characteristics["location_type"] == LocationType.GLOBAL:
                 main_commands.append("CCu base64:%s @ %d" % (sanitized_string, ds.va))
                 if ds.fva not in fvas:
@@ -756,7 +756,7 @@ def create_r2_script_content(sample_file_path, decoded_strings, stack_strings):
     ss_len = 0
     for ss in stack_strings:
         if ss.s != "":
-            sanitized_string = b64encode("\"FLOSS: %s\"" % ss.s)
+            sanitized_string = b64encode('"FLOSS: %s"' % ss.s)
             main_commands.append("Ca -0x%x base64:%s @ %d" % (ss.frame_offset, sanitized_string, ss.fva))
             ss_len += 1
 
