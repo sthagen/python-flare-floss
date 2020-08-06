@@ -16,7 +16,7 @@ requirements = [
     "tabulate",
     "vivisect==v0.0.20200804",
     "plugnplay",
-    "viv-utils==0.3.16",
+    "viv-utils==0.3.17",
     "enum34"
 ]
 
