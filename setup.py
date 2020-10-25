@@ -4,17 +4,13 @@
 
 import os
 
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
+import setuptools
 
 requirements = [
-    "q",
     "pyyaml",
     "simplejson",
     "tabulate",
-    "vivisect==v0.0.20200804",
+    "vivisect==0.1.0",
     "plugnplay",
     "viv-utils==0.3.17",
     "enum34"
@@ -23,13 +19,22 @@ requirements = [
 # this sets __version__
 # via: http://stackoverflow.com/a/7071358/87207
 # and: http://stackoverflow.com/a/2073599/87207
-with open(os.path.join("floss", "version.py"), "rb") as f:
+with open(os.path.join("floss", "version.py"), "r") as f:
     exec(f.read())
 
-setup(
+
+# via: https://packaging.python.org/guides/making-a-pypi-friendly-readme/
+this_directory = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(this_directory, "README.md"), "r") as f:
+    long_description = f.read()
+
+
+setuptools.setup(
     name='floss',
     version=__version__,
-    description="FireEye Labs Obfuscated String Solver",
+    description="FLARE Obfuscated String Solver",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     author="Willi Ballenthin, Moritz Raabe",
     author_email='william.ballenthin@mandiant.com, moritz.raabe@mandiant.com',
     url='https://www.github.com/fireeye/flare-floss',
@@ -43,20 +48,22 @@ setup(
             "floss=floss.main:main",
         ]
     },
-    setup_requires=[
-        'pytest-runner',
-    ],
-    tests_require=[
-        'pytest',
-    ],
     include_package_data=True,
     install_requires=requirements,
+    extras_require={
+        "dev": [
+            "pytest",
+            "pytest-sugar",
+            "pytest-instafail",
+            "pytest-cov",
+        ]
+    },
     zip_safe=False,
     keywords='floss',
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'Natural Language :: English',
-        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 2.7",
     ],
 )
