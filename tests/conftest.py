@@ -37,7 +37,6 @@ def pytest_collect_file(parent, path):
 
 
 class YamlFile(pytest.File):
-
     def collect(self):
         spec = yaml.safe_load(self.fspath.open())
         test_dir = os.path.dirname(str(self.fspath))
@@ -61,7 +60,6 @@ class YamlFile(pytest.File):
 
 
 class FLOSSTestError(Exception):
-
     def __init__(self, expected, got):
         self.expected = expected
         self.got = got
@@ -76,12 +74,8 @@ class FLOSSDecodingFunctionNotFound(Exception):
 
 
 class FLOSSTest(pytest.Item):
-
     def __init__(self, path, platform, arch, filename, spec):
-        name = "{name:s}::{platform:s}::{arch:s}".format(
-            name=spec["Test Name"],
-            platform=platform,
-            arch=arch)
+        name = "{name:s}::{platform:s}::{arch:s}".format(name=spec["Test Name"], platform=platform, arch=arch)
         super(FLOSSTest, self).__init__(name, path)
         self.spec = spec
         self.platform = platform
@@ -144,10 +138,12 @@ class FLOSSTest(pytest.Item):
         if isinstance(excinfo.value, FLOSSStringsNotExtracted):
             expected = excinfo.value.expected
             got = excinfo.value.got
-            return "\n".join([
-                "FLOSS extraction failed:",
-                "   expected: %s" % str(expected),
-                "   got: %s" % str(got),
-                "   expected-got: %s" % str(set(expected) - set(got)),
-                "   got-expected: %s" % str(set(got) - set(expected)),
-            ])
+            return "\n".join(
+                [
+                    "FLOSS extraction failed:",
+                    "   expected: %s" % str(expected),
+                    "   got: %s" % str(got),
+                    "   expected-got: %s" % str(set(expected) - set(got)),
+                    "   got-expected: %s" % str(set(got) - set(expected)),
+                ]
+            )

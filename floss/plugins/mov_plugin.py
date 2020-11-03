@@ -12,6 +12,7 @@ class MovPlugin(plugin_object.GeneralPlugin):
     """
     Identify suspicious MOV instructions.
     """
+
     implements = [interfaces.DecodingRoutineIdentifier]
     version = 1.0
 

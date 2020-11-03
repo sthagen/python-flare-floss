@@ -39,7 +39,9 @@ class WorkspaceLoadError(Exception):
     pass
 
 
-def decode_strings(vw, decoding_functions_candidates, min_length, no_filter=False, max_instruction_count=20000, max_hits=1):
+def decode_strings(
+    vw, decoding_functions_candidates, min_length, no_filter=False, max_instruction_count=20000, max_hits=1
+):
     """
     FLOSS string decoding algorithm
     :param vw: vivisect workspace
@@ -69,7 +71,7 @@ def sanitize_strings_iterator(str_coll):
     :return: a sanitized string
     """
     for s_obj in str_coll:
-        s = getattr(s_obj, 's', s_obj)  # Use .s attribute from each namedtuple if possible
+        s = getattr(s_obj, "s", s_obj)  # Use .s attribute from each namedtuple if possible
         yield sanitize_string_for_printing(s)
 
 
@@ -79,8 +81,8 @@ def sanitize_string_for_printing(s):
     :param s: input string
     :return: sanitized string
     """
-    sanitized_string = s.encode('unicode_escape')
-    sanitized_string = sanitized_string.replace('\\\\', '\\')  # print single backslashes
+    sanitized_string = s.encode("unicode_escape")
+    sanitized_string = sanitized_string.replace("\\\\", "\\")  # print single backslashes
     sanitized_string = "".join(c for c in sanitized_string if c in string.printable)
     return sanitized_string
 
@@ -92,8 +94,8 @@ def sanitize_string_for_script(s):
     :return: sanitized string
     """
     sanitized_string = sanitize_string_for_printing(s)
-    sanitized_string = sanitized_string.replace('\\', '\\\\')
-    sanitized_string = sanitized_string.replace('\"', '\\\"')
+    sanitized_string = sanitized_string.replace("\\", "\\\\")
+    sanitized_string = sanitized_string.replace('"', '\\"')
     return sanitized_string
 
 
@@ -126,85 +128,158 @@ def get_all_plugins():
 def make_parser():
     usage_message = "%prog [options] FILEPATH"
 
-    parser = OptionParser(usage=usage_message,
-                          version="%prog {:s}\nhttps://github.com/fireeye/flare-floss/".format(__version__))
+    parser = OptionParser(
+        usage=usage_message, version="%prog {:s}\nhttps://github.com/fireeye/flare-floss/".format(__version__)
+    )
 
-    parser.add_option("-n", "--minimum-length", dest="min_length",
-                      help="minimum string length (default is %d)" % MIN_STRING_LENGTH_DEFAULT)
-    parser.add_option("-f", "--functions", dest="functions",
-                      help="only analyze the specified functions (comma-separated)",
-                      type="string")
-    parser.add_option("-o", "--output-json", dest="json_output_file",
-                      help="save analysis output as a JSON document")
-    parser.add_option("--save-workspace", dest="save_workspace",
-                      help="save vivisect .viv workspace file in current directory", action="store_true")
-    parser.add_option("-m", "--show-metainfo", dest="should_show_metainfo",
-                      help="display vivisect workspace meta information", action="store_true")
-    parser.add_option("--no-filter", dest="no_filter",
-                      help="do not filter deobfuscated strings (may result in many false positive strings)",
-                      action="store_true")
-    parser.add_option("--max-instruction-count", dest="max_instruction_count", type=int, default=20000,
-                      help="maximum number of instructions to emulate per function (default is 20000)")
-    parser.add_option("--max-address-revisits", dest="max_address_revisits", type=int, default=0,
-                      help="maximum number of address revisits per function (default is 0)")
+    parser.add_option(
+        "-n",
+        "--minimum-length",
+        dest="min_length",
+        help="minimum string length (default is %d)" % MIN_STRING_LENGTH_DEFAULT,
+    )
+    parser.add_option(
+        "-f",
+        "--functions",
+        dest="functions",
+        help="only analyze the specified functions (comma-separated)",
+        type="string",
+    )
+    parser.add_option("-o", "--output-json", dest="json_output_file", help="save analysis output as a JSON document")
+    parser.add_option(
+        "--save-workspace",
+        dest="save_workspace",
+        help="save vivisect .viv workspace file in current directory",
+        action="store_true",
+    )
+    parser.add_option(
+        "-m",
+        "--show-metainfo",
+        dest="should_show_metainfo",
+        help="display vivisect workspace meta information",
+        action="store_true",
+    )
+    parser.add_option(
+        "--no-filter",
+        dest="no_filter",
+        help="do not filter deobfuscated strings (may result in many false positive strings)",
+        action="store_true",
+    )
+    parser.add_option(
+        "--max-instruction-count",
+        dest="max_instruction_count",
+        type=int,
+        default=20000,
+        help="maximum number of instructions to emulate per function (default is 20000)",
+    )
+    parser.add_option(
+        "--max-address-revisits",
+        dest="max_address_revisits",
+        type=int,
+        default=0,
+        help="maximum number of address revisits per function (default is 0)",
+    )
 
     shellcode_group = OptionGroup(parser, "Shellcode options", "Analyze raw binary file containing shellcode")
-    shellcode_group.add_option("-s", "--shellcode", dest="is_shellcode", help="analyze shellcode",
-                               action="store_true")
-    shellcode_group.add_option("-e", "--shellcode_ep", dest="shellcode_entry_point",
-                               help="shellcode entry point", type="string")
-    shellcode_group.add_option("-b", "--shellcode_base", dest="shellcode_base",
-                               help="shellcode base offset", type="string")
+    shellcode_group.add_option("-s", "--shellcode", dest="is_shellcode", help="analyze shellcode", action="store_true")
+    shellcode_group.add_option(
+        "-e", "--shellcode_ep", dest="shellcode_entry_point", help="shellcode entry point", type="string"
+    )
+    shellcode_group.add_option(
+        "-b", "--shellcode_base", dest="shellcode_base", help="shellcode base offset", type="string"
+    )
     parser.add_option_group(shellcode_group)
 
-    extraction_group = OptionGroup(parser, "Extraction options", "Specify which string types FLOSS shows from a file, "
-                                                                 "by default all types are shown")
-    extraction_group.add_option("--no-static-strings", dest="no_static_strings", action="store_true",
-                                help="do not show static ASCII and UTF-16 strings")
-    extraction_group.add_option("--no-decoded-strings", dest="no_decoded_strings", action="store_true",
-                                help="do not show decoded strings")
-    extraction_group.add_option("--no-stack-strings", dest="no_stack_strings", action="store_true",
-                                help="do not show stackstrings")
+    extraction_group = OptionGroup(
+        parser,
+        "Extraction options",
+        "Specify which string types FLOSS shows from a file, " "by default all types are shown",
+    )
+    extraction_group.add_option(
+        "--no-static-strings",
+        dest="no_static_strings",
+        action="store_true",
+        help="do not show static ASCII and UTF-16 strings",
+    )
+    extraction_group.add_option(
+        "--no-decoded-strings", dest="no_decoded_strings", action="store_true", help="do not show decoded strings"
+    )
+    extraction_group.add_option(
+        "--no-stack-strings", dest="no_stack_strings", action="store_true", help="do not show stackstrings"
+    )
     parser.add_option_group(extraction_group)
 
     format_group = OptionGroup(parser, "Format Options")
-    format_group.add_option("-g", "--group", dest="group_functions",
-                            help="group output by virtual address of decoding functions",
-                            action="store_true")
-    format_group.add_option("-q", "--quiet", dest="quiet", action="store_true",
-                            help="suppress headers and formatting to print only extracted strings")
+    format_group.add_option(
+        "-g",
+        "--group",
+        dest="group_functions",
+        help="group output by virtual address of decoding functions",
+        action="store_true",
+    )
+    format_group.add_option(
+        "-q",
+        "--quiet",
+        dest="quiet",
+        action="store_true",
+        help="suppress headers and formatting to print only extracted strings",
+    )
     parser.add_option_group(format_group)
 
     logging_group = OptionGroup(parser, "Logging Options")
-    logging_group.add_option("-v", "--verbose", dest="verbose",
-                             help="show verbose messages and warnings", action="store_true")
-    logging_group.add_option("-d", "--debug", dest="debug",
-                             help="show all trace messages", action="store_true")
+    logging_group.add_option(
+        "-v", "--verbose", dest="verbose", help="show verbose messages and warnings", action="store_true"
+    )
+    logging_group.add_option("-d", "--debug", dest="debug", help="show all trace messages", action="store_true")
     parser.add_option_group(logging_group)
 
     output_group = OptionGroup(parser, "Script output options")
-    output_group.add_option("-i", "--ida", dest="ida_python_file",
-                            help="create an IDAPython script to annotate the decoded strings in an IDB file")
-    output_group.add_option("--x64dbg", dest="x64dbg_database_file",
-                            help="create a x64dbg database/json file to annotate the decoded strings in x64dbg")
-    output_group.add_option("-r", "--radare", dest="radare2_script_file",
-                            help="create a radare2 script to annotate the decoded strings in an .r2 file")
-    output_group.add_option("-j", "--binja", dest="binja_script_file",
-                            help="create a Binary Ninja script to annotate the decoded strings in a BNDB file")
+    output_group.add_option(
+        "-i",
+        "--ida",
+        dest="ida_python_file",
+        help="create an IDAPython script to annotate the decoded strings in an IDB file",
+    )
+    output_group.add_option(
+        "--x64dbg",
+        dest="x64dbg_database_file",
+        help="create a x64dbg database/json file to annotate the decoded strings in x64dbg",
+    )
+    output_group.add_option(
+        "-r",
+        "--radare",
+        dest="radare2_script_file",
+        help="create a radare2 script to annotate the decoded strings in an .r2 file",
+    )
+    output_group.add_option(
+        "-j",
+        "--binja",
+        dest="binja_script_file",
+        help="create a Binary Ninja script to annotate the decoded strings in a BNDB file",
+    )
     parser.add_option_group(output_group)
 
     identification_group = OptionGroup(parser, "Identification Options")
-    identification_group.add_option("-p", "--plugins", dest="plugins",
-                                    help="apply the specified identification plugins only (comma-separated)")
-    identification_group.add_option("-l", "--list-plugins", dest="list_plugins",
-                                    help="list all available identification plugins and exit",
-                                    action="store_true")
+    identification_group.add_option(
+        "-p", "--plugins", dest="plugins", help="apply the specified identification plugins only (comma-separated)"
+    )
+    identification_group.add_option(
+        "-l",
+        "--list-plugins",
+        dest="list_plugins",
+        help="list all available identification plugins and exit",
+        action="store_true",
+    )
     parser.add_option_group(identification_group)
 
     profile_group = OptionGroup(parser, "FLOSS Profiles")
-    profile_group.add_option("-x", "--expert", dest="expert",
-                             help="show duplicate offset/string combinations, save workspace, group function output",
-                             action="store_true")
+    profile_group.add_option(
+        "-x",
+        "--expert",
+        dest="expert",
+        help="show duplicate offset/string combinations, save workspace, group function output",
+        action="store_true",
+    )
     parser.add_option_group(profile_group)
 
     return parser
@@ -378,8 +453,10 @@ def select_functions(vw, functions_option):
 
     function_vas = set(function_vas)
     if len(function_vas - workspace_functions) > 0:
-        raise Exception("Functions don't exist in vivisect workspace: %s" % get_str_from_func_list(
-            list(function_vas - workspace_functions)))
+        raise Exception(
+            "Functions don't exist in vivisect workspace: %s"
+            % get_str_from_func_list(list(function_vas - workspace_functions))
+        )
 
     return function_vas
 
@@ -476,9 +553,11 @@ def print_identification_results(sample_file_path, decoder_results):
         print("No candidate functions found.")
     else:
         print("Most likely decoding functions in: " + sample_file_path)
-        print(tabulate.tabulate(
-            [(hex(fva), "%.5f" % (score,)) for fva, score in candidates],
-            headers=["address", "score"]))
+        print(
+            tabulate.tabulate(
+                [(hex(fva), "%.5f" % (score,)) for fva, score in candidates], headers=["address", "score"]
+            )
+        )
 
 
 def print_decoding_results(decoded_strings, group_functions, quiet=False, expert=False):
@@ -545,9 +624,7 @@ def create_x64dbg_database_content(sample_file_path, imagebase, decoded_strings)
     :param decoded_strings: list of decoded strings ([DecodedString])
     :return: json needed to annotate a binary in x64dbg
     """
-    export = {
-        "comments": []
-    }
+    export = {"comments": []}
     module = os.path.basename(sample_file_path)
     processed = {}
     for ds in decoded_strings:
@@ -567,12 +644,7 @@ def create_x64dbg_database_content(sample_file_path, imagebase, decoded_strings)
                     processed[rva] = "FLOSS: " + sanitized_string
 
     for i in processed.keys():
-        comment = {
-            "text": processed[i],
-            "manual": False,
-            "module": module,
-            "address": i
-        }
+        comment = {"text": processed[i], "manual": False, "module": module, "address": i}
         export["comments"].append(comment)
 
     return json.dumps(export, indent=1)
@@ -594,7 +666,9 @@ def create_ida_script_content(sample_file_path, decoded_strings, stack_strings):
                 main_commands.append('print("FLOSS: string \\"%s\\" at global VA 0x%X")' % (sanitized_string, ds.va))
                 main_commands.append('AppendComment(%d, "FLOSS: %s", True)' % (ds.va, sanitized_string))
             else:
-                main_commands.append('print("FLOSS: string \\"%s\\" decoded at VA 0x%X")' % (sanitized_string, ds.decoded_at_va))
+                main_commands.append(
+                    'print("FLOSS: string \\"%s\\" decoded at VA 0x%X")' % (sanitized_string, ds.decoded_at_va)
+                )
                 main_commands.append('AppendComment(%d, "FLOSS: %s")' % (ds.decoded_at_va, sanitized_string))
     main_commands.append('print("Imported decoded strings from FLOSS")')
 
@@ -602,7 +676,9 @@ def create_ida_script_content(sample_file_path, decoded_strings, stack_strings):
     for ss in stack_strings:
         if ss.s != "":
             sanitized_string = sanitize_string_for_script(ss.s)
-            main_commands.append('AppendLvarComment(%d, %d, "FLOSS stackstring: %s", True)' % (ss.fva, ss.frame_offset, sanitized_string))
+            main_commands.append(
+                'AppendLvarComment(%d, %d, "FLOSS stackstring: %s", True)' % (ss.fva, ss.frame_offset, sanitized_string)
+            )
             ss_len += 1
     main_commands.append('print("Imported stackstrings from FLOSS")')
 
@@ -644,7 +720,11 @@ def main():
 
 if __name__ == "__main__":
     main()
-""" % (len(decoded_strings) + ss_len, sample_file_path, "\n    ".join(main_commands))
+""" % (
+        len(decoded_strings) + ss_len,
+        sample_file_path,
+        "\n    ".join(main_commands),
+    )
     return script_content
 
 
@@ -664,7 +744,9 @@ def create_binja_script_content(sample_file_path, decoded_strings, stack_strings
                 main_commands.append('print "FLOSS: string \\"%s\\" at global VA 0x%X"' % (sanitized_string, ds.va))
                 main_commands.append('AppendComment(%d, "FLOSS: %s")' % (ds.va, sanitized_string))
             else:
-                main_commands.append('print "FLOSS: string \\"%s\\" decoded at VA 0x%X"' % (sanitized_string, ds.decoded_at_va))
+                main_commands.append(
+                    'print "FLOSS: string \\"%s\\" decoded at VA 0x%X"' % (sanitized_string, ds.decoded_at_va)
+                )
                 main_commands.append('AppendComment(%d, "FLOSS: %s")' % (ds.decoded_at_va, sanitized_string))
     main_commands.append('print "Imported decoded strings from FLOSS"')
 
@@ -672,7 +754,9 @@ def create_binja_script_content(sample_file_path, decoded_strings, stack_strings
     for ss in stack_strings:
         if ss.s != "":
             sanitized_string = sanitize_string_for_script(ss.s)
-            main_commands.append('AppendLvarComment(%d, %d, "FLOSS stackstring: %s")' % (ss.fva, ss.pc, sanitized_string))
+            main_commands.append(
+                'AppendLvarComment(%d, %d, "FLOSS stackstring: %s")' % (ss.fva, ss.pc, sanitized_string)
+            )
             ss_len += 1
     main_commands.append('print "Imported stackstrings from FLOSS"')
 
@@ -723,7 +807,11 @@ def AppendLvarComment(fva, pc, s):
 print "Annotating %d strings from FLOSS for %s"
 %s
 
-""" % (len(decoded_strings) + ss_len, sample_file_path, "\n".join(main_commands))
+""" % (
+        len(decoded_strings) + ss_len,
+        sample_file_path,
+        "\n".join(main_commands),
+    )
     return script_content
 
 
@@ -771,7 +859,7 @@ def create_x64dbg_database(sample_file_path, x64dbg_database_file, imagebase, de
     :param decoded_strings: list of decoded strings ([DecodedString])
     """
     script_content = create_x64dbg_database_content(sample_file_path, imagebase, decoded_strings)
-    with open(x64dbg_database_file, 'wb') as f:
+    with open(x64dbg_database_file, "wb") as f:
         try:
             f.write(script_content)
             floss_logger.info("Wrote x64dbg database to %s\n" % x64dbg_database_file)
@@ -789,7 +877,7 @@ def create_ida_script(sample_file_path, ida_python_file, decoded_strings, stack_
     """
     script_content = create_ida_script_content(sample_file_path, decoded_strings, stack_strings)
     ida_python_file = os.path.abspath(ida_python_file)
-    with open(ida_python_file, 'wb') as f:
+    with open(ida_python_file, "wb") as f:
         try:
             f.write(script_content)
             floss_logger.info("Wrote IDAPython script file to %s\n" % ida_python_file)
@@ -808,7 +896,7 @@ def create_binja_script(sample_file_path, binja_script_file, decoded_strings, st
     """
     script_content = create_binja_script_content(sample_file_path, decoded_strings, stack_strings)
     binja_script__file = os.path.abspath(binja_script_file)
-    with open(binja_script_file, 'wb') as f:
+    with open(binja_script_file, "wb") as f:
         try:
             f.write(script_content)
             floss_logger.info("Wrote Binary Ninja script file to %s\n" % binja_script_file)
@@ -827,7 +915,7 @@ def create_r2_script(sample_file_path, r2_script_file, decoded_strings, stack_st
     """
     script_content = create_r2_script_content(sample_file_path, decoded_strings, stack_strings)
     r2_script_file = os.path.abspath(r2_script_file)
-    with open(r2_script_file, 'wb') as f:
+    with open(r2_script_file, "wb") as f:
         try:
             f.write(script_content)
             floss_logger.info("Wrote radare2script file to %s\n" % r2_script_file)
@@ -837,10 +925,7 @@ def create_r2_script(sample_file_path, r2_script_file, decoded_strings, stack_st
 
 
 def create_json_output_static_only(options, sample_file_path, static_strings):
-    create_json_output(options, sample_file_path,
-                       decoded_strings=[],
-                       stack_strings=[],
-                       static_strings=static_strings)
+    create_json_output(options, sample_file_path, decoded_strings=[], stack_strings=[], static_strings=static_strings)
     floss_logger.info("Wrote JSON file to %s\n" % options.json_output_file)
 
 
@@ -853,17 +938,21 @@ def create_json_output(options, sample_file_path, decoded_strings, stack_strings
     :param stack_strings: list of stack strings ([StackString])
     :param static_strings: iterable of static strings ([String])
     """
-    strings = {'stack_strings': sanitize_strings_iterator(stack_strings),
-               'decoded_strings': sanitize_strings_iterator(decoded_strings),
-               'static_strings': sanitize_strings_iterator(static_strings)}
-    metadata = {'file_path': sample_file_path,
-                'date': datetime.datetime.now().isoformat(),
-                'stack_strings': not options.no_stack_strings,
-                'decoded_strings': not options.no_decoded_strings,
-                'static_strings': not options.no_static_strings}
-    report = {'metadata': metadata, 'strings': strings}
+    strings = {
+        "stack_strings": sanitize_strings_iterator(stack_strings),
+        "decoded_strings": sanitize_strings_iterator(decoded_strings),
+        "static_strings": sanitize_strings_iterator(static_strings),
+    }
+    metadata = {
+        "file_path": sample_file_path,
+        "date": datetime.datetime.now().isoformat(),
+        "stack_strings": not options.no_stack_strings,
+        "decoded_strings": not options.no_decoded_strings,
+        "static_strings": not options.no_static_strings,
+    }
+    report = {"metadata": metadata, "strings": strings}
     try:
-        with open(options.json_output_file, 'w') as f:
+        with open(options.json_output_file, "w") as f:
             json.dump(report, f, iterable_as_array=True)
     except Exception:
         raise
@@ -874,7 +963,7 @@ def get_file_as_mmap(path):
     Returns an mmap object of the file
     :param path: path of the file to map
     """
-    with open(path, 'rb') as f:
+    with open(path, "rb") as f:
         return mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
 
 
@@ -919,9 +1008,12 @@ def print_stack_strings(extracted_strings, quiet=False, expert=False):
         for ss in extracted_strings:
             print("%s" % (ss.s))
     elif count > 0:
-        print(tabulate.tabulate(
-            [(hex(s.fva), hex(s.frame_offset), s.s) for s in extracted_strings],
-            headers=["Function", "Frame Offset", "String"]))
+        print(
+            tabulate.tabulate(
+                [(hex(s.fva), hex(s.frame_offset), s.s) for s in extracted_strings],
+                headers=["Function", "Frame Offset", "String"],
+            )
+        )
 
 
 def print_file_meta_info(vw, selected_functions):
@@ -939,9 +1031,11 @@ def load_workspace(sample_file_path, save_workspace):
         floss_logger.info("Loading existing vivisect workspace...")
     else:
         if not is_supported_file_type(sample_file_path):
-            raise LoadNotSupportedError("FLOSS currently supports the following formats for string decoding and "
-                                        "stackstrings: PE\nYou can analyze shellcode using the -s switch. See the "
-                                        "help (-h) for more information.")
+            raise LoadNotSupportedError(
+                "FLOSS currently supports the following formats for string decoding and "
+                "stackstrings: PE\nYou can analyze shellcode using the -s switch. See the "
+                "help (-h) for more information."
+            )
         floss_logger.info("Generating vivisect workspace...")
     return viv_utils.getWorkspace(sample_file_path, should_save=save_workspace)
 
@@ -958,20 +1052,26 @@ def load_shellcode_workspace(sample_file_path, save_workspace, shellcode_ep_in, 
     if shellcode_base_in:
         shellcode_base = int(shellcode_base_in, 0x10)
 
-    floss_logger.info("Generating vivisect workspace for shellcode, base: 0x%x, entry point: 0x%x...",
-                      shellcode_base, shellcode_entry_point)
+    floss_logger.info(
+        "Generating vivisect workspace for shellcode, base: 0x%x, entry point: 0x%x...",
+        shellcode_base,
+        shellcode_entry_point,
+    )
     with open(sample_file_path, "rb") as f:
         shellcode_data = f.read()
-    return viv_utils.getShellcodeWorkspace(shellcode_data, "i386", shellcode_base, shellcode_entry_point,
-                                           save_workspace, sample_file_path)
+    return viv_utils.getShellcodeWorkspace(
+        shellcode_data, "i386", shellcode_base, shellcode_entry_point, save_workspace, sample_file_path
+    )
 
 
 def load_vw(sample_file_path, save_workspace, verbose, is_shellcode, shellcode_entry_point, shellcode_base):
     try:
         if not is_shellcode:
             if shellcode_entry_point or shellcode_base:
-                floss_logger.warning("Entry point and base offset only apply in conjunction with the -s switch when "
-                                     "analyzing raw binary files.")
+                floss_logger.warning(
+                    "Entry point and base offset only apply in conjunction with the -s switch when "
+                    "analyzing raw binary files."
+                )
             return load_workspace(sample_file_path, save_workspace)
         else:
             return load_shellcode_workspace(sample_file_path, save_workspace, shellcode_entry_point, shellcode_base)
@@ -1034,15 +1134,22 @@ def main(argv=None):
             return 0
 
     if os.path.getsize(sample_file_path) > MAX_FILE_SIZE:
-        floss_logger.error("FLOSS cannot extract obfuscated strings or stackstrings from files larger than"
-                           " %d bytes" % MAX_FILE_SIZE)
+        floss_logger.error(
+            "FLOSS cannot extract obfuscated strings or stackstrings from files larger than" " %d bytes" % MAX_FILE_SIZE
+        )
         if options.json_output_file:
             create_json_output_static_only(options, sample_file_path, static_strings)
         return 1
 
     try:
-        vw = load_vw(sample_file_path, options.save_workspace, options.verbose, options.is_shellcode,
-                     options.shellcode_entry_point, options.shellcode_base)
+        vw = load_vw(
+            sample_file_path,
+            options.save_workspace,
+            options.verbose,
+            options.is_shellcode,
+            options.shellcode_entry_point,
+            options.shellcode_base,
+        )
     except WorkspaceLoadError:
         if options.json_output_file:
             create_json_output_static_only(options, sample_file_path, static_strings)
@@ -1075,8 +1182,14 @@ def main(argv=None):
             print_identification_results(sample_file_path, decoding_functions_candidates)
 
         floss_logger.info("Decoding strings...")
-        decoded_strings = decode_strings(vw, decoding_functions_candidates, min_length, options.no_filter,
-                                         options.max_instruction_count, options.max_address_revisits + 1)
+        decoded_strings = decode_strings(
+            vw,
+            decoding_functions_candidates,
+            min_length,
+            options.no_filter,
+            options.max_instruction_count,
+            options.max_address_revisits + 1,
+        )
         # TODO: The de-duplication process isn't perfect as it is done here and in print_decoding_results and
         # TODO: all of them on non-sanitized strings.
         if not options.expert:
@@ -1097,7 +1210,7 @@ def main(argv=None):
         stack_strings = []
 
     if options.x64dbg_database_file:
-        imagebase = vw.filemeta.values()[0]['imagebase']
+        imagebase = vw.filemeta.values()[0]["imagebase"]
         floss_logger.info("Creating x64dbg database...")
         create_x64dbg_database(sample_file_path, options.x64dbg_database_file, imagebase, decoded_strings)
 
@@ -1118,10 +1231,13 @@ def main(argv=None):
         print("\nFinished execution after %f seconds" % (time1 - time0))
 
     if options.json_output_file:
-        create_json_output(options, sample_file_path,
-                           decoded_strings=decoded_strings,
-                           stack_strings=stack_strings,
-                           static_strings=static_strings)
+        create_json_output(
+            options,
+            sample_file_path,
+            decoded_strings=decoded_strings,
+            stack_strings=stack_strings,
+            static_strings=static_strings,
+        )
         floss_logger.info("Wrote JSON file to %s\n" % options.json_output_file)
 
     return 0
