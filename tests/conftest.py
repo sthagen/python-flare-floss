@@ -1,14 +1,14 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
 import os
+
 import yaml
 import pytest
-
 import viv_utils
 
 import floss.main as floss_main
-import floss.identification_manager as im
 import floss.stackstrings as stackstrings
+import floss.identification_manager as im
 
 
 def extract_strings(vw):

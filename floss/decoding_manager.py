@@ -1,15 +1,14 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
 import logging
+from enum import Enum
 from collections import namedtuple
 
 import viv_utils
-import viv_utils.emulator_drivers
 import envi.memory
-from enum import Enum
+import viv_utils.emulator_drivers
 
 from . import api_hooks
-
 
 floss_logger = logging.getLogger("floss")
 MAX_MAPS_SIZE = 1024 * 1024 * 100  # 100MB max memory allocated in an emulator instance

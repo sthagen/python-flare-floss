@@ -10,8 +10,7 @@ import viv_utils.emulator_drivers
 
 from . import strings
 from .const import MAX_STRING_LENGTH
-from .utils import makeEmulator, is_fp_string, strip_string
-
+from .utils import is_fp_string, makeEmulator, strip_string
 
 logger = logging.getLogger(__name__)
 MAX_STACK_SIZE = 0x10000

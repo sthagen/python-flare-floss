@@ -9,6 +9,7 @@ email: willi.ballenthin@gmail.com
 import time
 import logging
 
+import idc
 import viv_utils
 
 import floss
@@ -16,9 +17,6 @@ import floss.main
 import floss.stackstrings
 import floss.decoding_manager
 import floss.identification_manager
-
-import idc
-
 
 logger = logging.getLogger('floss.idaplugin')
 

@@ -1,7 +1,8 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
-from . import plugin_object
 import floss.interfaces as interfaces
+
+from . import plugin_object
 
 
 class FunctionIsLibraryPlugin(plugin_object.GeneralPlugin):

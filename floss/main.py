@@ -9,9 +9,9 @@ import string
 import logging
 import datetime
 from time import time
-from itertools import chain
 from base64 import b64encode
-from optparse import OptionParser, OptionGroup
+from optparse import OptionGroup, OptionParser
+from itertools import chain
 
 import tabulate
 import viv_utils
@@ -23,11 +23,10 @@ import floss.stackstrings as stackstrings
 import floss.string_decoder as string_decoder
 import floss.identification_manager as im
 from floss.const import MAX_FILE_SIZE, SUPPORTED_FILE_MAGIC, MIN_STRING_LENGTH_DEFAULT
-from floss.utils import get_vivisect_meta_info, hex
+from floss.utils import hex, get_vivisect_meta_info
 from floss.version import __version__
 from floss.interfaces import DecodingRoutineIdentifier
 from floss.decoding_manager import LocationType
-
 
 floss_logger = logging.getLogger("floss")
 

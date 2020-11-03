@@ -2,12 +2,11 @@
 
 import logging
 
-from .const import MAX_STRING_LENGTH
 from . import strings, decoding_manager
-from .utils import makeEmulator, is_fp_string, strip_string
+from .const import MAX_STRING_LENGTH
+from .utils import is_fp_string, makeEmulator, strip_string
+from .decoding_manager import LocationType, DecodedString
 from .function_argument_getter import get_function_contexts
-from .decoding_manager import DecodedString, LocationType
-
 
 floss_logger = logging.getLogger("floss")
 

@@ -3,8 +3,9 @@
 import envi
 import viv_utils
 
-from . import plugin_object
 import floss.interfaces as interfaces
+
+from . import plugin_object
 
 
 class XORPlugin(plugin_object.GeneralPlugin):
