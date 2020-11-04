@@ -27,8 +27,10 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout FLOSS
+    - name: Checkout FLOSS with submodule
       uses: actions/checkout@v2
+      with:
+        submodules: true
     - name: Set up Python 2.7
       uses: actions/setup-python@v2
       with:
