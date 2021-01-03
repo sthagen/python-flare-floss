@@ -4,9 +4,9 @@ import re
 from collections import namedtuple
 
 
-ASCII_BYTE = r" !\"#\$%&\'\(\)\*\+,-\./0123456789:;<=>\?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\[\]\^_`abcdefghijklmnopqrstuvwxyz\{\|\}\\\~\t"
-ASCII_RE_4 = re.compile("([%s]{%d,})" % (ASCII_BYTE, 4))
-UNICODE_RE_4 = re.compile(b"((?:[%s]\x00){%d,})" % (ASCII_BYTE, 4))
+ASCII_BYTE = rb" !\"#\$%&\'\(\)\*\+,-\./0123456789:;<=>\?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\[\]\^_`abcdefghijklmnopqrstuvwxyz\{\|\}\\\~\t"
+ASCII_RE_4 = re.compile(rb"([%s]{%d,})" % (ASCII_BYTE, 4))
+UNICODE_RE_4 = re.compile(rb"((?:[%s]\x00){%d,})" % (ASCII_BYTE, 4))
 REPEATS = ["A", "\x00", "\xfe", "\xff"]
 SLICE_SIZE = 4096
 
@@ -43,7 +43,7 @@ def extract_ascii_strings(buf, n=4):
     if n == 4:
         r = ASCII_RE_4
     else:
-        reg = "([%s]{%d,})" % (ASCII_BYTE, n)
+        reg = rb"([%s]{%d,})" % (ASCII_BYTE, n)
         r = re.compile(reg)
     for match in r.finditer(buf):
         yield String(match.group().decode("ascii"), match.start())
@@ -69,7 +69,7 @@ def extract_unicode_strings(buf, n=4):
     if n == 4:
         r = UNICODE_RE_4
     else:
-        reg = b"((?:[%s]\x00){%d,})" % (ASCII_BYTE, n)
+        reg = rb"((?:[%s]\x00){%d,})" % (ASCII_BYTE, n)
         r = re.compile(reg)
     for match in r.finditer(buf):
         try:
