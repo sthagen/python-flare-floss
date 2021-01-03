@@ -1,11 +1,9 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
 import pytest
-
 import envi.memory
 
 from floss.string_decoder import memdiff
-
 
 basic_tests = [
     # Empty strings

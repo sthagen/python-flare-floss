@@ -1,8 +1,7 @@
-[![Appveyor Build Status](https://ci.appveyor.com/api/projects/status/github/fireeye/flare-floss?branch=master&svg=true)](https://ci.appveyor.com/project/williballenthin/flare-floss)
-[![Travis Build Status](https://travis-ci.org/fireeye/flare-floss.svg?branch=master)](https://travis-ci.org/fireeye/flare-floss)
+[![CI status](https://github.com/fireeye/flare-floss/workflows/CI/badge.svg)](https://github.com/fireeye/flare-floss/actions?query=workflow%3ACI+event%3Apush+branch%3Amaster)
+[![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE.txt)
 
-
-<img src="resources/logo.png?raw=true " width="350"/>
+<img src="resources/logo.png?raw=true" width="350"/>
 
 # FireEye Labs Obfuscated String Solver
 
@@ -18,21 +17,15 @@ static analysis techniques to automatically deobfuscate strings from
 malware binaries. You can use it just like `strings.exe` to enhance
 basic static analysis of unknown binaries.
 
-Please review the theory behind FLOSS [here](doc/theory.md).
+Please review the theory behind FLOSS [here](doc/theory.md). Our [blog post](https://www.fireeye.com/blog/threat-research/2016/06/automatically-extracting-obfuscated-strings.html) talks more about the motivation behind FLOSS and details how the tool works.
 
 
 ## Quick Run
 To try FLOSS right away, download a standalone executable file from the releases page:
 https://github.com/fireeye/flare-floss/releases
 
-For a detailed description of *installing* FLOSS, review the documention
+For a detailed description of *installing* FLOSS, review the documentation
  [here](doc/installation.md).
-
-Standalone nightly builds:
-  - Windows 64bit: [here](http://s3.amazonaws.com/build-artifacts.floss.flare.fireeye.com/appveyor/dist/floss64.exe) 
-  - Windows 32bit: [here](http://s3.amazonaws.com/build-artifacts.floss.flare.fireeye.com/appveyor/dist/floss32.exe)
-  - Linux: [here](https://s3.amazonaws.com/build-artifacts.floss.flare.fireeye.com/travis/linux/dist/floss)
-  - OSX: [here](https://s3.amazonaws.com/build-artifacts.floss.flare.fireeye.com/travis/osx/dist/floss)
 
 
 ## Usage
@@ -44,10 +37,10 @@ Display the help/usage screen to see all available switches.
 
     $ ./floss -h
 
-For a detailed description of *using* FLOSS, review the documention
+For a detailed description of *using* FLOSS, review the documentation
  [here](doc/usage.md).
 
-For a detailed description of *testing* FLOSS, review the documention
+For a detailed description of *testing* FLOSS, review the documentation
  [here](doc/test.md).
 
 ## Sample Output

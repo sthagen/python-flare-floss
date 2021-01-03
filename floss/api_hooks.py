@@ -7,9 +7,9 @@ import viv_utils
 
 
 class ApiMonitor(viv_utils.emulator_drivers.Monitor):
-    '''
+    """
     The ApiMonitor observes emulation and cleans up API function returns.
-    '''
+    """
 
     def __init__(self, vw, function_index):
         viv_utils.emulator_drivers.Monitor.__init__(self, vw)
@@ -32,12 +32,12 @@ class ApiMonitor(viv_utils.emulator_drivers.Monitor):
                 self.d(str(e))
 
     def _check_return(self, emu, op):
-        '''
+        """
         Ensure that the target of the return is within the allowed set of functions.
         Do nothing, if return address is valid. If return address is invalid:
         _fix_return modifies program counter and stack pointer if a valid return address is found
         on the stack or raises an Exception if no valid return address is found.
-        '''
+        """
         function_start = self.function_index[op.va]
         return_addresses = self._get_return_vas(emu, function_start)
 
@@ -47,9 +47,11 @@ class ApiMonitor(viv_utils.emulator_drivers.Monitor):
 
         return_address = self.getStackValue(emu, -4)
         if return_address not in return_addresses:
-            self._logger.debug("Return address 0x%08X is invalid, expected one of: %s",
-                               return_address,
-                               ', '.join(map(hex, return_addresses)))
+            self._logger.debug(
+                "Return address 0x%08X is invalid, expected one of: %s",
+                return_address,
+                ", ".join(map(hex, return_addresses)),
+            )
             self._fix_return(emu, return_address, return_addresses)
             # TODO return, handle Exception
         else:
@@ -57,9 +59,9 @@ class ApiMonitor(viv_utils.emulator_drivers.Monitor):
             # TODO return?
 
     def _get_return_vas(self, emu, function_start):
-        '''
+        """
         Get the list of valid addresses to which a function should return.
-        '''
+        """
         return_vas = []
         callers = self._vw.getCallers(function_start)
         for caller in callers:
@@ -69,11 +71,11 @@ class ApiMonitor(viv_utils.emulator_drivers.Monitor):
         return return_vas
 
     def _fix_return(self, emu, return_address, return_addresses):
-        '''
+        """
         Find a valid return address from return_addresses on the stack. Adjust the stack accordingly
         or raise an Exception if no valid address is found within the search boundaries.
         Modify program counter and stack pointer, so the emulator does not return to a garbage address.
-        '''
+        """
         self.dumpStack(emu)
         NUM_ADDRESSES = 4
         pointer_size = emu.getPointerSize()
@@ -92,10 +94,10 @@ class ApiMonitor(viv_utils.emulator_drivers.Monitor):
         raise Exception("No valid return address found...")
 
     def dumpStack(self, emu):
-        '''
+        """
         Convenience debugging routine for showing
          state current state of the stack.
-        '''
+        """
         esp = emu.getStackCounter()
         stack_str = ""
         for i in xrange(16, -16, -4):
@@ -118,29 +120,29 @@ class ApiMonitor(viv_utils.emulator_drivers.Monitor):
 
 
 def pointerSize(emu):
-    '''
+    """
     Convenience method whose name might be more readable
      than fetching emu.imem_psize.
     Returns the size of a pointer in bytes for the given emulator.
     :rtype: int
-    '''
+    """
     return emu.imem_psize
 
 
 def popStack(emu):
-    '''
+    """
     Remove the element at the top of the stack.
     :rtype: int
-    '''
+    """
     v = emu.readMemoryFormat(emu.getStackCounter(), "<P")[0]
     emu.setStackCounter(emu.getStackCounter() + pointerSize(emu))
     return v
 
 
 class GetProcessHeapHook(viv_utils.emulator_drivers.Hook):
-    '''
+    """
     Hook and handle calls to GetProcessHeap, returning 0.
-    '''
+    """
 
     def hook(self, callname, emu, callconv, api, argv):
         if callname == "kernel32.GetProcessHeap":
@@ -151,25 +153,25 @@ class GetProcessHeapHook(viv_utils.emulator_drivers.Hook):
 
 
 def round(i, size):
-    '''
+    """
     Round `i` to the nearest greater-or-equal-to multiple of `size`.
 
     :type i: int
     :type size: int
     :rtype: int
-    '''
+    """
     if i % size == 0:
         return i
     return i + (size - (i % size))
 
 
 class RtlAllocateHeapHook(viv_utils.emulator_drivers.Hook):
-    '''
+    """
     Hook calls to RtlAllocateHeap, allocate memory in a "heap"
      section, and return pointers to this memory.
     The base heap address is 0x96960000.
     The max allocation size is 10 MB.
-    '''
+    """
 
     def __init__(self, *args, **kwargs):
         super(RtlAllocateHeapHook, self).__init__(*args, **kwargs)
@@ -200,17 +202,19 @@ class RtlAllocateHeapHook(viv_utils.emulator_drivers.Hook):
 
 
 class AllocateHeap(RtlAllocateHeapHook):
-    '''
+    """
     Hook calls to AllocateHeap and handle them like calls to RtlAllocateHeapHook.
-    '''
+    """
 
     def __init__(self, *args, **kwargs):
         super(AllocateHeap, self).__init__(*args, **kwargs)
 
     def hook(self, callname, driver, callconv, api, argv):
-        if callname == "kernel32.LocalAlloc" or \
-           callname == "kernel32.GlobalAlloc" or \
-           callname == "kernel32.VirtualAlloc":
+        if (
+            callname == "kernel32.LocalAlloc"
+            or callname == "kernel32.GlobalAlloc"
+            or callname == "kernel32.VirtualAlloc"
+        ):
             size = argv[1]
         elif callname == "kernel32.VirtualAllocEx":
             size = argv[2]
@@ -222,16 +226,15 @@ class AllocateHeap(RtlAllocateHeapHook):
 
 
 class MallocHeap(RtlAllocateHeapHook):
-    '''
+    """
     Hook calls to malloc and handle them like calls to RtlAllocateHeapHook.
-    '''
+    """
 
     def __init__(self, *args, **kwargs):
         super(MallocHeap, self).__init__(*args, **kwargs)
 
     def hook(self, callname, driver, callconv, api, argv):
-        if callname == "msvcrt.malloc" or \
-           callname == "msvcrt.calloc":
+        if callname == "msvcrt.malloc" or callname == "msvcrt.calloc":
             size = argv[0]
             va = self._allocate_mem(driver, size)
             callconv.execCallReturn(driver, va, len(argv))
@@ -240,21 +243,21 @@ class MallocHeap(RtlAllocateHeapHook):
 
 
 class MemcpyHook(viv_utils.emulator_drivers.Hook):
-    '''
+    """
     Hook and handle calls to memcpy and memmove.
-    '''
+    """
+
     MAX_COPY_SIZE = 1024 * 1024 * 32  # don't attempt to copy more than 32MB, or something is wrong
 
     def __init__(self, *args, **kwargs):
         super(MemcpyHook, self).__init__(*args, **kwargs)
 
     def hook(self, callname, driver, callconv, api, argv):
-        if callname == "msvcrt.memcpy" or \
-           callname == "msvcrt.memmove":
+        if callname == "msvcrt.memcpy" or callname == "msvcrt.memmove":
             emu = driver
             dst, src, count = argv
             if count > self.MAX_COPY_SIZE:
-                self.d('unusually large memcpy, truncating to 32MB: 0x%x', count)
+                self.d("unusually large memcpy, truncating to 32MB: 0x%x", count)
                 count = self.MAX_COPY_SIZE
             data = emu.readMemory(src, count)
             emu.writeMemory(dst, data)
@@ -276,11 +279,11 @@ def readStringAtRva(emu, rva, maxsize=None):
         if maxsize and maxsize <= len(ret):
             break
         x = emu.readMemory(rva, 1)
-        if x == '\x00' or x is None:
+        if x == "\x00" or x is None:
             break
         ret.append(x)
         rva += 1
-    return ''.join(ret)
+    return "".join(ret)
 
 
 class StrlenHook(viv_utils.emulator_drivers.Hook):
@@ -302,9 +305,10 @@ class StrlenHook(viv_utils.emulator_drivers.Hook):
 
 
 class StrnlenHook(viv_utils.emulator_drivers.Hook):
-    '''
+    """
     Hook and handle calls to strnlen.
-    '''
+    """
+
     MAX_COPY_SIZE = 1024 * 1024 * 32
 
     def __init__(self, *args, **kwargs):
@@ -315,10 +319,10 @@ class StrnlenHook(viv_utils.emulator_drivers.Hook):
             emu = driver
             string_va, maxlen = argv
             if maxlen > self.MAX_COPY_SIZE:
-                self.d('unusually large strnlen, truncating to 32MB: 0x%x', maxlen)
+                self.d("unusually large strnlen, truncating to 32MB: 0x%x", maxlen)
                 maxlen = self.MAX_COPY_SIZE
             s = readStringAtRva(emu, string_va, maxsize=maxlen)
-            slen = len(s.partition('\x00')[0])
+            slen = len(s.partition("\x00")[0])
             callconv.execCallReturn(emu, slen, len(argv))
             return True
 
@@ -326,9 +330,10 @@ class StrnlenHook(viv_utils.emulator_drivers.Hook):
 
 
 class StrncmpHook(viv_utils.emulator_drivers.Hook):
-    '''
+    """
     Hook and handle calls to strncmp.
-    '''
+    """
+
     MAX_COPY_SIZE = 1024 * 1024 * 32
 
     def __init__(self, *args, **kwargs):
@@ -339,14 +344,14 @@ class StrncmpHook(viv_utils.emulator_drivers.Hook):
             emu = driver
             s1va, s2va, num = argv
             if num > self.MAX_COPY_SIZE:
-                self.d('unusually large strnlen, truncating to 32MB: 0x%x', num)
+                self.d("unusually large strnlen, truncating to 32MB: 0x%x", num)
                 num = self.MAX_COPY_SIZE
 
             s1 = readStringAtRva(emu, s1va, maxsize=num)
             s2 = readStringAtRva(emu, s2va, maxsize=num)
 
-            s1 = s1.partition('\x00')[0]
-            s2 = s2.partition('\x00')[0]
+            s1 = s1.partition("\x00")[0]
+            s2 = s2.partition("\x00")[0]
 
             result = cmp(s1, s2)
 
@@ -380,9 +385,9 @@ class MemchrHook(viv_utils.emulator_drivers.Hook):
 
 
 class ExitProcessHook(viv_utils.emulator_drivers.Hook):
-    '''
+    """
     Hook calls to ExitProcess and stop emulation when these are hit.
-    '''
+    """
 
     def __init__(self, *args, **kwargs):
         super(ExitProcessHook, self).__init__(*args, **kwargs)
@@ -393,14 +398,14 @@ class ExitProcessHook(viv_utils.emulator_drivers.Hook):
 
 
 class CriticalSectionHooks(viv_utils.emulator_drivers.Hook):
-    '''
+    """
     Hook calls to:
       - InitializeCriticalSection
-    '''
+    """
 
     def hook(self, callname, emu, callconv, api, argv):
         if callname == "kernel32.InitializeCriticalSection":
-            hsection, = argv
+            (hsection,) = argv
             emu.writeMemory(hsection, "csec")
             callconv.execCallReturn(emu, 0, len(argv))
             return True
@@ -423,7 +428,7 @@ DEFAULT_HOOKS = [
 
 @contextlib.contextmanager
 def defaultHooks(driver):
-    '''
+    """
     Install and remove the default set of hooks to handle common functions.
 
     intended usage:
@@ -431,7 +436,7 @@ def defaultHooks(driver):
         with defaultHooks(driver):
             driver.runFunction()
             ...
-    '''
+    """
     try:
         for hook in DEFAULT_HOOKS:
             driver.add_hook(hook)

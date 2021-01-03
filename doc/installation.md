@@ -19,7 +19,7 @@ These binary executable files contain all the source code,
 This means you can run it without any installation!
 Just invoke the file using your terminal shell to see the help documentation.
 
-We used PyInstaller to create these packages.
+We use PyInstaller to create these packages.
 
 
 ## Method 2: Using FLOSS as a Python library
@@ -34,18 +34,9 @@ We designed FLOSS to be as easy to use from a client program as from
 To install FLOSS as a Python library, you'll need to install a few
  dependencies, and then use `pip` to fetch the FLOSS module.
 
-### Step 1: Install requirements
+### Step 1: Install FLOSS module
 
-First, install a few required dependencies.
-Heres the easiest way:
-
-- `vivisect` - https://github.com/vivisect/vivisect, installable module from https://github.com/williballenthin/vivisect
-
-    `$ pip install https://github.com/williballenthin/vivisect/zipball/master`
-
-### Step 2: Install FLOSS module
-
-Second, use `pip` to install the FLOSS module to your local
+Use `pip` to install the FLOSS module to your local
  Python environment.
 This fetches the library code to your computer, but does not keep
  editable source files around for you to hack on.
@@ -56,7 +47,7 @@ If you'd like to edit the source files, see Method 3.
     `$ pip install https://github.com/fireeye/flare-floss/zipball/master`
 
 
-### Step 3: Use FLOSS from a Python script
+### Step 2: Use FLOSS from a Python script
 
 You can now import the `floss` module from a Python script:
 
@@ -72,26 +63,13 @@ If you'd like to review and modify the FLOSS source code,
 By following these instructions, you'll maintain a local directory
  of source code that you can modify and run easily.
 
-### Step 1: Install requirements
-
-First, install a few required dependencies.
-Heres the easiest way:
-
-- `vivisect` - https://github.com/vivisect/vivisect, installable module from https://github.com/williballenthin/vivisect
-
-    `$ pip install https://github.com/williballenthin/vivisect/zipball/master`
-
-- `pytest` - http://pytest.org
-
-    `$ pip install pytest`
-
-### Step 2: Check out source code
+### Step 1: Check out source code
 
 - Clone the FLOSS git repository:
 
     `$ git clone https://github.com/fireeye/flare-floss /local/path/to/src`
 
-### Step 3: Install the local source code
+### Step 2: Install the local source code
 
 Next, use `pip` to install the source code in "editable" mode.
 This means that Python will load the FLOSS module from this local
@@ -102,10 +80,29 @@ But be careful not to remove this directory unless uninstalling FLOSS!
 
 - Install FLOSS:
 
-    `$ pip install -e ./local/path/to/src`
+    `$ pip install -e /local/path/to/src`
 
 you'll find that the `FLOSS.exe` (Windows) or `floss` (Linux) executables
  in your path now invoke the FLOSS binary from this directory.
+
+### Step 3: Install development and testing dependencies
+
+To install all testing and development dependencies, run:
+
+`$ pip install -e /local/path/to/src[dev]`
+
+We use a git submodule to separate [code](https://github.com/fireeye/flare-floss) and [test data](https://github.com/fireeye/flare-floss-testfiles).
+To clone everything use the `--recurse-submodules` option:
+- `$ git clone --recurse-submodules https://github.com/fireeye/flare-floss.git /local/path/to/src` (HTTPS)
+- `$ git clone --recurse-submodules git@github.com:fireeye/flare-floss.git /local/path/to/src` (SSH)
+
+Or use  the manual option:
+- clone repository
+  - `$ git clone https://github.com/fireeye/flare-floss.git /local/path/to/src` (HTTPS)
+  - `$ git clone git@github.com:fireeye/flare-floss.git /local/path/to/src` (SSH)
+- `$ cd /local/path/to/src`
+- `$ git submodule update --init tests/data`
+
 
 ### Step 4: Building standalone executables
 

@@ -3,14 +3,16 @@
 import envi
 import viv_utils
 
-from . import plugin_object
 import floss.interfaces as interfaces
+
+from . import plugin_object
 
 
 class MovPlugin(plugin_object.GeneralPlugin):
     """
     Identify suspicious MOV instructions.
     """
+
     implements = [interfaces.DecodingRoutineIdentifier]
     version = 1.0
 

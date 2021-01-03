@@ -18,7 +18,7 @@ def makeEmulator(vw):
     removeStackMemory(emu)
     emu.initStackMemory(stacksize=int(0.5 * MEGABYTE))
     emu.setStackCounter(emu.getStackCounter() - int(0.25 * MEGABYTE))
-    emu.setEmuOpt('i386:reponce', False)  # do not short circuit rep prefix
+    emu.setEmuOpt("i386:reponce", False)  # do not short circuit rep prefix
     return emu
 
 
@@ -43,9 +43,9 @@ def get_vivisect_meta_info(vw, selected_functions):
     if entry_points:
         basename = vw.getFileByVa(entry_points[0])
     if basename:
-        version = vw.getFileMeta(basename, 'Version')
-        md5sum = vw.getFileMeta(basename, 'md5sum')
-        baseva = hex(vw.getFileMeta(basename, 'imagebase'))
+        version = vw.getFileMeta(basename, "Version")
+        md5sum = vw.getFileMeta(basename, "md5sum")
+        baseva = hex(vw.getFileMeta(basename, "imagebase"))
     else:
         version = "N/A"
         md5sum = "N/A"
@@ -57,7 +57,11 @@ def get_vivisect_meta_info(vw, selected_functions):
     info["Architecture"] = vw.getMeta("Architecture")
     info["Platform"] = vw.getMeta("Platform")
     disc, undisc = vw.getDiscoveredInfo()
-    info["Percentage of discovered executable surface area"] = "%.1f%% (%s / %s)" % (disc * 100.0 / (disc + undisc), disc, disc + undisc)
+    info["Percentage of discovered executable surface area"] = "%.1f%% (%s / %s)" % (
+        disc * 100.0 / (disc + undisc),
+        disc,
+        disc + undisc,
+    )
     info["Base VA"] = baseva
     info["Entry point(s)"] = ", ".join(map(hex, entry_points))
     info["Number of imports"] = len(vw.getImports())
@@ -73,7 +77,9 @@ def get_vivisect_meta_info(vw, selected_functions):
             block_count = function_meta["BlockCount"]
             size = function_meta["Size"]
             meta.append((hex(fva), xrefs_to, num_args, size, block_count, instr_count))
-        info["Selected functions' info"] = "\n%s" % tabulate.tabulate(meta, headers=["fva", "#xrefs", "#args", "size", "#blocks", "#instructions"])
+        info["Selected functions' info"] = "\n%s" % tabulate.tabulate(
+            meta, headers=["fva", "#xrefs", "#args", "size", "#blocks", "#instructions"]
+        )
     return info
 
 
@@ -82,7 +88,9 @@ def hex(i):
 
 
 FP_FILTER_PREFIXES = re.compile(r"^.?((p|P|0)?VA)|(0|P)?\\A|\[A|P\]A|@AA")  # remove string prefixes: pVA, VA, 0VA, etc.
-FP_FILTER_SUFFIXES = re.compile(r"([0-9A-G>]VA|@AA|iiVV|j=p@|ids@|iDC@|i4C@|i%1@)$")  # remove string suffixes: 0VA, AVA, >VA, etc.
+FP_FILTER_SUFFIXES = re.compile(
+    r"([0-9A-G>]VA|@AA|iiVV|j=p@|ids@|iDC@|i4C@|i%1@)$"
+)  # remove string suffixes: 0VA, AVA, >VA, etc.
 FP_FILTER_CHARS = re.compile(r".*(AAA|BBB|CCC|DDD|EEE|FFF|PPP|UUU|ZZZ|@@@|;;;|&&&|\?\?\?|\|\|\||    ).*")
 # alternatively: ".*([^0-9wW])\1{2}.*" to match any 3 consecutive chars (except numbers, ws, and others?)
 FP_FILTER_REP_CHARS = re.compile(r".*(.)\1{7}.*")  # any string containing the same char 8 or more consecutive times

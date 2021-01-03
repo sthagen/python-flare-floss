@@ -1,12 +1,11 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
-import pytest
-
 import mmap
 import tempfile
 
-from floss.strings import buf_filled_with
+import pytest
 
+from floss.strings import buf_filled_with
 
 # (test case, expected result)
 tests = [
