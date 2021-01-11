@@ -31,12 +31,14 @@ This will be less messy than using `system()` to shell-out
 We designed FLOSS to be as easy to use from a client program as from
  the command line.
 
-To install FLOSS as a Python library, you'll need to install a few
+To install FLOSS as a *Python2.7* library, you'll need to install a few
  dependencies, and then use `pip` to fetch the FLOSS module.
+ 
+:warning: **FLOSS requires Python2.7 due to some of its dependencies.**
 
 ### Step 1: Install FLOSS module
 
-Use `pip` to install the FLOSS module to your local
+Use `pip` (Python2.7) to install the FLOSS module to your local
  Python environment.
 This fetches the library code to your computer, but does not keep
  editable source files around for you to hack on.
