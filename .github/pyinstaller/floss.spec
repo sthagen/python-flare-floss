@@ -3,7 +3,10 @@
 block_cipher = None
 
 a = Analysis(
-    ['floss/main.py'],
+    # when invoking pyinstaller from the project root,
+    # this gets invoked from the directory of the spec file,
+    # i.e. ./.github/pyinstaller
+    ['../../floss/main.py'],
              pathex=['floss'],
              binaries=None,
              datas=None,
@@ -156,7 +159,10 @@ exe = EXE(pyz,
           a.binaries,
           exclude_binaries=False,
           name='floss',
-          icon='resources/icon.ico',
+          # when invoking pyinstaller from the project root,
+          # this gets invoked from the directory of the spec file,
+          # i.e. ./.github/pyinstaller
+          icon='../../resources/icon.ico',
           debug=False,
           strip=None,
           upx=True,
