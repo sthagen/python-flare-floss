@@ -40,7 +40,7 @@ jobs:
       - name: Install floss
         run: pip install -e .
       - name: Build standalone executable
-        run: pyinstaller floss.spec
+        run: pyinstaller .github/pyinstaller/floss.spec
       - name: Does it run?
         run: dist/floss --help
       - uses: actions/upload-artifact@v2
