@@ -3,10 +3,9 @@
 import re
 from collections import namedtuple
 
-
-ASCII_BYTE = r" !\"#\$%&\'\(\)\*\+,-\./0123456789:;<=>\?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\[\]\^_`abcdefghijklmnopqrstuvwxyz\{\|\}\\\~\t"
-ASCII_RE_4 = re.compile("([%s]{%d,})" % (ASCII_BYTE, 4))
-UNICODE_RE_4 = re.compile(b"((?:[%s]\x00){%d,})" % (ASCII_BYTE, 4))
+ASCII_BYTE = br" !\"#\$%&\'\(\)\*\+,-\./0123456789:;<=>\?@ABCDEFGHIJKLMNOPQRSTUVWXYZ\[\]\^_`abcdefghijklmnopqrstuvwxyz\{\|\}\\\~\t"
+ASCII_RE_4 = re.compile(br"([%s]{%d,})" % (ASCII_BYTE, 4))
+UNICODE_RE_4 = re.compile(br"((?:[%s]\x00){%d,})" % (ASCII_BYTE, 4))
 REPEATS = ["A", "\x00", "\xfe", "\xff"]
 SLICE_SIZE = 4096
 
@@ -16,14 +15,14 @@ String = namedtuple("String", ["s", "offset"])
 def buf_filled_with(buf, character):
     dupe_chunk = character * SLICE_SIZE
     for offset in xrange(0, len(buf), SLICE_SIZE):
-        new_chunk = buf[offset: offset + SLICE_SIZE]
-        if dupe_chunk[:len(new_chunk)] != new_chunk:
+        new_chunk = buf[offset : offset + SLICE_SIZE]
+        if dupe_chunk[: len(new_chunk)] != new_chunk:
             return False
     return True
 
 
 def extract_ascii_strings(buf, n=4):
-    '''
+    """
     Extract ASCII strings from the given binary data.
 
     :param buf: A bytestring.
@@ -31,7 +30,7 @@ def extract_ascii_strings(buf, n=4):
     :param n: The minimum length of strings to extract.
     :type n: int
     :rtype: Sequence[String]
-    '''
+    """
 
     if not buf:
         return
@@ -43,14 +42,14 @@ def extract_ascii_strings(buf, n=4):
     if n == 4:
         r = ASCII_RE_4
     else:
-        reg = "([%s]{%d,})" % (ASCII_BYTE, n)
+        reg = br"([%s]{%d,})" % (ASCII_BYTE, n)
         r = re.compile(reg)
     for match in r.finditer(buf):
         yield String(match.group().decode("ascii"), match.start())
 
 
 def extract_unicode_strings(buf, n=4):
-    '''
+    """
     Extract naive UTF-16 strings from the given binary data.
 
     :param buf: A bytestring.
@@ -58,7 +57,7 @@ def extract_unicode_strings(buf, n=4):
     :param n: The minimum length of strings to extract.
     :type n: int
     :rtype: Sequence[String]
-    '''
+    """
 
     if not buf:
         return
@@ -69,7 +68,7 @@ def extract_unicode_strings(buf, n=4):
     if n == 4:
         r = UNICODE_RE_4
     else:
-        reg = b"((?:[%s]\x00){%d,})" % (ASCII_BYTE, n)
+        reg = br"((?:[%s]\x00){%d,})" % (ASCII_BYTE, n)
         r = re.compile(reg)
     for match in r.finditer(buf):
         try:
@@ -81,15 +80,15 @@ def extract_unicode_strings(buf, n=4):
 def main():
     import sys
 
-    with open(sys.argv[1], 'rb') as f:
+    with open(sys.argv[1], "rb") as f:
         b = f.read()
 
     for s in extract_ascii_strings(b):
-        print('0x{:x}: {:s}'.format(s.offset, s.s))
+        print("0x{:x}: {:s}".format(s.offset, s.s))
 
     for s in extract_unicode_strings(b):
-        print('0x{:x}: {:s}'.format(s.offset, s.s))
+        print("0x{:x}: {:s}".format(s.offset, s.s))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

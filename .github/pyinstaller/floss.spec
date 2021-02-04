@@ -3,7 +3,10 @@
 block_cipher = None
 
 a = Analysis(
-    ['floss/main.py'],
+    # when invoking pyinstaller from the project root,
+    # this gets invoked from the directory of the spec file,
+    # i.e. ./.github/pyinstaller
+    ['../../floss/main.py'],
              pathex=['floss'],
              binaries=None,
              datas=None,
@@ -14,6 +17,7 @@ a = Analysis(
                 # vivisect does manual/runtime importing of its modules,
                 # so declare the things that could be imported here.
                 "pycparser",
+                "vivisect",
                 "vivisect.analysis",
                 "vivisect.analysis.amd64",
                 "vivisect.analysis.amd64",
@@ -60,11 +64,13 @@ a = Analysis(
                 "vivisect.impapi.windows",
                 "vivisect.impapi.windows.amd64",
                 "vivisect.impapi.windows.i386",
+                "vivisect.impapi.winkern.i386",
+                "vivisect.impapi.winkern.amd64",
                 "vivisect.parsers.blob",
                 "vivisect.parsers.elf",
                 "vivisect.parsers.ihex",
                 "vivisect.parsers.macho",
-                "vivisect.parsers.parse_pe",
+                "vivisect.parsers.pe",
                 "vivisect.parsers.utils",
                 "vivisect.storage",
                 "vivisect.storage.basicfile",
@@ -153,7 +159,10 @@ exe = EXE(pyz,
           a.binaries,
           exclude_binaries=False,
           name='floss',
-          icon='resources/icon.ico',
+          # when invoking pyinstaller from the project root,
+          # this gets invoked from the directory of the spec file,
+          # i.e. ./.github/pyinstaller
+          icon='../../resources/icon.ico',
           debug=False,
           strip=None,
           upx=True,

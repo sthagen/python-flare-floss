@@ -3,14 +3,16 @@
 import envi
 import viv_utils
 
-from . import plugin_object
 import floss.interfaces as interfaces
+
+from . import plugin_object
 
 
 class XORPlugin(plugin_object.GeneralPlugin):
     """
     Identify unusual XOR instructions.
     """
+
     implements = [interfaces.DecodingRoutineIdentifier]
     version = 1.0
 
@@ -29,7 +31,12 @@ class XORPlugin(plugin_object.GeneralPlugin):
                             if i.opers[0] != i.opers[1]:
                                 self.d("suspicious XOR instruction at 0x%08X in function 0x%08X: %s", i.va, fva, i)
                                 if (n_instr - 1) > 0 and (n_instr + 1) < len(instructions) - 1:
-                                    self.d("Instructions: %s;  %s;  %s", instructions[n_instr - 1], i, instructions[n_instr + 1])
+                                    self.d(
+                                        "Instructions: %s;  %s;  %s",
+                                        instructions[n_instr - 1],
+                                        i,
+                                        instructions[n_instr + 1],
+                                    )
                                 if self.is_security_cookie(f, n_bb, n_instr):
                                     self.d("XOR related to security cookie: %s", i)
                                 else:
@@ -70,6 +77,7 @@ class ShiftPlugin(plugin_object.GeneralPlugin):
     """
     Identify shift instructions.
     """
+
     implements = [interfaces.DecodingRoutineIdentifier]
     version = 1.0
 

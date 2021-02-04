@@ -1,13 +1,15 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
-from . import plugin_object
 import floss.interfaces as interfaces
+
+from . import plugin_object
 
 
 class FunctionIsLibraryPlugin(plugin_object.GeneralPlugin):
     """
     Identify library functions. Score is 1.0 if function is library, 0.0 otherwise
     """
+
     implements = [interfaces.DecodingRoutineIdentifier]
     version = 1.0
 

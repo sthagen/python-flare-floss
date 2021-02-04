@@ -1,15 +1,14 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
 import logging
+from enum import Enum
 from collections import namedtuple
 
 import viv_utils
-import viv_utils.emulator_drivers
 import envi.memory
-from enum import Enum
+import viv_utils.emulator_drivers
 
 from . import api_hooks
-
 
 floss_logger = logging.getLogger("floss")
 MAX_MAPS_SIZE = 1024 * 1024 * 100  # 100MB max memory allocated in an emulator instance
@@ -22,15 +21,15 @@ DecodedString = namedtuple("DecodedString", ["va", "s", "decoded_at_va", "fva", 
 
 
 class LocationType(str, Enum):
-    STACK = 'STACK'
-    GLOBAL = 'GLOBAL'
-    HEAP = 'HEAP'
+    STACK = "STACK"
+    GLOBAL = "GLOBAL"
+    HEAP = "HEAP"
 
 
 def is_import(emu, va):
-    '''
+    """
     Return True if the given VA is that of an imported function.
-    '''
+    """
     # TODO: also check location type
     t = emu.getVivTaint(va)
     if t is None:
@@ -39,11 +38,14 @@ def is_import(emu, va):
 
 
 # A snapshot represents the current state of the CPU and memory
-Snapshot = namedtuple("Snapshot",
-                      ["memory",  # The memory snapshot, type: envi.MemorySnapshot
-                       "sp",  # The current stack counter, type: int
-                       "pc",  # The current instruction pointer, type: int
-                       ])
+Snapshot = namedtuple(
+    "Snapshot",
+    [
+        "memory",  # The memory snapshot, type: envi.MemorySnapshot
+        "sp",  # The current stack counter, type: int
+        "pc",  # The current instruction pointer, type: int
+    ],
+)
 
 
 def get_map_size(emu):
@@ -58,13 +60,13 @@ class MapsTooLargeError(Exception):
 
 
 def make_snapshot(emu):
-    '''
+    """
     Create a snapshot of the current CPU and memory.
 
     :rtype: Snapshot
-    '''
+    """
     if get_map_size(emu) > MAX_MAPS_SIZE:
-        floss_logger.debug('emulator mapped too much memory: 0x%x', get_map_size(emu))
+        floss_logger.debug("emulator mapped too much memory: 0x%x", get_map_size(emu))
         raise MapsTooLargeError()
     return Snapshot(emu.getMemorySnap(), emu.getStackCounter(), emu.getProgramCounter())
 
@@ -72,10 +74,13 @@ def make_snapshot(emu):
 # A Delta represents the pair of snapshots from before and
 #  after an operation. It facilitates diffing the state of
 #  an emalutor.
-Delta = namedtuple("Delta",
-                   ["pre_snap",  # type: Snapshot
-                    "post_snap",  # type: Snapshot
-                    ])
+Delta = namedtuple(
+    "Delta",
+    [
+        "pre_snap",  # type: Snapshot
+        "post_snap",  # type: Snapshot
+    ],
+)
 
 
 class DeltaCollectorHook(viv_utils.emulator_drivers.Hook):
@@ -95,7 +100,7 @@ class DeltaCollectorHook(viv_utils.emulator_drivers.Hook):
             try:
                 self.deltas.append(Delta(self._pre_snap, make_snapshot(driver._emu)))
             except MapsTooLargeError:
-                floss_logger.debug('despite call to import %s, maps too large, not extracting strings', callname)
+                floss_logger.debug("despite call to import %s, maps too large, not extracting strings", callname)
                 pass
 
 
@@ -112,7 +117,7 @@ class DebugMonitor(viv_utils.emulator_drivers.Monitor):
 
 
 def emulate_function(emu, function_index, fva, return_address, max_instruction_count):
-    '''
+    """
     Emulate a function and collect snapshots at each interesting place.
     These interesting places include calls to imported API functions
      and the final state of the emulator.
@@ -137,11 +142,11 @@ def emulate_function(emu, function_index, fva, return_address, max_instruction_c
     :param max_instruction_count: The max number of instructions to emulate.
      This helps avoid unexpected infinite loops.
     :rtype: Sequence[Delta]
-    '''
+    """
     try:
         pre_snap = make_snapshot(emu)
     except MapsTooLargeError:
-        floss_logger.warn('initial snapshot mapped too much memory, can\'t extract strings')
+        floss_logger.warn("initial snapshot mapped too much memory, can't extract strings")
         return []
 
     delta_collector = DeltaCollectorHook(pre_snap)
@@ -160,19 +165,17 @@ def emulate_function(emu, function_index, fva, return_address, max_instruction_c
     except viv_utils.emulator_drivers.InstructionRangeExceededError:
         floss_logger.debug("Halting as emulation has escaped!")
     except envi.InvalidInstruction:
-        floss_logger.debug("vivisect encountered an invalid instruction. will continue processing.",
-                           exc_info=True)
+        floss_logger.debug("vivisect encountered an invalid instruction. will continue processing.", exc_info=True)
     except envi.UnsupportedInstruction:
-        floss_logger.debug("vivisect encountered an unsupported instruction. will continue processing.",
-                           exc_info=True)
+        floss_logger.debug("vivisect encountered an unsupported instruction. will continue processing.", exc_info=True)
     except envi.BreakpointHit:
-        floss_logger.debug("vivisect encountered an unexpected emulation breakpoint. will continue processing.",
-                           exc_info=True)
+        floss_logger.debug(
+            "vivisect encountered an unexpected emulation breakpoint. will continue processing.", exc_info=True
+        )
     except viv_utils.emulator_drivers.StopEmulation:
         pass
     except Exception:
-        floss_logger.debug("vivisect encountered an unexpected exception. will continue processing.",
-                           exc_info=True)
+        floss_logger.debug("vivisect encountered an unexpected exception. will continue processing.", exc_info=True)
     floss_logger.debug("Ended emulation at 0x%08X", emu.getProgramCounter())
 
     deltas = delta_collector.deltas
@@ -180,7 +183,7 @@ def emulate_function(emu, function_index, fva, return_address, max_instruction_c
     try:
         deltas.append(Delta(pre_snap, make_snapshot(emu)))
     except MapsTooLargeError:
-        floss_logger.debug('failed to create final snapshot, emulator mapped too much memory, skipping')
+        floss_logger.debug("failed to create final snapshot, emulator mapped too much memory, skipping")
         pass
 
     return deltas

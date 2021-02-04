@@ -6,24 +6,27 @@ import viv_utils
 
 
 class IdentificationManager(viv_utils.LoggingObject):
-    '''
+    """
     IdentificationManager runs identification plugins and computes
      the weights of their results.
-    '''
+    """
+
     # this defines the weight of each plugin
     # positive values mark functions likely decoding routines, while
     # negative values mark functions as not-decoding routines
-    PLUGIN_WEIGHTS = {"XORPlugin": 0.5,
-                      "ShiftPlugin": 0.5,
-                      "MovPlugin": 0.3,
-                      "FunctionCrossReferencesToPlugin": 0.2,
-                      "FunctionArgumentCountPlugin": 0.2,
-                      "FunctionBlockCountPlugin": 0.025,
-                      "FunctionInstructionCountPlugin": 0.025,
-                      "FunctionSizePlugin": 0.025,
-                      "FunctionRecursivePlugin": 0.025,
-                      "FunctionIsThunkPlugin": -1.0,
-                      "FunctionIsLibraryPlugin": -1.0, }
+    PLUGIN_WEIGHTS = {
+        "XORPlugin": 0.5,
+        "ShiftPlugin": 0.5,
+        "MovPlugin": 0.3,
+        "FunctionCrossReferencesToPlugin": 0.2,
+        "FunctionArgumentCountPlugin": 0.2,
+        "FunctionBlockCountPlugin": 0.025,
+        "FunctionInstructionCountPlugin": 0.025,
+        "FunctionSizePlugin": 0.025,
+        "FunctionRecursivePlugin": 0.025,
+        "FunctionIsThunkPlugin": -1.0,
+        "FunctionIsLibraryPlugin": -1.0,
+    }
 
     def __init__(self, vw):
         viv_utils.LoggingObject.__init__(self)
@@ -69,8 +72,10 @@ class IdentificationManager(viv_utils.LoggingObject):
             for plugin_name, score in plugin_score.items():
                 if plugin_name not in self.PLUGIN_WEIGHTS.keys():
                     raise Exception("Plugin weight not found: %s" % plugin_name)
-                self.d("[%s] %.05f (weight) * %.05f (score) = %.05f" % (plugin_name, self.PLUGIN_WEIGHTS[plugin_name],
-                                                                        score, self.PLUGIN_WEIGHTS[plugin_name] * score))
+                self.d(
+                    "[%s] %.05f (weight) * %.05f (score) = %.05f"
+                    % (plugin_name, self.PLUGIN_WEIGHTS[plugin_name], score, self.PLUGIN_WEIGHTS[plugin_name] * score)
+                )
                 total_score = total_score + (self.PLUGIN_WEIGHTS[plugin_name] * score)
             self.d("Total score: %.05f\n" % total_score)
             functions_weighted[candidate_function] = total_score
@@ -89,14 +94,14 @@ class IdentificationManager(viv_utils.LoggingObject):
 
 
 def identify_decoding_functions(vw, identification_plugins, functions):
-    '''
+    """
     Identify the functions most likely to be decoding routines
      given the the indentification plugins.
 
     :param vw: The vivisect workspace that contains the given functions.
     :type identification_plugins: List[DecodingRoutineIdentifier]
     :param functions: List[int]
-    '''
+    """
     identification_manager = IdentificationManager(vw)
     identification_manager.run_plugins(identification_plugins, functions)
     identification_manager.apply_plugin_weights()
