@@ -22,7 +22,7 @@ with open(os.path.join(this_directory, "README.md"), "r") as f:
 
 
 setuptools.setup(
-    name="floss",
+    name="flare-floss",
     version=__version__,
     description="FLARE Obfuscated String Solver",
     long_description=long_description,
