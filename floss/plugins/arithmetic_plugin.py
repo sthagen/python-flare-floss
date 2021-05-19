@@ -21,11 +21,11 @@ class XORPlugin(plugin_object.GeneralPlugin):
         # walk over every instruction
         for fva in function_vas:
             f = viv_utils.Function(vivisect_workspace, fva)
-            for n_bb in xrange(0, len(f.basic_blocks)):
+            for n_bb in range(0, len(f.basic_blocks)):
                 bb = f.basic_blocks[n_bb]
                 try:
                     instructions = bb.instructions
-                    for n_instr in xrange(0, len(bb.instructions)):
+                    for n_instr in range(0, len(bb.instructions)):
                         i = instructions[n_instr]
                         if i.mnem == "xor":
                             if i.opers[0] != i.opers[1]:

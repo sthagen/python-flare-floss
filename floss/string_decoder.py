@@ -24,7 +24,7 @@ def memdiff_search(bytes1, bytes2):
     """
 
     # Prevent infinite recursion on inputs with length of one
-    half = (len(bytes1) / 2) or 1
+    half = (len(bytes1) // 2) or 1
 
     # Compare first half of the string
     if bytes1[:half] != bytes2[:half]:
@@ -175,7 +175,7 @@ def extract_delta_bytes(delta, decoded_at_va, source_fva=0x0):
 
     # iterate memory from after the decoding, since if somethings been allocated,
     # we want to know. don't care if things have been deallocated.
-    for section_after_start, section_after in mem_after.items():
+    for section_after_start, section_after in list(mem_after.items()):
         (_, _, (_, after_len, _, _), bytes_after) = section_after
         if section_after_start not in mem_before:
             characteristics = {"location_type": LocationType.HEAP}
