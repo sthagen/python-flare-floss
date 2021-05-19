@@ -15,8 +15,8 @@ String = namedtuple("String", ["s", "offset"])
 def buf_filled_with(buf, character):
     dupe_chunk = character * SLICE_SIZE
     for offset in range(0, len(buf), SLICE_SIZE):
-        new_chunk = buf[offset:offset + SLICE_SIZE]
-        if dupe_chunk[:len(new_chunk)] != new_chunk:
+        new_chunk = buf[offset : offset + SLICE_SIZE]
+        if dupe_chunk[: len(new_chunk)] != new_chunk:
             return False
     return True
 
