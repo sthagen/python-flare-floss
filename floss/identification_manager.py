@@ -51,7 +51,7 @@ class IdentificationManager(viv_utils.LoggingObject):
             return self.candidate_functions
 
         for candidate_function in plugin_candidates:
-            if candidate_function in list(self.candidate_functions.keys()):
+            if candidate_function in self.candidate_functions.keys():
                 self.d("Function at 0x%08X is already in candidate list, merging", candidate_function)
                 self.candidate_functions[candidate_function][plugin_name] = plugin_candidates[candidate_function]
             else:
@@ -66,11 +66,11 @@ class IdentificationManager(viv_utils.LoggingObject):
         :return: dictionary storing {effective_function_address: total score}
         """
         functions_weighted = {}
-        for candidate_function, plugin_score in list(self.candidate_functions.items()):
+        for candidate_function, plugin_score in self.candidate_functions.items():
             self.d("0x%08X" % candidate_function)
             total_score = 0.0
-            for plugin_name, score in list(plugin_score.items()):
-                if plugin_name not in list(self.PLUGIN_WEIGHTS.keys()):
+            for plugin_name, score in plugin_score.items():
+                if plugin_name not in self.PLUGIN_WEIGHTS.keys():
                     raise Exception("Plugin weight not found: %s" % plugin_name)
                 self.d(
                     "[%s] %.05f (weight) * %.05f (score) = %.05f"
@@ -84,7 +84,7 @@ class IdentificationManager(viv_utils.LoggingObject):
 
     def sort_candidates_by_score(self):
         # via http://stackoverflow.com/questions/613183/sort-a-python-dictionary-by-value
-        return sorted(list(self.candidates_weighted.items()), key=operator.itemgetter(1), reverse=True)
+        return sorted(self.candidates_weighted.items(), key=operator.itemgetter(1), reverse=True)
 
     def get_top_candidate_functions(self, n=10):
         return [(fva, score) for fva, score in self.sort_candidates_by_score()[:n]]

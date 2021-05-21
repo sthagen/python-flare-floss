@@ -40,8 +40,8 @@ class YamlFile(pytest.File):
     def collect(self):
         spec = yaml.safe_load(self.fspath.open())
         test_dir = os.path.dirname(str(self.fspath))
-        for platform, archs in list(spec["Output Files"].items()):
-            for arch, filename in list(archs.items()):
+        for platform, archs in spec["Output Files"].items():
+            for arch, filename in archs.items():
                 # TODO specify max runtime via command line option
                 MAX_RUNTIME = 30.0
                 try:

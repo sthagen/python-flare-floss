@@ -25,7 +25,7 @@ class FunctionIsLibraryPlugin(plugin_object.GeneralPlugin):
 
     def score(self, function_vas, vivisect_workspace=None):
         candidate_functions = {}
-        for fva, is_lib in list(function_vas.items()):
+        for fva, is_lib in function_vas.items():
             if is_lib:
                 candidate_functions[fva] = 1.0
             else:
