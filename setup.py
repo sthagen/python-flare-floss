@@ -12,7 +12,7 @@ requirements = [
     "tabulate==0.8.9",
     "vivisect==1.0.3",
     "plugnplay==0.5.4",  # TODO removeme?
-    "viv-utils[flirt]==0.6.2",
+    "viv-utils[flirt]==0.6.4",
 ]
 
 # this sets __version__
