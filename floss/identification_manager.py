@@ -1,11 +1,14 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
+import logging
 import operator
 
-import viv_utils
+from floss.plugins import mov_plugin, arithmetic_plugin, library_function_plugin, function_meta_data_plugin
+
+logger = logger = logging.getLogger(__name__)
 
 
-class IdentificationManager(viv_utils.LoggingObject):
+class IdentificationManager(object):
     """
     IdentificationManager runs identification plugins and computes
      the weights of their results.
@@ -29,7 +32,6 @@ class IdentificationManager(viv_utils.LoggingObject):
     }
 
     def __init__(self, vw):
-        viv_utils.LoggingObject.__init__(self)
         self.vw = vw
         self.candidate_functions = {}
         self.candidates_weighted = None
@@ -52,10 +54,10 @@ class IdentificationManager(viv_utils.LoggingObject):
 
         for candidate_function in plugin_candidates:
             if candidate_function in list(self.candidate_functions.keys()):
-                self.d("Function at 0x%08X is already in candidate list, merging", candidate_function)
+                logger.debug("Function at 0x%08X is already in candidate list, merging", candidate_function)
                 self.candidate_functions[candidate_function][plugin_name] = plugin_candidates[candidate_function]
             else:
-                self.d("Function at 0x%08X is new, adding", candidate_function)
+                logger.debug("Function at 0x%08X is new, adding", candidate_function)
                 self.candidate_functions[candidate_function] = {}
                 self.candidate_functions[candidate_function][plugin_name] = plugin_candidates[candidate_function]
 
@@ -67,17 +69,17 @@ class IdentificationManager(viv_utils.LoggingObject):
         """
         functions_weighted = {}
         for candidate_function, plugin_score in list(self.candidate_functions.items()):
-            self.d("0x%08X" % candidate_function)
+            logger.debug("0x%08X" % candidate_function)
             total_score = 0.0
             for plugin_name, score in list(plugin_score.items()):
                 if plugin_name not in list(self.PLUGIN_WEIGHTS.keys()):
                     raise Exception("Plugin weight not found: %s" % plugin_name)
-                self.d(
+                logger.debug(
                     "[%s] %.05f (weight) * %.05f (score) = %.05f"
                     % (plugin_name, self.PLUGIN_WEIGHTS[plugin_name], score, self.PLUGIN_WEIGHTS[plugin_name] * score)
                 )
                 total_score = total_score + (self.PLUGIN_WEIGHTS[plugin_name] * score)
-            self.d("Total score: %.05f\n" % total_score)
+            logger.debug("Total score: %.05f\n" % total_score)
             functions_weighted[candidate_function] = total_score
 
         self.candidates_weighted = functions_weighted
@@ -93,16 +95,33 @@ class IdentificationManager(viv_utils.LoggingObject):
         return self.candidate_functions
 
 
-def identify_decoding_functions(vw, identification_plugins, functions):
+def identify_decoding_functions(vw, functions):
     """
-    Identify the functions most likely to be decoding routines
-     given the the indentification plugins.
+    Identify the functions most likely to be decoding routines.
 
     :param vw: The vivisect workspace that contains the given functions.
-    :type identification_plugins: List[DecodingRoutineIdentifier]
     :param functions: List[int]
     """
     identification_manager = IdentificationManager(vw)
-    identification_manager.run_plugins(identification_plugins, functions)
+    identification_manager.run_plugins(get_all_plugins(), functions)
     identification_manager.apply_plugin_weights()
     return identification_manager
+
+
+def get_all_plugins():
+    """
+    Return all plugins to be run.
+    """
+    ps = list()
+    ps.append(function_meta_data_plugin.FunctionCrossReferencesToPlugin())
+    ps.append(function_meta_data_plugin.FunctionArgumentCountPlugin())
+    ps.append(function_meta_data_plugin.FunctionIsThunkPlugin())
+    ps.append(function_meta_data_plugin.FunctionBlockCountPlugin())
+    ps.append(function_meta_data_plugin.FunctionInstructionCountPlugin())
+    ps.append(function_meta_data_plugin.FunctionSizePlugin())
+    ps.append(function_meta_data_plugin.FunctionRecursivePlugin())
+    ps.append(library_function_plugin.FunctionIsLibraryPlugin())
+    ps.append(arithmetic_plugin.XORPlugin())
+    ps.append(arithmetic_plugin.ShiftPlugin())
+    ps.append(mov_plugin.MovPlugin())
+    return ps

@@ -1,8 +1,7 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
-import floss.interfaces as interfaces
-
-from . import plugin_object
+import abc
+import logging
 
 # TODO skip imports
 # print fva in vivisect_workspace.getImports()
@@ -11,19 +10,57 @@ from . import plugin_object
 # " Calling convention: %s\n" api[2]
 
 
-class FunctionCrossReferencesToPlugin(plugin_object.GeneralPlugin):
+logger = logging.getLogger(__name__)
+
+
+class DecodingRoutineIdentifier(object):
+
+    """
+    Identify a decoding routine.
+
+    Return mapping from function virtual addresses to score of likelihood to be
+    a decoding function.
+    """
+
+    __metaclass__ = abc.ABCMeta
+
+    def identify(self, vivisect_workspace, function_vas):
+        """
+
+        :param vivisect_workspace: vivisect workspace for the binary file
+        :param function_vas: virtual addresses of functions to analyze
+        :return: dictionary {function_va: score}
+        """
+        pass
+
+    def score(self, function_vas):
+        """
+
+        :param function_vas: virtual addresses of functions to be scored
+        :return: dictionary {function_va: score}
+        """
+        pass
+
+    def __str__(self):
+        return self.__class__.__name__
+
+    def __repr__(self):
+        return str(self)
+
+
+class FunctionCrossReferencesToPlugin(DecodingRoutineIdentifier):
     """
     Identification based on cross references to functions
     """
 
-    implements = [interfaces.DecodingRoutineIdentifier]
     version = 1.0
+    weight = 0.2
 
     def identify(self, vivisect_workspace, function_vas):
         candidate_functions = {}
         for fva in function_vas:
             xrefs_to = len(vivisect_workspace.getXrefsTo(fva))
-            self.d("\nFunction at 0x%08X:\n" " Cross references to: %d\n" % (fva, xrefs_to))
+            logger.debug("\nFunction at 0x%08X:\n" " Cross references to: %d\n" % (fva, xrefs_to))
             candidate_functions[fva] = xrefs_to
         return candidate_functions
 
@@ -49,13 +86,13 @@ class FunctionCrossReferencesToPlugin(plugin_object.GeneralPlugin):
         return max_cross_references_to
 
 
-class FunctionArgumentCountPlugin(plugin_object.GeneralPlugin):
+class FunctionArgumentCountPlugin(DecodingRoutineIdentifier):
     """
     Identification based on number of function arguments. Score is 1.0 if number of arguments is greater than 0 and
     smaller than 4, It is 0.5 for a number of arguments between 4 and 7, and 0.0 otherwise.
     """
 
-    implements = [interfaces.DecodingRoutineIdentifier]
+    # implements = [interfaces.DecodingRoutineIdentifier]
     version = 1.0
 
     def identify(self, vivisect_workspace, function_vas):
@@ -63,7 +100,7 @@ class FunctionArgumentCountPlugin(plugin_object.GeneralPlugin):
         for fva in function_vas:
             args = vivisect_workspace.getFunctionArgs(fva)
             candidate_functions[fva] = len(args)
-            self.d("\nFunction at 0x%08X:\n" " Number of arguments: %d\n" % (fva, len(args)))
+            logger.debug("\nFunction at 0x%08X:\n" " Number of arguments: %d\n" % (fva, len(args)))
         return candidate_functions
 
     def score(self, function_vas, vivisect_workspace=None):
@@ -76,7 +113,7 @@ class FunctionArgumentCountPlugin(plugin_object.GeneralPlugin):
             else:
                 score = 0.0
             candidate_functions[fva] = score
-            self.d("\nFunction at 0x%08X:\n" "  Score: %.5f" % (fva, score))
+            logger.debug("\nFunction at 0x%08X:\n" "  Score: %.5f" % (fva, score))
         return candidate_functions
 
     def __str__(self):
@@ -86,7 +123,7 @@ class FunctionArgumentCountPlugin(plugin_object.GeneralPlugin):
         return str(self)
 
 
-class FunctionMetaDataPlugin(plugin_object.GeneralPlugin):
+class FunctionMetaDataPlugin(DecodingRoutineIdentifier):
     """
     Abstract class providing functionality for the following meta data plugins
     """
@@ -99,7 +136,9 @@ class FunctionMetaDataPlugin(plugin_object.GeneralPlugin):
         for fva in function_vas:
             meta_data = vivisect_workspace.getFunctionMetaDict(fva)
             if meta_data_key in list(meta_data.keys()):
-                self.d("Function at 0x%08X has meta data:\n" " %s: %s" % (fva, meta_data_key, meta_data[meta_data_key]))
+                logger.debug(
+                    "Function at 0x%08X has meta data:\n" " %s: %s" % (fva, meta_data_key, meta_data[meta_data_key])
+                )
                 candidate_functions[fva] = meta_data[meta_data_key]
         return candidate_functions
 
@@ -109,7 +148,6 @@ class FunctionIsThunkPlugin(FunctionMetaDataPlugin):
     Identify thunk functions. Score is 1.0 if function is thunk, 0.0 otherwise
     """
 
-    implements = [interfaces.DecodingRoutineIdentifier]
     version = 1.0
 
     def __init__(self):
@@ -133,7 +171,6 @@ class FunctionBlockCountPlugin(FunctionMetaDataPlugin):
     Count function blocks
     """
 
-    implements = [interfaces.DecodingRoutineIdentifier]
     version = 1.0
 
     def __init__(self):
@@ -155,7 +192,6 @@ class FunctionInstructionCountPlugin(FunctionMetaDataPlugin):
     Count instructions per function
     """
 
-    implements = [interfaces.DecodingRoutineIdentifier]
     version = 1.0
 
     def __init__(self):
@@ -177,7 +213,6 @@ class FunctionSizePlugin(FunctionMetaDataPlugin):
     Count instructions per function
     """
 
-    implements = [interfaces.DecodingRoutineIdentifier]
     version = 1.0
 
     def __init__(self):
@@ -199,7 +234,6 @@ class FunctionRecursivePlugin(FunctionMetaDataPlugin):
     Count instructions per function
     """
 
-    implements = [interfaces.DecodingRoutineIdentifier]
     version = 1.0
 
     def __init__(self):

@@ -25,9 +25,7 @@ def extract_strings(vw):
 
 def identify_decoding_functions(vw):
     selected_functions = floss_main.select_functions(vw, None)
-    selected_plugin_names = floss_main.select_plugins(None)
-    selected_plugins = [p for p in floss_main.get_all_plugins() if str(p) in selected_plugin_names]
-    decoding_functions_candidates = im.identify_decoding_functions(vw, selected_plugins, selected_functions)
+    decoding_functions_candidates = im.identify_decoding_functions(vw, selected_functions)
     return decoding_functions_candidates
 
 

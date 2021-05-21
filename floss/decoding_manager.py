@@ -104,18 +104,6 @@ class DeltaCollectorHook(viv_utils.emulator_drivers.Hook):
                 pass
 
 
-class DebugMonitor(viv_utils.emulator_drivers.Monitor):
-    """
-    Emulator monitor that is useful during debugging.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super(DebugMonitor, self).__init__(*args, **kwargs)
-
-    def prehook(self, emu, op, startpc):
-        self._logger.debug("prehook: %s: %s", hex(startpc), op)
-
-
 def emulate_function(emu, function_index, fva, return_address, max_instruction_count):
     """
     Emulate a function and collect snapshots at each interesting place.
@@ -155,7 +143,6 @@ def emulate_function(emu, function_index, fva, return_address, max_instruction_c
         floss_logger.debug("Emulating function at 0x%08X", fva)
         driver = viv_utils.emulator_drivers.DebuggerEmulatorDriver(emu)
         monitor = api_hooks.ApiMonitor(emu.vw, function_index)
-        dbg = DebugMonitor(emu.vw)
         driver.add_monitor(monitor)
         driver.add_hook(delta_collector)
 
