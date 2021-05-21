@@ -11,7 +11,6 @@ a = Analysis(
              binaries=None,
              datas=None,
              hiddenimports=[
-                "plugnplay",
                 "viv_utils",
 
                 # vivisect does manual/runtime importing of its modules,
