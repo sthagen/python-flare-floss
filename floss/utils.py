@@ -26,7 +26,7 @@ def removeStackMemory(emu):
     # TODO this is a hack while vivisect's initStackMemory() has a bug (see issue #27)
     # TODO does this bug still exist?
     memory_snap = emu.getMemorySnap()
-    for i in xrange((len(memory_snap) - 1), -1, -1):
+    for i in range((len(memory_snap) - 1), -1, -1):
         (_, _, info, _) = memory_snap[i]
         if info[3] == STACK_MEM_NAME:
             del memory_snap[i]

@@ -81,8 +81,7 @@ def sanitize_string_for_printing(s):
     :param s: input string
     :return: sanitized string
     """
-    sanitized_string = s.encode("unicode_escape")
-    sanitized_string = sanitized_string.replace("\\\\", "\\")  # print single backslashes
+    sanitized_string = s.replace("\\\\", "\\")  # print single backslashes
     sanitized_string = "".join(c for c in sanitized_string if c in string.printable)
     return sanitized_string
 
@@ -572,9 +571,9 @@ def print_decoding_results(decoded_strings, group_functions, quiet=False, expert
     if group_functions:
         if not quiet:
             print("\nFLOSS decoded %d strings" % len(decoded_strings))
-        fvas = set(map(lambda i: i.fva, decoded_strings))
+        fvas = set([i.fva for i in decoded_strings])
         for fva in fvas:
-            grouped_strings = filter(lambda ds: ds.fva == fva, decoded_strings)
+            grouped_strings = [ds for ds in decoded_strings if ds.fva == fva]
             len_ds = len(grouped_strings)
             if len_ds > 0:
                 if not quiet:
@@ -643,7 +642,7 @@ def create_x64dbg_database_content(sample_file_path, imagebase, decoded_strings)
                 except BaseException:
                     processed[rva] = "FLOSS: " + sanitized_string
 
-    for i in processed.keys():
+    for i in list(processed.keys()):
         comment = {"text": processed[i], "manual": False, "module": module, "address": i}
         export["comments"].append(comment)
 
@@ -1019,7 +1018,7 @@ def print_stack_strings(extracted_strings, quiet=False, expert=False):
 def print_file_meta_info(vw, selected_functions):
     print("\nVivisect workspace analysis information")
     try:
-        for k, v in get_vivisect_meta_info(vw, selected_functions).iteritems():
+        for k, v in get_vivisect_meta_info(vw, selected_functions).items():
             print("%s: %s" % (k, v or "N/A"))  # display N/A if value is None
     except Exception as e:
         floss_logger.error("Failed to print vivisect analysis information: {0}".format(e.message))
@@ -1165,7 +1164,7 @@ def main(argv=None):
 
     selected_plugin_names = select_plugins(options.plugins)
     floss_logger.debug("Selected the following plugins: %s", ", ".join(map(str, selected_plugin_names)))
-    selected_plugins = filter(lambda p: str(p) in selected_plugin_names, get_all_plugins())
+    selected_plugins = [p for p in get_all_plugins() if str(p) in selected_plugin_names]
 
     if options.should_show_metainfo:
         meta_functions = None
@@ -1210,7 +1209,7 @@ def main(argv=None):
         stack_strings = []
 
     if options.x64dbg_database_file:
-        imagebase = vw.filemeta.values()[0]["imagebase"]
+        imagebase = list(vw.filemeta.values())[0]["imagebase"]
         floss_logger.info("Creating x64dbg database...")
         create_x64dbg_database(sample_file_path, options.x64dbg_database_file, imagebase, decoded_strings)
 

@@ -81,7 +81,7 @@ class ApiMonitor(viv_utils.emulator_drivers.Monitor):
         pointer_size = emu.getPointerSize()
         STACK_SEARCH_WINDOW = pointer_size * NUM_ADDRESSES
         esp = emu.getStackCounter()
-        for offset in xrange(0, STACK_SEARCH_WINDOW, pointer_size):
+        for offset in range(0, STACK_SEARCH_WINDOW, pointer_size):
             ret_va_candidate = self.getStackValue(emu, offset)
             if ret_va_candidate in return_addresses:
                 emu.setProgramCounter(ret_va_candidate)
@@ -100,7 +100,7 @@ class ApiMonitor(viv_utils.emulator_drivers.Monitor):
         """
         esp = emu.getStackCounter()
         stack_str = ""
-        for i in xrange(16, -16, -4):
+        for i in range(16, -16, -4):
             if i == 0:
                 sp = "<= SP"
             else:
@@ -185,8 +185,8 @@ class RtlAllocateHeapHook(viv_utils.emulator_drivers.Hook):
             size = self.MAX_ALLOCATION_SIZE
         va = self._heap_addr
         self.d("RtlAllocateHeap: mapping %s bytes at %s", hex(size), hex(va))
-        emu.addMemoryMap(va, envi.memory.MM_RWX, "[heap allocation]", "\x00" * (size + 4))
-        emu.writeMemory(va, "\x00" * size)
+        emu.addMemoryMap(va, envi.memory.MM_RWX, "[heap allocation]", b"\x00" * (size + 4))
+        emu.writeMemory(va, b"\x00" * size)
         self._heap_addr += size
         return va
 
@@ -274,16 +274,16 @@ def readStringAtRva(emu, rva, maxsize=None):
     :param maxsize: maxsize of string
     :return: the read string
     """
-    ret = []
+    ret = bytearray()
     while True:
         if maxsize and maxsize <= len(ret):
             break
         x = emu.readMemory(rva, 1)
-        if x == "\x00" or x is None:
+        if x == b"\x00" or x is None:
             break
-        ret.append(x)
+        ret += x
         rva += 1
-    return "".join(ret)
+    return bytes(ret)
 
 
 class StrlenHook(viv_utils.emulator_drivers.Hook):
@@ -322,7 +322,7 @@ class StrnlenHook(viv_utils.emulator_drivers.Hook):
                 self.d("unusually large strnlen, truncating to 32MB: 0x%x", maxlen)
                 maxlen = self.MAX_COPY_SIZE
             s = readStringAtRva(emu, string_va, maxsize=maxlen)
-            slen = len(s.partition("\x00")[0])
+            slen = s.index(b"\x00")
             callconv.execCallReturn(emu, slen, len(argv))
             return True
 
@@ -350,8 +350,11 @@ class StrncmpHook(viv_utils.emulator_drivers.Hook):
             s1 = readStringAtRva(emu, s1va, maxsize=num)
             s2 = readStringAtRva(emu, s2va, maxsize=num)
 
-            s1 = s1.partition("\x00")[0]
-            s2 = s2.partition("\x00")[0]
+            s1 = s1.partition(b"\x00")[0]
+            s2 = s2.partition(b"\x00")[0]
+
+            def cmp(a, b):
+                return (a > b) - (a < b)
 
             result = cmp(s1, s2)
 
@@ -373,7 +376,7 @@ class MemchrHook(viv_utils.emulator_drivers.Hook):
         if callname == "msvcrt.memchr":
             emu = driver
             ptr, value, num = argv
-            value = chr(value)
+            value = bytes([value])
             memory = emu.readMemory(ptr, num)
             try:
                 idx = memory.index(value)
