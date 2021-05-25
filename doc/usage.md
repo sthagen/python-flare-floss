@@ -202,36 +202,6 @@ The verbose mode enables a moderate amount of logging output,
      floss.exe --debug malware.bin
 
 
-### Detection plugin specification (`-p`/`-l`)
-
-FLOSS uses a plugin-based system to run heuristics
- that identify decoding routines.
-You can list the installed plugins by providing the
- flag `-l` or `--list-plugins`.
-To selectively enable only a subset of the installed plugins,
- provide a comma-separated list to the `-p` or `--plugins`
- option.
-Manipulating the plugin list may be useful during the development
- of new plugins that search for specific features in a known
- binary executable file.
-
-    floss.exe -l
-    Available identification plugins:
-    - XORPlugin (v1.0)
-    - ShiftPlugin (v1.0)
-    - FunctionIsLibraryPlugin (v1.0)
-    - FunctionCrossReferencesToPlugin (v1.0)
-    - FunctionArgumentCountPlugin (v1.0)
-    - FunctionIsThunkPlugin (v1.0)
-    - FunctionBlockCountPlugin (v1.0)
-    - FunctionInstructionCountPlugin (v1.0)
-    - FunctionSizePlugin (v1.0)
-    - FunctionRecursivePlugin (v1.0)
-
-    floss.exe -p XORPlugin,ShiftPlugin malware.bin
-    floss.exe --plugins=XORPlugin,ShiftPlugin malware.bin
-
-
 ## <a name="shellcode"></a>Shellcode analysis options
 
 Malicious shellcode often times contains obfuscated strings and/or stackstrings.

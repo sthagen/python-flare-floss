@@ -36,10 +36,7 @@ setuptools.setup(
     author="Willi Ballenthin, Moritz Raabe",
     author_email="william.ballenthin@mandiant.com, moritz.raabe@mandiant.com",
     url="https://www.github.com/fireeye/flare-floss",
-    packages=[
-        "floss",
-        "floss.plugins",  # TODO removeme?
-    ],
+    packages=setuptools.find_packages(exclude=["tests"]),
     package_dir={"floss": "floss"},
     entry_points={
         "console_scripts": [
