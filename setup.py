@@ -11,7 +11,6 @@ requirements = [
     "simplejson==3.17.2",
     "tabulate==0.8.9",
     "vivisect==1.0.3",
-    "plugnplay==0.5.4",  # TODO removeme?
     "viv-utils[flirt]==0.6.4",
 ]
 
@@ -37,10 +36,7 @@ setuptools.setup(
     author="Willi Ballenthin, Moritz Raabe",
     author_email="william.ballenthin@mandiant.com, moritz.raabe@mandiant.com",
     url="https://www.github.com/fireeye/flare-floss",
-    packages=[
-        "floss",
-        "floss.plugins",  # TODO removeme?
-    ],
+    packages=setuptools.find_packages(exclude=["tests"]),
     package_dir={"floss": "floss"},
     entry_points={
         "console_scripts": [

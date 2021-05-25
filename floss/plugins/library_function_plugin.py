@@ -1,16 +1,17 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
+import logging
 
-import floss.interfaces as interfaces
+from floss.plugins.function_meta_data_plugin import DecodingRoutineIdentifier
 
-from . import plugin_object
+logger = logging.getLogger(__name__)
 
 
-class FunctionIsLibraryPlugin(plugin_object.GeneralPlugin):
+# TODO replace/augment with flirt matching
+class FunctionIsLibraryPlugin(DecodingRoutineIdentifier):
     """
     Identify library functions. Score is 1.0 if function is library, 0.0 otherwise
     """
 
-    implements = [interfaces.DecodingRoutineIdentifier]
     version = 1.0
 
     def identify(self, vivisect_workspace, function_vas):
@@ -19,7 +20,7 @@ class FunctionIsLibraryPlugin(plugin_object.GeneralPlugin):
             fname = vivisect_workspace.getName(fva)
             default_name = "sub_%.8x" % fva
             if fname != default_name:
-                self.d("Identified %s at VA 0x%08X " % (fname, fva))
+                logger.debug("Identified %s at VA 0x%08X " % (fname, fva))
                 candidate_functions[fva] = True
         return candidate_functions
 
