@@ -274,7 +274,7 @@ def readStringAtRva(emu, rva, maxsize=None):
     :param maxsize: maxsize of string
     :return: the read string
     """
-    ret = b""
+    ret = bytearray()
     while True:
         if maxsize and maxsize <= len(ret):
             break
@@ -283,7 +283,7 @@ def readStringAtRva(emu, rva, maxsize=None):
             break
         ret += x
         rva += 1
-    return ret
+    return bytes(ret)
 
 
 class StrlenHook(viv_utils.emulator_drivers.Hook):
@@ -322,7 +322,7 @@ class StrnlenHook(viv_utils.emulator_drivers.Hook):
                 self.d("unusually large strnlen, truncating to 32MB: 0x%x", maxlen)
                 maxlen = self.MAX_COPY_SIZE
             s = readStringAtRva(emu, string_va, maxsize=maxlen)
-            slen = len(s.partition(b"\x00")[0])
+            slen = s.index(b"\x00")
             callconv.execCallReturn(emu, slen, len(argv))
             return True
 
