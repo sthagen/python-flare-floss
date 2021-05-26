@@ -54,7 +54,10 @@ setuptools.setup(
             "pycodestyle==2.7.0",
             "black==21.5b1",
             "isort==5.8.0",
-        ]
+        ],
+        "build": [
+            "pyinstaller==4.2",
+        ],
     },
     zip_safe=False,
     keywords="floss malware analysis obfuscation strings FLARE",
