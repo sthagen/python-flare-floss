@@ -56,7 +56,7 @@ setuptools.setup(
             "isort==5.8.0",
         ],
         "build": [
-            "pyinstaller==4.3",
+            "pyinstaller==4.1",
         ],
     },
     zip_safe=False,
