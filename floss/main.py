@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# encoding: utf-8
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
 import os
