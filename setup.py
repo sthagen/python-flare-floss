@@ -7,7 +7,6 @@ import os
 import setuptools
 
 requirements = [
-    "pyyaml==5.4.1",
     "simplejson==3.17.2",
     "tabulate==0.8.9",
     "vivisect==1.0.3",
@@ -47,6 +46,7 @@ setuptools.setup(
     install_requires=requirements,
     extras_require={
         "dev": [
+            "pyyaml==5.4.1",
             "pytest==6.2.4",
             "pytest-sugar==0.9.4",
             "pytest-instafail==0.4.2",

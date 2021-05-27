@@ -36,8 +36,6 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: 3.8
-      - if: matrix.os == 'ubuntu-16.04'
-        run: sudo apt-get install -y libyaml-dev
       - name: Install floss [build]
         run: pip install -e .[build]
       - name: Build standalone executable
