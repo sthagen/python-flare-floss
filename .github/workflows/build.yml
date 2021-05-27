@@ -32,10 +32,10 @@ jobs:
         with:
           submodules: false
       # using Python 3.8 to support running across multiple operating systems including Windows 7
-      - name: Set up Python 3.8
+      - name: Set up Python 3.7  # TODO only testing
         uses: actions/setup-python@v2
         with:
-          python-version: 3.8
+          python-version: 3.7
       - name: Install floss [build]
         run: pip install -e .[build]
       - name: Build standalone executable
