@@ -19,12 +19,10 @@ requirements = [
 with open(os.path.join("floss", "version.py"), "r") as f:
     exec(f.read())
 
-
 # via: https://packaging.python.org/guides/making-a-pypi-friendly-readme/
 this_directory = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(this_directory, "README.md"), "r") as f:
     long_description = f.read()
-
 
 setuptools.setup(
     name="flare-floss",
@@ -35,7 +33,10 @@ setuptools.setup(
     author="Willi Ballenthin, Moritz Raabe",
     author_email="william.ballenthin@mandiant.com, moritz.raabe@mandiant.com",
     url="https://www.github.com/fireeye/flare-floss",
-    packages=setuptools.find_packages(exclude=["tests"]),
+    packages=[
+        "floss",
+        "floss.plugins",
+    ],  # setuptools.find_packages(exclude=["tests"]),
     package_dir={"floss": "floss"},
     entry_points={
         "console_scripts": [

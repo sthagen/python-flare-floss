@@ -30,7 +30,7 @@ jobs:
       - name: Checkout floss
         uses: actions/checkout@v2
         with:
-          submodules: true
+          submodules: false
       # using Python 3.8 to support running across multiple operating systems including Windows 7
       - name: Set up Python 3.8
         uses: actions/setup-python@v2
