@@ -5,38 +5,38 @@ import subprocess
 
 # when invoking pyinstaller from the project root,
 # this gets run from the project root.
-with open('./floss/version.py', 'wb') as f:
+with open("./floss/version.py", "wb") as f:
     # git output will look like:
     #
     #     tags/v1.0.0-0-g3af38dc
     #         ------- tag
     #                 - commits since
     #                   g------- git hash fragment
-    version = (subprocess.check_output(["git", "describe", "--always", "--tags", "--long"])
-               .decode("utf-8")
-               .strip()
-               .replace("tags/", ""))
+    version = (
+        subprocess.check_output(["git", "describe", "--always", "--tags", "--long"])
+        .decode("utf-8")
+        .strip()
+        .replace("tags/", "")
+    )
     f.write(("__version__ = '%s'" % version).encode("utf-8"))
 
 a = Analysis(
     # when invoking pyinstaller from the project root,
     # this gets invoked from the directory of the spec file,
     # i.e. ./.github/pyinstaller
-    ['../../floss/main.py'],
-    pathex=['floss'],
+    ["../../floss/main.py"],
+    pathex=["floss"],
     binaries=None,
     datas=None,
-    hookspath=['.github/pyinstaller/hooks'],
+    hookspath=[".github/pyinstaller/hooks"],
     runtime_hooks=None,
     excludes=[
         # ignore packages that would otherwise be bundled with the .exe.
         # review: build/pyinstaller/xref-pyinstaller.html
-
         # we don't do any GUI stuff, so ignore these modules
         "tkinter",
         "_tkinter",
         "Tkinter",
-
         # deps from viv that we don't use.
         # this duplicates the entries in `hook-vivisect`,
         # but works better this way.
@@ -46,36 +46,34 @@ a = Analysis(
         "PyQt5",
         "qt5",
         "pyqtwebengine",
-        "pyasn1"
-    ])
+        "pyasn1",
+    ],
+)
 
-a.binaries = a.binaries - TOC([
- ('tcl85.dll', None, None),
- ('tk85.dll', None, None),
- ('_tkinter', None, None)])
+a.binaries = a.binaries - TOC(
+    [("tcl85.dll", None, None), ("tk85.dll", None, None), ("_tkinter", None, None)]
+)
 
 pyz = PYZ(a.pure, a.zipped_data)
 
-exe = EXE(pyz,
-          a.scripts,
-          a.binaries,
-          exclude_binaries=False,
-          name='floss',
-          # when invoking pyinstaller from the project root,
-          # this gets invoked from the directory of the spec file,
-          # i.e. ./.github/pyinstaller
-          icon='../../resources/icon.ico',
-          debug=False,
-          strip=None,
-          upx=True,
-          console=True )
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries,
+    exclude_binaries=False,
+    name="floss",
+    # when invoking pyinstaller from the project root,
+    # this gets invoked from the directory of the spec file,
+    # i.e. ./.github/pyinstaller
+    icon="../../resources/icon.ico",
+    debug=False,
+    strip=None,
+    upx=True,
+    console=True,
+)
 
 # enable the following to debug the contents of the .exe
 #
-coll = COLLECT(exe,
-               a.binaries,
-               a.zipfiles,
-               a.datas,
-               strip=None,
-               upx=True,
-               name='floss-dat')
+coll = COLLECT(
+    exe, a.binaries, a.zipfiles, a.datas, strip=None, upx=True, name="floss-dat"
+)
