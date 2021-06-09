@@ -2,7 +2,6 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 import subprocess
 
-
 # when invoking pyinstaller from the project root,
 # this gets run from the project root.
 with open("./floss/version.py", "wb") as f:
@@ -26,10 +25,11 @@ a = Analysis(
     # i.e. ./.github/pyinstaller
     ["../../floss/main.py"],
     pathex=["floss"],
-    binaries=None,
-    datas=None,
+    binaries=[],
+    datas=[],
+    hiddenimports=[],
     hookspath=[".github/pyinstaller/hooks"],
-    runtime_hooks=None,
+    runtime_hooks=[],
     excludes=[
         # ignore packages that would otherwise be bundled with the .exe.
         # review: build/pyinstaller/xref-pyinstaller.html
@@ -48,10 +48,9 @@ a = Analysis(
         "pyqtwebengine",
         "pyasn1",
     ],
-)
-
-a.binaries = a.binaries - TOC(
-    [("tcl85.dll", None, None), ("tk85.dll", None, None), ("_tkinter", None, None)]
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    noarchive=False,
 )
 
 pyz = PYZ(a.pure, a.zipped_data)
@@ -60,20 +59,25 @@ exe = EXE(
     pyz,
     a.scripts,
     a.binaries,
-    exclude_binaries=False,
+    a.zipfiles,
+    a.datas,
+    [],
     name="floss",
     # when invoking pyinstaller from the project root,
     # this gets invoked from the directory of the spec file,
     # i.e. ./.github/pyinstaller
     icon="../../resources/icon.ico",
     debug=False,
-    strip=None,
+    bootloader_ignore_signals=False,
+    strip=False,
     upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
     console=True,
 )
 
 # enable the following to debug the contents of the .exe
-#
+# writes to ./dist/floss-dat
 coll = COLLECT(
     exe, a.binaries, a.zipfiles, a.datas, strip=None, upx=True, name="floss-dat"
 )
