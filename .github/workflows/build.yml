@@ -1,9 +1,6 @@
 name: build
 
 on:
-  # for testing
-  pull_request:
-    branches: [master]
   push:
     branches: [master]
   release:
