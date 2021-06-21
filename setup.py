@@ -10,7 +10,7 @@ requirements = [
     "simplejson==3.17.2",
     "tabulate==0.8.9",
     "vivisect==1.0.3",
-    "viv-utils[flirt]==0.6.4",
+    "viv-utils[flirt]==0.6.5",
 ]
 
 # this sets __version__
