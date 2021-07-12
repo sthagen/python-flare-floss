@@ -53,7 +53,7 @@ setuptools.setup(
             "pytest-cov==2.12.1",
             "pycodestyle==2.7.0",
             "black==21.6b0",
-            "isort==5.9.1",
+            "isort==5.9.2",
         ],
         "build": [
             "pyinstaller==4.3",
