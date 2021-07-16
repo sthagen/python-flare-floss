@@ -1,19 +1,20 @@
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
+import logging
+
 import envi
 import viv_utils
 
-import floss.interfaces as interfaces
+from floss.plugins.function_meta_data_plugin import DecodingRoutineIdentifier
 
-from . import plugin_object
+logger = logging.getLogger(__name__)
 
 
-class XORPlugin(plugin_object.GeneralPlugin):
+class XORPlugin(DecodingRoutineIdentifier):
     """
     Identify unusual XOR instructions.
     """
 
-    implements = [interfaces.DecodingRoutineIdentifier]
     version = 1.0
 
     def identify(self, vivisect_workspace, function_vas):
@@ -21,29 +22,31 @@ class XORPlugin(plugin_object.GeneralPlugin):
         # walk over every instruction
         for fva in function_vas:
             f = viv_utils.Function(vivisect_workspace, fva)
-            for n_bb in xrange(0, len(f.basic_blocks)):
+            for n_bb in range(0, len(f.basic_blocks)):
                 bb = f.basic_blocks[n_bb]
                 try:
                     instructions = bb.instructions
-                    for n_instr in xrange(0, len(bb.instructions)):
+                    for n_instr in range(0, len(bb.instructions)):
                         i = instructions[n_instr]
                         if i.mnem == "xor":
                             if i.opers[0] != i.opers[1]:
-                                self.d("suspicious XOR instruction at 0x%08X in function 0x%08X: %s", i.va, fva, i)
+                                logger.debug(
+                                    "suspicious XOR instruction at 0x%08X in function 0x%08X: %s", i.va, fva, i
+                                )
                                 if (n_instr - 1) > 0 and (n_instr + 1) < len(instructions) - 1:
-                                    self.d(
+                                    logger.debug(
                                         "Instructions: %s;  %s;  %s",
                                         instructions[n_instr - 1],
                                         i,
                                         instructions[n_instr + 1],
                                     )
                                 if self.is_security_cookie(f, n_bb, n_instr):
-                                    self.d("XOR related to security cookie: %s", i)
+                                    logger.debug("XOR related to security cookie: %s", i)
                                 else:
-                                    self.d("unusual XOR: %s", i)
+                                    logger.debug("unusual XOR: %s", i)
                                     candidate_functions[fva] = 1.0  # TODO scoring
                 except envi.InvalidInstruction:
-                    self.w("Invalid instruction encountered in basic block, skipping: 0x%x", bb.va)
+                    logger.warning("Invalid instruction encountered in basic block, skipping: 0x%x", bb.va)
                     continue
         return candidate_functions
 
@@ -73,12 +76,11 @@ class XORPlugin(plugin_object.GeneralPlugin):
         return function_vas  # scoring simply means identifying functions with non-zero XOR instructions
 
 
-class ShiftPlugin(plugin_object.GeneralPlugin):
+class ShiftPlugin(DecodingRoutineIdentifier):
     """
     Identify shift instructions.
     """
 
-    implements = [interfaces.DecodingRoutineIdentifier]
     version = 1.0
 
     def identify(self, vivisect_workspace, fvas):
@@ -92,13 +94,13 @@ class ShiftPlugin(plugin_object.GeneralPlugin):
                     for i in bb.instructions:
                         mnems.add(i.mnem)
                         if i.mnem in shift_mnems:
-                            self.d("shift instruction: %s va: 0x%x function: 0x%x", i, i.va, f.va)
+                            logger.debug("shift instruction: %s va: 0x%x function: 0x%x", i, i.va, f.va)
                 except envi.InvalidInstruction:
-                    self.w("Invalid instruction encountered in basic block, skipping: 0x%x", bb.va)
+                    logger.warning("Invalid instruction encountered in basic block, skipping: 0x%x", bb.va)
                     continue
 
             candidate_functions[fva] = 1 - (len(shift_mnems - mnems) / float(len(shift_mnems)))
-            self.d("0x%x %f", fva, candidate_functions[fva])
+            logger.warning("0x%x %f", fva, candidate_functions[fva])
         return candidate_functions
 
     def score(self, function_vas, vivisect_workspace=None):

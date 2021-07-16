@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# encoding: utf-8
 # Copyright (C) 2017 FireEye, Inc. All Rights Reserved.
 
 import os
@@ -17,7 +16,6 @@ import tabulate
 import viv_utils
 import simplejson as json
 
-import floss.plugins as plugins
 import floss.strings as strings
 import floss.stackstrings as stackstrings
 import floss.string_decoder as string_decoder
@@ -25,7 +23,6 @@ import floss.identification_manager as im
 from floss.const import MAX_FILE_SIZE, SUPPORTED_FILE_MAGIC, MIN_STRING_LENGTH_DEFAULT
 from floss.utils import hex, get_vivisect_meta_info
 from floss.version import __version__
-from floss.interfaces import DecodingRoutineIdentifier
 from floss.decoding_manager import LocationType
 
 floss_logger = logging.getLogger("floss")
@@ -81,8 +78,7 @@ def sanitize_string_for_printing(s):
     :param s: input string
     :return: sanitized string
     """
-    sanitized_string = s.encode("unicode_escape")
-    sanitized_string = sanitized_string.replace("\\\\", "\\")  # print single backslashes
+    sanitized_string = s.replace("\\\\", "\\")  # print single backslashes
     sanitized_string = "".join(c for c in sanitized_string if c in string.printable)
     return sanitized_string
 
@@ -97,32 +93,6 @@ def sanitize_string_for_script(s):
     sanitized_string = sanitized_string.replace("\\", "\\\\")
     sanitized_string = sanitized_string.replace('"', '\\"')
     return sanitized_string
-
-
-def print_plugin_list():
-    print("Available identification plugins:")
-    print("\n".join([" - %s" % plugin.get_name_version() for plugin in get_all_plugins()]))
-
-
-# TODO add --plugin_dir switch at some point
-def get_all_plugins():
-    """
-    Return all plugins to be run.
-    """
-    ps = DecodingRoutineIdentifier.implementors()
-    if len(ps) == 0:
-        ps.append(plugins.function_meta_data_plugin.FunctionCrossReferencesToPlugin())
-        ps.append(plugins.function_meta_data_plugin.FunctionArgumentCountPlugin())
-        ps.append(plugins.function_meta_data_plugin.FunctionIsThunkPlugin())
-        ps.append(plugins.function_meta_data_plugin.FunctionBlockCountPlugin())
-        ps.append(plugins.function_meta_data_plugin.FunctionInstructionCountPlugin())
-        ps.append(plugins.function_meta_data_plugin.FunctionSizePlugin())
-        ps.append(plugins.function_meta_data_plugin.FunctionRecursivePlugin())
-        ps.append(plugins.library_function_plugin.FunctionIsLibraryPlugin())
-        ps.append(plugins.arithmetic_plugin.XORPlugin())
-        ps.append(plugins.arithmetic_plugin.ShiftPlugin())
-        ps.append(plugins.mov_plugin.MovPlugin())
-    return ps
 
 
 def make_parser():
@@ -257,20 +227,12 @@ def make_parser():
         dest="binja_script_file",
         help="create a Binary Ninja script to annotate the decoded strings in a BNDB file",
     )
+    output_group.add_option(
+        "--ghidra",
+        dest="ghidra_script_file",
+        help="create a ghidra script to annotate the decoded strings in Ghidra",
+    )
     parser.add_option_group(output_group)
-
-    identification_group = OptionGroup(parser, "Identification Options")
-    identification_group.add_option(
-        "-p", "--plugins", dest="plugins", help="apply the specified identification plugins only (comma-separated)"
-    )
-    identification_group.add_option(
-        "-l",
-        "--list-plugins",
-        dest="list_plugins",
-        help="list all available identification plugins and exit",
-        action="store_true",
-    )
-    parser.add_option_group(identification_group)
 
     profile_group = OptionGroup(parser, "FLOSS Profiles")
     profile_group.add_option(
@@ -465,37 +427,6 @@ def get_str_from_func_list(function_list):
     return ", ".join(map(hex, function_list))
 
 
-def parse_plugins_option(plugins_option):
-    """
-    Return parsed -p command line option or "".
-    """
-    return (plugins_option or "").split(",")
-
-
-def select_plugins(plugins_option):
-    """
-    Return the list of valid plugin names from the list of
-    plugin names, or all valid plugin names.
-    :param plugins_option: -p command line argument value
-    :return: list of strings of all selected plugins
-    """
-    plugin_names = parse_plugins_option(plugins_option)
-
-    plugin_names = set(plugin_names)
-    all_plugin_names = set(map(str, get_all_plugins()))
-
-    if "" in plugin_names:
-        plugin_names.remove("")
-    if not plugin_names:
-        return list(all_plugin_names)
-
-    if len(plugin_names - all_plugin_names) > 0:
-        # TODO handle exception
-        raise Exception("Plugin not found")
-
-    return plugin_names
-
-
 def filter_unique_decoded(decoded_strings):
     unique_values = set()
     originals = []
@@ -572,9 +503,9 @@ def print_decoding_results(decoded_strings, group_functions, quiet=False, expert
     if group_functions:
         if not quiet:
             print("\nFLOSS decoded %d strings" % len(decoded_strings))
-        fvas = set(map(lambda i: i.fva, decoded_strings))
+        fvas = set([i.fva for i in decoded_strings])
         for fva in fvas:
-            grouped_strings = filter(lambda ds: ds.fva == fva, decoded_strings)
+            grouped_strings = [ds for ds in decoded_strings if ds.fva == fva]
             len_ds = len(grouped_strings)
             if len_ds > 0:
                 if not quiet:
@@ -643,7 +574,7 @@ def create_x64dbg_database_content(sample_file_path, imagebase, decoded_strings)
                 except BaseException:
                     processed[rva] = "FLOSS: " + sanitized_string
 
-    for i in processed.keys():
+    for i in list(processed.keys()):
         comment = {"text": processed[i], "manual": False, "module": module, "address": i}
         export["comments"].append(comment)
 
@@ -815,6 +746,80 @@ print "Annotating %d strings from FLOSS for %s"
     return script_content
 
 
+def create_ghidra_script_content(sample_file_path, decoded_strings, stack_strings):
+    """
+    Create Ghidra script contents for Ghidra file annotations.
+    :param sample_file_path: input file path
+    :param decoded_strings: list of decoded strings ([DecodedString])
+    :param stack_strings: list of stack strings ([StackString])
+    :return: content of the Ghidra script
+    """
+    main_commands = []
+    for ds in decoded_strings:
+        if ds.s != "":
+            sanitized_string = sanitize_string_for_script(ds.s)
+            if ds.characteristics["location_type"] == LocationType.GLOBAL:
+                main_commands.append('print "FLOSS: string \\"%s\\" at global VA 0x%X"' % (sanitized_string, ds.va))
+                main_commands.append('AppendComment(%d, "FLOSS: %s")' % (ds.va, sanitized_string))
+            else:
+                main_commands.append(
+                    'print "FLOSS: string \\"%s\\" decoded at VA 0x%X"' % (sanitized_string, ds.decoded_at_va)
+                )
+                main_commands.append('AppendComment(%d, "FLOSS: %s")' % (ds.decoded_at_va, sanitized_string))
+    main_commands.append('print "Imported decoded strings from FLOSS"')
+
+    ss_len = 0
+    for ss in stack_strings:
+        if ss.s != "":
+            sanitized_string = sanitize_string_for_script(ss.s)
+            main_commands.append(
+                'AppendLvarComment(%d, %d, "FLOSS stackstring: %s")' % (ss.fva, ss.pc, sanitized_string)
+            )
+            ss_len += 1
+    main_commands.append('print "Imported stackstrings from FLOSS"')
+
+    script_content = """from ghidra.program.model.listing import CodeUnit
+
+def AppendComment(ea, s):
+    cu = currentProgram.getListing().getCodeUnitAt(toAddr(ea))
+    string = cu.getComment(CodeUnit.EOL_COMMENT)
+
+    if not string:
+        string = s
+    else:
+        if s in string:  # ignore duplicates
+            return
+        string = string + "\\n" + s
+    cu.setComment(CodeUnit.EOL_COMMENT, string)
+    createBookmark(toAddr(ea), "decoded_string", string)
+
+def AppendLvarComment(fva, pc, s):
+    # stack var comments are not a thing in Ghidra so just add at top of function
+    # and at location where it's used as an arg
+
+    cu = currentProgram.getListing().getCodeUnitAt(toAddr(fva))
+    string = cu.getComment(CodeUnit.EOL_COMMENT)
+
+    if not string:
+        string = s
+    else:
+        if s in string:  # ignore duplicates
+            return
+        string = string + "\\n" + s
+    cu.setComment(CodeUnit.EOL_COMMENT, string)
+    createBookmark(toAddr(fva), "stackstring", string)
+
+print "Annotating %d strings from FLOSS for %s"
+%s
+
+""" % (
+        len(decoded_strings) + ss_len,
+        sample_file_path,
+        "\n".join(main_commands),
+    )
+    return script_content
+
+
 def create_r2_script_content(sample_file_path, decoded_strings, stack_strings):
     """
     Create r2script contents for r2 session annotations.
@@ -900,6 +905,25 @@ def create_binja_script(sample_file_path, binja_script_file, decoded_strings, st
         try:
             f.write(script_content)
             floss_logger.info("Wrote Binary Ninja script file to %s\n" % binja_script_file)
+        except Exception as e:
+            raise e
+    # TODO return, catch exception in main()
+
+
+def create_ghidra_script(sample_file_path, ghidra_script_file, decoded_strings, stack_strings):
+    """
+    Create a Binary Ninja script to annotate a BNDB file with decoded strings.
+    :param sample_file_path: input file path
+    :param ghidra_script_file: output file path
+    :param decoded_strings: list of decoded strings ([DecodedString])
+    :param stack_strings: list of stack strings ([StackString])
+    """
+    script_content = create_ghidra_script_content(sample_file_path, decoded_strings, stack_strings)
+    ghidra_script__file = os.path.abspath(ghidra_script_file)
+    with open(ghidra_script_file, "w") as f:
+        try:
+            f.write(script_content)
+            floss_logger.info("Wrote Ghidra script file to %s\n" % ghidra_script_file)
         except Exception as e:
             raise e
     # TODO return, catch exception in main()
@@ -1019,7 +1043,7 @@ def print_stack_strings(extracted_strings, quiet=False, expert=False):
 def print_file_meta_info(vw, selected_functions):
     print("\nVivisect workspace analysis information")
     try:
-        for k, v in get_vivisect_meta_info(vw, selected_functions).iteritems():
+        for k, v in get_vivisect_meta_info(vw, selected_functions).items():
             print("%s: %s" % (k, v or "N/A"))  # display N/A if value is None
     except Exception as e:
         floss_logger.error("Failed to print vivisect analysis information: {0}".format(e.message))
@@ -1098,10 +1122,6 @@ def main(argv=None):
 
     set_log_config(options.debug, options.verbose)
 
-    if options.list_plugins:
-        print_plugin_list()
-        return 0
-
     sample_file_path = parse_sample_file_path(parser, args)
     min_length = parse_min_length_option(options.min_length)
 
@@ -1163,10 +1183,6 @@ def main(argv=None):
 
     floss_logger.debug("Selected the following functions: %s", get_str_from_func_list(selected_functions))
 
-    selected_plugin_names = select_plugins(options.plugins)
-    floss_logger.debug("Selected the following plugins: %s", ", ".join(map(str, selected_plugin_names)))
-    selected_plugins = filter(lambda p: str(p) in selected_plugin_names, get_all_plugins())
-
     if options.should_show_metainfo:
         meta_functions = None
         if options.functions:
@@ -1177,7 +1193,7 @@ def main(argv=None):
 
     if not options.no_decoded_strings:
         floss_logger.info("Identifying decoding functions...")
-        decoding_functions_candidates = im.identify_decoding_functions(vw, selected_plugins, selected_functions)
+        decoding_functions_candidates = im.identify_decoding_functions(vw, selected_functions)
         if options.expert:
             print_identification_results(sample_file_path, decoding_functions_candidates)
 
@@ -1210,7 +1226,7 @@ def main(argv=None):
         stack_strings = []
 
     if options.x64dbg_database_file:
-        imagebase = vw.filemeta.values()[0]["imagebase"]
+        imagebase = list(vw.filemeta.values())[0]["imagebase"]
         floss_logger.info("Creating x64dbg database...")
         create_x64dbg_database(sample_file_path, options.x64dbg_database_file, imagebase, decoded_strings)
 
@@ -1225,6 +1241,10 @@ def main(argv=None):
     if options.binja_script_file:
         floss_logger.info("Creating Binary Ninja script...")
         create_binja_script(sample_file_path, options.binja_script_file, decoded_strings, stack_strings)
+
+    if options.ghidra_script_file:
+        floss_logger.info("Creating Ghidra script...")
+        create_ghidra_script(sample_file_path, options.ghidra_script_file, decoded_strings, stack_strings)
 
     time1 = time()
     if not options.quiet:

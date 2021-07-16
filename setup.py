@@ -6,7 +6,12 @@ import os
 
 import setuptools
 
-requirements = ["pyyaml", "simplejson", "tabulate", "vivisect==0.1.0", "plugnplay", "viv-utils==0.3.17", "enum34"]
+requirements = [
+    "simplejson==3.17.3",
+    "tabulate==0.8.9",
+    "vivisect==1.0.3",
+    "viv-utils[flirt]==0.6.5",
+]
 
 # this sets __version__
 # via: http://stackoverflow.com/a/7071358/87207
@@ -30,10 +35,7 @@ setuptools.setup(
     author="Willi Ballenthin, Moritz Raabe",
     author_email="william.ballenthin@mandiant.com, moritz.raabe@mandiant.com",
     url="https://www.github.com/fireeye/flare-floss",
-    packages=[
-        "floss",
-        "floss.plugins",
-    ],
+    packages=setuptools.find_packages(exclude=["tests"]),
     package_dir={"floss": "floss"},
     entry_points={
         "console_scripts": [
@@ -44,18 +46,29 @@ setuptools.setup(
     install_requires=requirements,
     extras_require={
         "dev": [
-            "pytest",
-            "pytest-sugar",
-            "pytest-instafail",
-            "pytest-cov",
-        ]
+            "pyyaml==5.4.1",
+            "pytest==6.2.4",
+            "pytest-sugar==0.9.4",
+            "pytest-instafail==0.4.2",
+            "pytest-cov==2.12.1",
+            "pycodestyle==2.7.0",
+            "black==21.6b0",
+            "isort==5.9.2",
+        ],
+        "build": [
+            "pyinstaller==4.3",
+        ],
     },
     zip_safe=False,
-    keywords="floss",
+    keywords="floss malware analysis obfuscation strings FLARE",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
+        "Intended Audience :: Information Technology",
+        "License :: OSI Approved :: Apache Software License",
         "Natural Language :: English",
-        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
+        "Topic :: Security",
     ],
+    python_requires=">=3.6",
 )

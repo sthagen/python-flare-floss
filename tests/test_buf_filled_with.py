@@ -27,7 +27,7 @@ def test_str():
 def test_mmap():
     for test, expectation in tests:
         f = tempfile.NamedTemporaryFile()
-        f.write(test)
+        f.write(test.encode("utf-8"))
         f.flush()
         test_mmap = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
-        assert buf_filled_with(test_mmap, test_mmap[0]) == expectation
+        assert buf_filled_with(test_mmap, test[0].encode("utf-8")) == expectation

@@ -24,7 +24,7 @@ def memdiff_search(bytes1, bytes2):
     """
 
     # Prevent infinite recursion on inputs with length of one
-    half = (len(bytes1) / 2) or 1
+    half = (len(bytes1) // 2) or 1
 
     # Compare first half of the string
     if bytes1[:half] != bytes2[:half]:

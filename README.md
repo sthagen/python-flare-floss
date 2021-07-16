@@ -1,7 +1,8 @@
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/flare-floss)
 [![CI status](https://github.com/fireeye/flare-floss/workflows/CI/badge.svg)](https://github.com/fireeye/flare-floss/actions?query=workflow%3ACI+event%3Apush+branch%3Amaster)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE.txt)
 
-<img src="resources/logo.png?raw=true" width="350"/>
+<img src="https://raw.githubusercontent.com/fireeye/flare-floss/master/resources/logo.png" width="350"/>
 
 # FireEye Labs Obfuscated String Solver
 

@@ -25,15 +25,13 @@ def extract_strings(vw):
 
 def identify_decoding_functions(vw):
     selected_functions = floss_main.select_functions(vw, None)
-    selected_plugin_names = floss_main.select_plugins(None)
-    selected_plugins = filter(lambda p: str(p) in selected_plugin_names, floss_main.get_all_plugins())
-    decoding_functions_candidates = im.identify_decoding_functions(vw, selected_plugins, selected_functions)
+    decoding_functions_candidates = im.identify_decoding_functions(vw, selected_functions)
     return decoding_functions_candidates
 
 
 def pytest_collect_file(parent, path):
     if path.basename == "test.yml":
-        return YamlFile(path, parent)
+        return YamlFile.from_parent(parent, fspath=path)
 
 
 class YamlFile(pytest.File):
@@ -56,7 +54,9 @@ class YamlFile(pytest.File):
                     pass
                 filepath = os.path.join(test_dir, filename)
                 if os.path.exists(filepath):
-                    yield FLOSSTest(self, platform, arch, filename, spec)
+                    yield FLOSSTest.from_parent(
+                        self, path=filepath, platform=platform, arch=arch, filename=filename, spec=spec
+                    )
 
 
 class FLOSSTestError(Exception):
@@ -74,9 +74,9 @@ class FLOSSDecodingFunctionNotFound(Exception):
 
 
 class FLOSSTest(pytest.Item):
-    def __init__(self, path, platform, arch, filename, spec):
+    def __init__(self, parent, path, platform, arch, filename, spec):
         name = "{name:s}::{platform:s}::{arch:s}".format(name=spec["Test Name"], platform=platform, arch=arch)
-        super(FLOSSTest, self).__init__(name, path)
+        super(FLOSSTest, self).__init__(name, parent)
         self.spec = spec
         self.platform = platform
         self.arch = arch
@@ -110,7 +110,7 @@ class FLOSSTest(pytest.Item):
             return
 
         vw = viv_utils.getWorkspace(test_path)
-        fs = map(lambda p: p[0], identify_decoding_functions(vw).get_top_candidate_functions())
+        fs = [p[0] for p in identify_decoding_functions(vw).get_top_candidate_functions()]
         found_functions = set(fs)
 
         if not (expected_functions <= found_functions):

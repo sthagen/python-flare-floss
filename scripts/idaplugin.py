@@ -170,14 +170,11 @@ def main(argv=None):
     logger.info("loaded vivisect workspace")
 
     selected_functions = vw.getFunctions()
-    selected_plugins = floss.main.get_all_plugins()
 
     time0 = time.time()
 
     logger.info("identifying decoding functions...")
-    decoding_functions_candidates = floss.identification_manager.identify_decoding_functions(
-        vw, selected_plugins, selected_functions
-    )
+    decoding_functions_candidates = floss.identification_manager.identify_decoding_functions(vw, selected_functions)
     for fva, score in decoding_functions_candidates.get_top_candidate_functions():
         logger.info("possible decoding function: 0x%x  score: %.02f", fva, score)
 
